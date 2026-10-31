@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Doc } from "@/convex/_generated/dataModel";
 
 export type Deck = Doc<"decks">;

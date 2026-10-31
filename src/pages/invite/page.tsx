@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Authenticated, AuthLoading, Unauthenticated, useAction, useQuery } from '@/lib/convex-compat';

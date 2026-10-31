@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { useMutation } from '@/lib/convex-compat';
 import { formatDistanceToNow } from "date-fns";

@@ -77,3 +77,4 @@ export function isStudyStatus(value: string): value is StudyStatus {
 export function isReactionKind(value: string): value is ReactionKind {
   return ['true', 'surprised', 'pushback'].includes(value);
 }
+export const UNTITLED_STUDY = "Untitled Study";

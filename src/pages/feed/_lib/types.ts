@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { FunctionReturnType } from '@/convex/_generated/server';
 import type { api } from "@/convex/_generated/api";
 

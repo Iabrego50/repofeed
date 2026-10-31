@@ -115,3 +115,13 @@ export default function PlanGrid({
     </div>
   );
 }
+
+export function IntervalToggle({ value, onChange }: { value: "month" | "year"; onChange: (v: "month" | "year") => void }) {
+  return (
+    <div className="inline-flex rounded-full border border-border bg-card p-1">
+      <button onClick={() => onChange("month")} className={value === "month" ? "bg-primary text-primary-foreground rounded-full px-4 py-2" : "px-4 py-2"}>Monthly</button>
+      <button onClick={() => onChange("year")} className={value === "year" ? "bg-primary text-primary-foreground rounded-full px-4 py-2" : "px-4 py-2"}>Yearly · save 20%</button>
+    </div>
+  );
+}
+

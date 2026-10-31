@@ -16,7 +16,7 @@ export default function BillingPage() {
   const { plan, loading: planLoading } = usePlan();
   const [usage, setUsage] = useState<any>(null);
   const [loadingUsage, setLoadingUsage] = useState(true);
-  const [confirmPlan, setConfirmPlan] = useState<{ plan: Plan; interval: 'month' | 'year' } | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<{ plan: 'pro' | 'team'; interval: 'month' | 'year' } | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function BillingPage() {
   } : { studies: 0, editors: 0 };
 
   const handlePlanSelect = (selectedPlan: 'pro' | 'team', interval: 'month' | 'year') => {
-    setConfirmPlan({ plan: selectedPlan as Plan, interval });
+    setConfirmPlan({ plan: selectedPlan, interval });
   };
 
   const handleConfirmCheckout = async () => {

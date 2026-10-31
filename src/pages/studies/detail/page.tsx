@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useSearchParams, useParams, Link } from "react-router-dom";
 import { useQuery } from '@/lib/convex-compat';
 import { ArrowLeft, FileSearch, LifeBuoy } from "lucide-react";

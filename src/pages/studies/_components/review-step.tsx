@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { useMutation, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";

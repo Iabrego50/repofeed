@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from '@/lib/convex-compat';

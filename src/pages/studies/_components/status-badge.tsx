@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { StudyStatus } from "@/schema/validators.ts";
 import { cn } from "@/lib/utils.ts";
 

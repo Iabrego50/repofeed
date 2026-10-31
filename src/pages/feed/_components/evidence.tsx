@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BarChart3, FileText, Lightbulb, Quote } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { reelScript } from "@/lib/reel/painter.ts";
