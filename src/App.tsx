@@ -1,8 +1,8 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
-import Layout from "./layout.tsx";
-import LandingPage from "./pages/landing/page.tsx";
+import AppLayout from "./components/app-layout.tsx";
+import LandingPage from "./pages/landing/public-entry.tsx";
 import StudiesPage from "./pages/studies/page.tsx";
 import StudyDetailPage from "./pages/studies/detail/page.tsx";
 import NewStudyPage from "./pages/studies/new/page.tsx";
@@ -14,8 +14,8 @@ import SettingsPage from "./pages/settings/page.tsx";
 import WelcomePage from "./pages/welcome/page.tsx";
 import InvitePage from "./pages/invite/page.tsx";
 import SharePage from "./pages/share/page.tsx";
-import PrivacyPage from "./pages/privacy.tsx";
-import TermsPage from "./pages/terms.tsx";
+import PrivacyPage from "./pages/legal/privacy.tsx";
+import TermsPage from "./pages/legal/terms.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,7 +72,7 @@ export default function App() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/share/:token" element={<SharePage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
-          <Route element={<AuthenticatedRoute><Layout /></AuthenticatedRoute>}>
+          <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
             <Route path="/welcome" element={<WelcomePage />} />
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/studies" element={<StudiesPage />} />
