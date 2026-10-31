@@ -1,0 +1,13 @@
+{
+  "id": "/",
+  "name": "repofeed.ai",
+  "short_name": "repofeed.ai",
+  "description": "Research, as a feed of short AI-generated insight scenes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070B14",
+  "theme_color": "#070B14",
+  "orientation": "portrait-primary",
+  "icons": []
+}
