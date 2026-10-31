@@ -29,7 +29,7 @@ export async function createWorkspace(args: { name: string }) {
       created_by: user.id,
     })
     .select()
-    .single();
+    .single() as any;
 
   if (wsError) throw wsError;
 
@@ -56,7 +56,7 @@ export async function renameWorkspace(args: { workspaceId: string; name: string 
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || membership.role !== 'owner') {
     throw new Error('Must be workspace owner');
@@ -80,7 +80,7 @@ export async function getMembers(args: { workspaceId: string }) {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .maybeSingle();
+    .maybeSingle() as any;
 
   if (!membership) throw new Error('Not authorized');
 
@@ -110,7 +110,7 @@ export async function removeMember(args: { workspaceId: string; userId: string }
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || membership.role !== 'owner') {
     throw new Error('Must be workspace owner');
@@ -152,7 +152,7 @@ export async function createInvite(args: {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be owner or editor');
@@ -173,7 +173,7 @@ export async function createInvite(args: {
       max_uses: args.maxUses || null,
     })
     .select()
-    .single();
+    .single() as any;
 
   if (error) throw error;
   return { token, url: `${process.env.VITE_SITE_URL}/invite/${token}` };
@@ -189,7 +189,7 @@ export async function listInvites(args: { workspaceId: string }) {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership) throw new Error('Not authorized');
 
@@ -211,7 +211,7 @@ export async function revokeInvite(args: { inviteId: string }) {
     .from('workspace_invites')
     .select('workspace_id')
     .eq('id', args.inviteId)
-    .single();
+    .single() as any;
 
   if (!invite) throw new Error('Invite not found');
 
@@ -221,7 +221,7 @@ export async function revokeInvite(args: { inviteId: string }) {
     .select('role')
     .eq('workspace_id', invite.workspace_id)
     .eq('user_id', user.id)
-    .maybeSingle();
+    .maybeSingle() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be owner or editor');
@@ -241,7 +241,7 @@ export async function peekInvite(args: { token: string }) {
     .from('workspace_invites')
     .select('workspace_id, role, expires_at, revoked, max_uses, uses, workspaces!inner(name)')
     .eq('token', args.token)
-    .maybeSingle();
+    .maybeSingle() as any;
 
   if (error || !invite) return null;
   
@@ -264,7 +264,7 @@ export async function acceptInvite(args: { token: string }) {
     .from('workspace_invites')
     .select('*')
     .eq('token', args.token)
-    .single();
+    .single() as any;
 
   if (inviteError || !invite) throw new Error('Invite not found');
   
@@ -279,7 +279,7 @@ export async function acceptInvite(args: { token: string }) {
     .select('id')
     .eq('workspace_id', typedInvite.workspace_id)
     .eq('user_id', user.id)
-    .maybeSingle();
+    .maybeSingle() as any;
 
   if (existing) {
     return typedInvite.workspace_id; // Already a member
@@ -291,7 +291,7 @@ export async function acceptInvite(args: { token: string }) {
     .select('id')
     .eq('workspace_id', typedInvite.workspace_id)
     .eq('user_id', user.id)
-    .maybeSingle();
+    .maybeSingle() as any;
 
   if (removed) {
     throw new Error('You were removed from this workspace and cannot rejoin');

@@ -16,7 +16,7 @@ export async function listStudies(args: { workspaceId: string }) {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership) throw new Error('Not a workspace member');
 
@@ -59,7 +59,7 @@ export async function getStudy(args: { studyId: string }) {
     .from('studies')
     .select('*')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (studyError || !study) throw new Error('Study not found');
 
@@ -69,7 +69,7 @@ export async function getStudy(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership) throw new Error('Not authorized');
 
@@ -97,7 +97,7 @@ export async function createStudy(args: {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor to create studies');
@@ -108,7 +108,7 @@ export async function createStudy(args: {
     .from('workspaces')
     .select('paid_plan')
     .eq('id', args.workspaceId)
-    .single();
+    .single() as any;
 
   if (!workspace?.paid_plan) {
     const { count } = await supabase
@@ -128,6 +128,7 @@ export async function createStudy(args: {
 
   const { data, error } = await supabase
     .from('studies')
+    // @ts-expect-error - Supabase typing
     .insert({
       workspace_id: args.workspaceId,
       title: title.slice(0, 120),
@@ -138,7 +139,7 @@ export async function createStudy(args: {
       created_by: user.id,
     })
     .select()
-    .single();
+    .single() as any;
 
   if (error) throw error;
   return data.id;
@@ -158,7 +159,7 @@ export async function updateStudy(args: {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -168,7 +169,7 @@ export async function updateStudy(args: {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -202,7 +203,7 @@ export async function addSource(args: {
     .from('studies')
     .select('workspace_id, status')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
   if (study.status !== 'draft') {
@@ -215,7 +216,7 @@ export async function addSource(args: {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -244,7 +245,7 @@ export async function addSource(args: {
       chars: args.text.length,
     })
     .select()
-    .single();
+    .single() as any;
 
   if (error) throw error;
   return data.id;
@@ -259,7 +260,7 @@ export async function removeSource(args: { sourceId: string }) {
     .from('sources')
     .select('study_id, workspace_id')
     .eq('id', args.sourceId)
-    .single();
+    .single() as any;
 
   if (!source) throw new Error('Source not found');
 
@@ -269,7 +270,7 @@ export async function removeSource(args: { sourceId: string }) {
     .select('role')
     .eq('workspace_id', source.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -292,7 +293,7 @@ export async function getReviewReels(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -302,7 +303,7 @@ export async function getReviewReels(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership) throw new Error('Not authorized');
 
@@ -325,7 +326,7 @@ export async function setReelEnabled(args: { reelId: string; enabled: boolean })
     .from('reels')
     .select('workspace_id')
     .eq('id', args.reelId)
-    .single();
+    .single() as any;
 
   if (!reel) throw new Error('Reel not found');
 
@@ -335,7 +336,7 @@ export async function setReelEnabled(args: { reelId: string; enabled: boolean })
     .select('role')
     .eq('workspace_id', reel.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -358,7 +359,7 @@ export async function publishStudy(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id, status')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -368,7 +369,7 @@ export async function publishStudy(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -395,7 +396,7 @@ export async function archiveStudy(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -405,7 +406,7 @@ export async function archiveStudy(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -431,7 +432,7 @@ export async function deleteStudy(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -441,7 +442,7 @@ export async function deleteStudy(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -467,7 +468,7 @@ export async function listSources(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -477,7 +478,7 @@ export async function listSources(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership) throw new Error('Not authorized');
 
@@ -508,7 +509,7 @@ export async function getShareLink(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id, share_enabled, share_token')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -518,7 +519,7 @@ export async function getShareLink(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -539,7 +540,7 @@ export async function setShareEnabled(args: { studyId: string; enabled: boolean 
     .from('studies')
     .select('workspace_id, share_token')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -549,7 +550,7 @@ export async function setShareEnabled(args: { studyId: string; enabled: boolean 
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -584,7 +585,7 @@ export async function regenerateShareLink(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single() as any;
 
   if (!study) throw new Error('Study not found');
 
@@ -594,7 +595,7 @@ export async function regenerateShareLink(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -624,7 +625,7 @@ export async function updateReelScenes(args: { reelId: string; scenes: any[] }) 
     .from('reels')
     .select('workspace_id')
     .eq('id', args.reelId)
-    .single();
+    .single() as any;
 
   if (!reel) throw new Error('Reel not found');
 
@@ -634,7 +635,7 @@ export async function updateReelScenes(args: { reelId: string; scenes: any[] }) 
     .select('role')
     .eq('workspace_id', reel.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
