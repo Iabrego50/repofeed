@@ -1,132 +1,79 @@
-// @ts-nocheck
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from '@/lib/convex-compat';
-import { formatDistanceToNow } from "date-fns";
-import { ChevronDown, FolderPlus, Layers } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { FunctionReturnType } from '@/convex/_generated/server';
+import { useQuery } from "@tanstack/react-query";
+import { PlusIcon } from "lucide-react";
+import { api } from "@/lib/api/complete";
+import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { Button } from "@/components/ui/button.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
+import StatusBadge from "@/components/status-badge.tsx";
 import PageHeader from "@/components/page-header.tsx";
 import PermissionDenied from "@/components/permission-denied.tsx";
-import { useWorkspace } from "@/hooks/use-workspace.ts";
-import { usePlan } from "@/hooks/use-plan.ts";
-import { cn } from "@/lib/utils.ts";
-import StatusBadge from "./_components/status-badge.tsx";
-import StudyActions from "./_components/study-actions.tsx";
-
-type Study = FunctionReturnType<typeof api.studies.list>[number];
-
-const FREE_LIMIT = 3;
-
-function StudyList({ studies, archived }: { studies: Study[]; archived: boolean }) {
-  return (
-    <ul className={cn("divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card", archived && "opacity-80")}>
-      {studies.map((s) => (
-        <li key={s._id} className="flex items-center gap-1 pr-2 transition-colors hover:bg-accent">
-          <Link
-            to={`/studies/${s._id}`}
-            className="flex min-w-0 flex-1 cursor-pointer flex-col gap-2 px-5 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 truncate font-display text-lg font-bold">
-                <span className="truncate">{s.title}</span>
-                {s.isDemo && (
-                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-primary">Demo</span>
-                )}
-              </p>
-              <p className="truncate text-sm text-muted-foreground">
-                {s.audience} · {formatDistanceToNow(new Date(s._creationTime), { addSuffix: true })}
-              </p>
-            </div>
-            <StatusBadge status={s.status} />
-          </Link>
-          <StudyActions studyId={s._id} title={s.title} archived={archived} isDemo={s.isDemo} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function FreeUsageNote({ used }: { used: number }) {
-  const full = used >= FREE_LIMIT;
-  return (
-    <p className={cn("mt-4 rounded-xl border px-4 py-3 text-sm", full ? "border-[#FFC23D]/50 bg-[#FFC23D]/10 text-[#FFC23D]" : "border-border text-muted-foreground")}>
-      {used} of {FREE_LIMIT} free studies used{full ? ". Archive one or " : ". The demo study doesn't count. "}
-      {full ? (
-        <Link to="/billing" className="cursor-pointer font-semibold underline underline-offset-2">upgrade for unlimited studies</Link>
-      ) : (
-        <Link to="/billing" className="cursor-pointer underline underline-offset-2">See plans</Link>
-      )}
-      .
-    </p>
-  );
-}
+import Empty from "@/components/empty.tsx";
 
 export default function StudiesPage() {
   const { current, isEditor } = useWorkspace();
-  const studies = useQuery(api.studies.list, current && isEditor ? { workspaceId: current._id } : "skip");
-  const usage = useQuery(api.billing.data.usage, current && isEditor ? { workspaceId: current._id } : "skip");
-  const { plan } = usePlan(current?._id);
-  const [showArchived, setShowArchived] = useState(false);
+  
+  const { data: allStudies } = useQuery({
+    queryKey: ["studies", "list", current?._id],
+    queryFn: () => api.studies.list({ workspaceId: current!._id }),
+    enabled: !!current && isEditor,
+  });
+
   if (!current) return null;
-  if (!isEditor) return <PermissionDenied what="manage studies" />;
-  const active = studies?.filter((s) => s.status !== "archived");
-  const archived = studies?.filter((s) => s.status === "archived") ?? [];
+  if (!isEditor) return <PermissionDenied what="view studies" />;
+
+  if (!allStudies || allStudies.length === 0) {
+    return (
+      <div className="mx-auto max-w-3xl px-5 py-8">
+        <PageHeader title="Studies" />
+        <Empty
+          title="No studies yet"
+          description="Create your first study to get started"
+          action={
+            <Button asChild>
+              <Link to="/studies/new">
+                <PlusIcon className="size-4" />
+                New study
+              </Link>
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-8 lg:py-12">
-      <PageHeader
-        eyebrow={current.name}
-        title="Studies"
-        description="Each study turns a set of research files into a series of scenes."
-        actions={
-          <Button asChild size="lg" className="h-11 font-semibold">
-            <Link to="/studies/new"><FolderPlus className="size-4" /> New study</Link>
-          </Button>
-        }
-      />
-      {plan === "free" && usage && <FreeUsageNote used={usage.studies} />}
-      <div className="mt-6">
-        {active === undefined ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}
-          </div>
-        ) : active.length === 0 ? (
-          <Empty className="rounded-2xl border border-dashed border-border">
-            <EmptyHeader>
-              <EmptyMedia variant="icon"><Layers /></EmptyMedia>
-              <EmptyTitle>No studies yet</EmptyTitle>
-              <EmptyDescription>Upload interviews, surveys or notes and repofeed.ai will turn them into scenes.</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button asChild className="h-11"><Link to="/studies/new">Create your first study</Link></Button>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          <StudyList studies={active} archived={false} />
-        )}
+    <div className="mx-auto max-w-5xl px-5 py-8">
+      <div className="flex items-center justify-between">
+        <PageHeader title="Studies" />
+        <Button asChild>
+          <Link to="/studies/new">
+            <PlusIcon className="size-4" />
+            New study
+          </Link>
+        </Button>
       </div>
-      {archived.length > 0 && (
-        <section className="mt-10">
-          <button
-            type="button"
-            onClick={() => setShowArchived((v) => !v)}
-            aria-expanded={showArchived}
-            className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      <div className="mt-6 space-y-3">
+        {allStudies.map((study: any) => (
+          <Link
+            key={study._id}
+            to={`/studies/${study._id}`}
+            className="block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
           >
-            <ChevronDown className={cn("size-4 transition-transform", showArchived && "rotate-180")} />
-            Archived ({archived.length})
-          </button>
-          {showArchived && (
-            <div className="mt-3">
-              <StudyList studies={archived} archived />
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-semibold">{study.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{study.audience}</p>
+                {study.tracks && study.tracks.length > 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {study.tracks.length} track{study.tracks.length === 1 ? "" : "s"}
+                  </p>
+                )}
+              </div>
+              <StatusBadge status={study.status} />
             </div>
-          )}
-        </section>
-      )}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
