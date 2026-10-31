@@ -1,10 +1,17 @@
-// @ts-nocheck
 import { useState } from "react";
-import { useAction, useMutation } from '@/lib/convex-compat';
+import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
-import { Archive, ArchiveRestore, EllipsisVertical, Trash2 } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { Archive, MoreVertical, Share2, Trash2, Undo2 } from "lucide-react";
+import { Button } from "@/components/ui/button.tsx";
+import { Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,89 +22,140 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu.tsx";
-import { errorMessage } from "@/lib/errors.ts";
 
-type Props = {
-  studyId: Id<"studies">;
+interface StudyActionsProps {
+  studyId: string;
   title: string;
   archived: boolean;
-  isDemo: boolean;
-};
+  isDemo?: boolean;
+}
 
-/** Archive / restore / delete menu for one study. */
-export default function StudyActions({ studyId, title, archived, isDemo }: Props) {
-  const archive = useMutation(api.studies.archive);
-  const destroy = useMutation(api.studies.destroy);
-  const restore = useAction(api.billing.actions.restoreStudy);
-  const [confirm, setConfirm] = useState<"archive" | "delete" | null>(null);
+export default function StudyActions({ studyId, title, archived, isDemo }: StudyActionsProps) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const run = async (fn: () => Promise<unknown>, done: string, fail: string) => {
-    try {
-      await fn();
-      toast.success(done);
-    } catch (err) {
-      toast.error(errorMessage(err, fail));
-    }
-  };
+  const archiveMutation = useMutation({
+    mutationFn: () => api.studies.archive({ studyId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies"] });
+      toast.success("Study archived");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to archive study");
+    },
+  });
 
-  const label = isDemo ? "demo study" : "study";
+  const publishMutation = useMutation({
+    mutationFn: () => api.studies.publish({ studyId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies"] });
+      toast.success("Study unarchived");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to unarchive study");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.studies.destroy({ studyId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies"] });
+      toast.success("Study deleted");
+      navigate("/studies");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to delete study");
+    },
+  });
+
+  if (isDemo) return null;
 
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label={`Actions for ${title}`}
-          className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-        >
-          <EllipsisVertical className="size-4" />
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9 shrink-0"
+            aria-label={`Actions for ${title}`}
+          >
+            <MoreVertical className="size-4" />
+          </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-48">
+        <DropdownMenuContent align="end">
           {archived ? (
-            <DropdownMenuItem className="cursor-pointer" onSelect={() => void run(() => restore({ studyId }), "Study restored. Publish it again to show it in the feed.", "Couldn't restore the study")}>
-              <ArchiveRestore /> Restore
+            <DropdownMenuItem
+              onClick={() => publishMutation.mutate()}
+              disabled={publishMutation.isPending}
+            >
+              {publishMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Undo2 className="size-4" />
+              )}
+              Unarchive
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem className="cursor-pointer" onSelect={() => setConfirm("archive")}>
-              <Archive /> {isDemo ? "Remove demo" : "Archive"}
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem
+                onClick={() => navigate(`/studies/${studyId}?step=review`)}
+              >
+                <Share2 className="size-4" />
+                Share
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => archiveMutation.mutate()}
+                disabled={archiveMutation.isPending}
+              >
+                {archiveMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Archive className="size-4" />
+                )}
+                Archive
+              </DropdownMenuItem>
+            </>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" className="cursor-pointer" onSelect={() => setConfirm("delete")}>
-            <Trash2 /> Delete forever
+          <DropdownMenuItem
+            onClick={() => setDeleteOpen(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="size-4" />
+            Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm === "delete" ? `Delete "${title}" forever?` : `Archive this ${label}?`}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Delete study?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm === "delete"
-                ? "Its scenes, files, reactions, comments and share links are removed for good. This can't be undone."
-                : "It leaves the feed, its share link stops working and it no longer counts toward your plan. You can restore it any time."}
+              This will permanently delete "{title}" and all its sources, scenes, and comments.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel variant="secondary" className="h-11">Cancel</AlertDialogCancel>
-            {confirm === "delete" ? (
-              <AlertDialogAction variant="destructive" className="h-11" onClick={() => void run(() => destroy({ studyId }), "Study deleted", "Couldn't delete the study")}>
-                Delete forever
-              </AlertDialogAction>
-            ) : (
-              <AlertDialogAction className="h-11" onClick={() => void run(() => archive({ studyId }), "Study archived", "Couldn't archive the study")}>
-                Archive
-              </AlertDialogAction>
-            )}
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteMutation.mutate();
+                setDeleteOpen(false);
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
