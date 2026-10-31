@@ -16,6 +16,8 @@ import InvitePage from "./pages/invite/page.tsx";
 import SharePage from "./pages/share/page.tsx";
 import PrivacyPage from "./pages/legal/privacy.tsx";
 import TermsPage from "./pages/legal/terms.tsx";
+import Logo from "./components/logo.tsx";
+import { Spinner } from "./components/ui/spinner.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +27,15 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function FullScreenLoader() {
+  return (
+    <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background">
+      <Logo />
+      <Spinner className="size-6 text-primary" />
+    </div>
+  );
+}
 
 function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -67,7 +78,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<UnauthenticatedRoute><LandingPage /></UnauthenticatedRoute>} />
+          <Route path="/" element={<UnauthenticatedRoute><LandingPage loader={<FullScreenLoader />} /></UnauthenticatedRoute>} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/share/:token" element={<SharePage />} />
