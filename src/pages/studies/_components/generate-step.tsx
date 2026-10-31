@@ -1,15 +1,11 @@
-// @ts-nocheck
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from '@/lib/convex-compat';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { AlertTriangle, Check, CircleStop, Play, RotateCcw, Sparkles } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { AlertTriangle, Check, CircleStop, Loader2, Play, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
-import { Spinner } from "@/components/ui/spinner.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
-import { errorMessage } from "@/lib/errors.ts";
 import { cn } from "@/lib/utils.ts";
 
 const PHASES = [
@@ -43,7 +39,7 @@ function StepCard({ index, label, hint, state, progress }: { index: number; labe
         Step {index + 1}
       </p>
       <p className="mt-2 flex items-center gap-2 font-medium">
-        {state === "current" && <Spinner className="size-4" />}
+        {state === "current" && <Loader2 className="size-4 animate-spin" />}
         {label}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
@@ -58,135 +54,125 @@ function StepCard({ index, label, hint, state, progress }: { index: number; labe
   );
 }
 
-export default function GenerateStep({ studyId, onDone }: { studyId: Id<"studies">; onDone: () => void }) {
-  const job = useQuery(api.generation.jobs.latestForStudy, { studyId });
-  const start = useMutation(api.generation.jobs.startGeneration);
-  const resume = useMutation(api.generation.jobs.resumeGeneration);
-  const cancel = useMutation(api.generation.jobs.cancelGeneration);
+interface GenerateStepProps {
+  studyId: string;
+  study: any;
+  onNext: () => void;
+}
+
+export default function GenerateStep({ studyId, study, onNext }: GenerateStepProps) {
+  const queryClient = useQueryClient();
+  const { data: job } = useQuery({
+    queryKey: ["generation", "jobs", "latest", studyId],
+    queryFn: () => api.generation.jobs.latestForStudy({ studyId }),
+    refetchInterval: (data) => {
+      if (!data) return false;
+      return data.status === "running" ? 2000 : false;
+    },
+  });
+
+  const startMutation = useMutation({
+    mutationFn: () => api.generation.jobs.startGeneration({ studyId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["generation", "jobs", "latest", studyId] });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => api.generation.jobs.cancelGeneration({ studyId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["generation", "jobs", "latest", studyId] });
+      toast.success("Generation cancelled");
+    },
+  });
+
   const logRef = useRef<HTMLOListElement>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const el = logRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [job?.log.length]);
+  }, [job?.log?.length]);
 
   const act = async (fn: () => Promise<unknown>, fail: string) => {
     setBusy(true);
     try {
       await fn();
-    } catch (err) {
-      toast.error(errorMessage(err, fail));
+    } catch (err: any) {
+      toast.error(err.message || fail);
     } finally {
       setBusy(false);
     }
   };
-  const run = () => act(() => start({ studyId }), "Couldn't start generation");
 
-  if (job === undefined) return <Skeleton className="h-80 w-full rounded-2xl" />;
-
-  const active = job && (job.status === "queued" || job.status === "running");
-  const failed = job?.status === "failed";
-  const phaseIdx = job ? PHASES.findIndex((p) => p.key === job.phase) : -1;
-
-  const stateFor = (i: number): StepState => {
-    if (!job) return "waiting";
-    if (job.status === "done" || i < phaseIdx) return "done";
-    if (i === phaseIdx) return failed ? "failed" : active ? "current" : "waiting";
-    return "waiting";
-  };
-
-  if (!job || job.status === "cancelled") {
-    return (
-      <div className="rounded-2xl border border-border bg-card p-8 text-center">
-        <Sparkles className="mx-auto size-10 text-primary" />
-        <h2 className="mt-4 font-display text-2xl font-bold">
-          {job?.status === "cancelled" ? "Generation was stopped" : "Ready to generate"}
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-muted-foreground">
-          The AI reads every file, picks out findings, writes 8–24 one-point scenes, then checks every quote and number against your files. It keeps running if you close this tab.
-        </p>
-        <Button size="lg" className="mt-6 h-12 px-6 font-semibold" disabled={busy} onClick={() => void run()}>
-          {busy ? <Spinner /> : job ? <RotateCcw className="size-4" /> : <Sparkles className="size-4" />}
-          {job ? "Start again" : "Generate scenes"}
-        </Button>
-      </div>
-    );
-  }
+  const isRunning = job?.status === "running";
+  const isDone = job?.status === "completed";
+  const isFailed = job?.status === "failed";
 
   return (
     <div className="space-y-6">
-      <ol className="grid gap-2 sm:grid-cols-3">
-        {PHASES.map((p, i) => (
-          <StepCard
-            key={p.key}
-            index={i}
-            label={p.label}
-            hint={p.hint}
-            state={stateFor(i)}
-            progress={
-              p.key === "extract"
-                ? `File part ${Math.min(job.cursor + 1, job.totalChunks)} of ${job.totalChunks}`
-                : p.key === "compose"
-                  ? "Writing 8–24 one-point scenes"
-                  : "Matching every quote and number to your files"
-            }
-          />
-        ))}
-      </ol>
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-display text-lg font-bold">Generate scenes</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              AI will extract findings from your sources and compose them into scenes.
+            </p>
+          </div>
+          {!job || job.status === "failed" ? (
+            <Button onClick={() => act(() => startMutation.mutateAsync(), "Couldn't start generation")} disabled={busy} size="lg">
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+              {job ? "Retry" : "Start generation"}
+            </Button>
+          ) : isRunning ? (
+            <Button onClick={() => act(() => cancelMutation.mutateAsync(), "Couldn't cancel generation")} disabled={busy} variant="destructive" size="lg">
+              <CircleStop className="size-4" />
+              Cancel
+            </Button>
+          ) : isDone ? (
+            <Button onClick={onNext} size="lg">
+              Continue to Review
+            </Button>
+          ) : null}
+        </div>
 
-      {failed && (
-        <div role="alert" className="rounded-xl border border-destructive/50 bg-destructive/10 p-4">
-          <div className="flex gap-3">
-            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
+        {job && (
+          <ul className="mt-6 space-y-3">
+            {PHASES.map((phase, i) => {
+              const state: StepState =
+                job.phase === phase.key && isRunning
+                  ? "current"
+                  : job.phase === phase.key && isFailed
+                    ? "failed"
+                    : PHASES.findIndex((p) => p.key === job.phase) > i
+                      ? "done"
+                      : "waiting";
+              return <StepCard key={phase.key} index={i} label={phase.label} hint={phase.hint} state={state} progress={job.progress} />;
+            })}
+          </ul>
+        )}
+
+        {job?.log && job.log.length > 0 && (
+          <details className="mt-6">
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground">View generation log</summary>
+            <ol ref={logRef} className="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-lg bg-muted p-3 font-mono text-xs">
+              {job.log.map((entry: any, i: number) => (
+                <li key={i} className="text-muted-foreground">
+                  [{format(new Date(entry.timestamp), "HH:mm:ss")}] {entry.message}
+                </li>
+              ))}
+            </ol>
+          </details>
+        )}
+
+        {isFailed && job?.error && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+            <AlertTriangle className="size-5 shrink-0 text-destructive" />
             <div className="min-w-0 flex-1">
-              <p className="font-medium">Generation stopped</p>
-              <p className="mt-1 break-words text-sm text-muted-foreground">{job.error}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button className="h-10" disabled={busy} onClick={() => void act(() => resume({ studyId }), "Couldn't resume")}>
-                  {busy ? <Spinner /> : <Play className="size-4" />} Resume where it stopped
-                </Button>
-                <Button variant="secondary" className="h-10" disabled={busy} onClick={() => void run()}>
-                  <RotateCcw className="size-4" /> Start over
-                </Button>
-              </div>
+              <p className="font-medium text-destructive">Generation failed</p>
+              <p className="mt-1 text-sm text-destructive/80">{job.error}</p>
             </div>
           </div>
-        </div>
-      )}
-
-      <div className="rounded-2xl border border-border bg-background">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Activity</p>
-          {active && (
-            <span className="flex items-center gap-2 font-mono text-xs text-primary">
-              <span className="size-2 animate-pulse rounded-full bg-primary" /> running
-            </span>
-          )}
-        </div>
-        <ol ref={logRef} className="max-h-72 space-y-1 overflow-y-auto p-4 font-mono text-[13px]" aria-live="polite">
-          {job.log.map((l, i) => (
-            <li key={i} className="flex gap-3">
-              <span className="shrink-0 text-muted-foreground">{format(new Date(l.at), "HH:mm:ss")}</span>
-              <span className={cn("min-w-0 break-words", l.level === "warn" && "text-[#FFC23D]", l.level === "error" && "text-destructive")}>{l.message}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="flex flex-wrap justify-end gap-2">
-        {active && (
-          <Button variant="destructive" className="h-11" onClick={() => void act(() => cancel({ studyId }), "Couldn't stop")}>
-            <CircleStop className="size-4" /> Stop
-          </Button>
-        )}
-        {job.status === "done" && (
-          <>
-            <Button variant="secondary" className="h-11" disabled={busy} onClick={() => void run()}>
-              <RotateCcw className="size-4" /> Regenerate
-            </Button>
-            <Button className="h-11 font-semibold" onClick={onDone}>Review scenes</Button>
-          </>
         )}
       </div>
     </div>
