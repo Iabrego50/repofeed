@@ -4,10 +4,10 @@ import { PlusIcon } from "lucide-react";
 import { api } from "@/lib/api/complete";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { Button } from "@/components/ui/button.tsx";
-import StatusBadge from "@/components/status-badge.tsx";
+import StatusBadge from "./_components/status-badge.tsx";
 import PageHeader from "@/components/page-header.tsx";
 import PermissionDenied from "@/components/permission-denied.tsx";
-import Empty from "@/components/empty.tsx";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 
 export default function StudiesPage() {
   const { current, isEditor } = useWorkspace();
@@ -25,18 +25,20 @@ export default function StudiesPage() {
     return (
       <div className="mx-auto max-w-3xl px-5 py-8">
         <PageHeader title="Studies" />
-        <Empty
-          title="No studies yet"
-          description="Create your first study to get started"
-          action={
+        <Empty className="rounded-2xl border border-dashed border-border">
+          <EmptyHeader>
+            <EmptyTitle>No studies yet</EmptyTitle>
+            <EmptyDescription>Create your first study to get started</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button asChild>
               <Link to="/studies/new">
                 <PlusIcon className="size-4" />
                 New study
               </Link>
             </Button>
-          }
-        />
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
