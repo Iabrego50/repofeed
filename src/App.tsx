@@ -16,8 +16,6 @@ import { hasStoredSession } from "./lib/stored-session.ts";
 const Welcome = lazy(() => import("./pages/welcome/page.tsx"));
 const InvitePage = lazy(() => import("./pages/invite/page.tsx"));
 const SharePage = lazy(() => import("./pages/share/page.tsx"));
-const DemoPage = lazy(() => import("./pages/demo/page.tsx"));
-const DemoInsightsPage = lazy(() => import("./pages/demo/insights/page.tsx"));
 const FeedPage = lazy(() => import("./pages/feed/page.tsx"));
 const StudiesPage = lazy(() => import("./pages/studies/page.tsx"));
 const NewStudyPage = lazy(() => import("./pages/studies/new/page.tsx"));
@@ -91,9 +89,8 @@ export default function App() {
         <Routes>
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/invite/:token" element={<InvitePage />} />
-          <Route path="/s/:token" element={<SharePage />} />
-          <Route path="/demo" element={<DemoPage />} />
-          <Route path="/demo/insights" element={<DemoInsightsPage />} />
+          <Route path="/share/:slug" element={<SharePage />} />
+          <Route path="/s/:slug" element={<SharePage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route element={<Gate />}>

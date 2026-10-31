@@ -1,15 +1,11 @@
-// Demo insights - temporary stub
-import { demoReels, demoFindings } from './demo-data';
+// Demo insights - stub until demo data is restored
 
-export function getDemoInsights() {
-  return {
-    reels: demoReels,
-    findings: demoFindings,
-  };
+export function getDemoReels() {
+  return [];
 }
 
-export function searchDemoReels(query: string) {
-  return demoReels.filter((reel: any) =>
-    reel.title?.toLowerCase().includes(query.toLowerCase())
-  );
+export function getDemoFindings() {
+  return [];
 }
+
+export const DEMO_INSIGHT_SUMMARY = 'Demo insights coming soon';
