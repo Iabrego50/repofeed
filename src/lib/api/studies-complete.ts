@@ -457,3 +457,196 @@ export async function deleteStudy(args: { studyId: string }) {
 
   // TODO: Schedule actual deletion cleanup
 }
+
+// List sources for a study
+export async function listSources(args: { studyId: string }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: study } = await supabase
+    .from('studies')
+    .select('workspace_id')
+    .eq('id', args.studyId)
+    .single();
+
+  if (!study) throw new Error('Study not found');
+
+  // Check membership
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', study.workspace_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!membership) throw new Error('Not authorized');
+
+  const { data, error } = await supabase
+    .from('sources')
+    .select('*')
+    .eq('study_id', args.studyId)
+    .order('created_at');
+
+  if (error) throw error;
+  
+  return (data || []).map((s: any) => ({
+    _id: s.id,
+    _creationTime: new Date(s.created_at).getTime(),
+    name: s.name,
+    kind: s.kind,
+    storageId: s.storage_id,
+    chars: s.chars,
+  }));
+}
+
+// Get share link for a study
+export async function getShareLink(args: { studyId: string }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: study } = await supabase
+    .from('studies')
+    .select('workspace_id, share_enabled, share_token')
+    .eq('id', args.studyId)
+    .single();
+
+  if (!study) throw new Error('Study not found');
+
+  // Check editor permission
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', study.workspace_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
+    throw new Error('Must be an editor');
+  }
+
+  return {
+    enabled: study.share_enabled || false,
+    token: study.share_token || null,
+  };
+}
+
+// Set share enabled for a study
+export async function setShareEnabled(args: { studyId: string; enabled: boolean }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: study } = await supabase
+    .from('studies')
+    .select('workspace_id, share_token')
+    .eq('id', args.studyId)
+    .single();
+
+  if (!study) throw new Error('Study not found');
+
+  // Check editor permission
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', study.workspace_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
+    throw new Error('Must be an editor');
+  }
+
+  // Generate token if enabling and doesn't exist
+  let token = study.share_token;
+  if (args.enabled && !token) {
+    token = crypto.randomUUID();
+  }
+
+  const { error } = await supabase
+    .from('studies')
+    .update({
+      share_enabled: args.enabled,
+      share_token: token,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', args.studyId);
+
+  if (error) throw error;
+
+  return { token };
+}
+
+// Regenerate share link for a study
+export async function regenerateShareLink(args: { studyId: string }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: study } = await supabase
+    .from('studies')
+    .select('workspace_id')
+    .eq('id', args.studyId)
+    .single();
+
+  if (!study) throw new Error('Study not found');
+
+  // Check editor permission
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', study.workspace_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
+    throw new Error('Must be an editor');
+  }
+
+  const newToken = crypto.randomUUID();
+
+  const { error } = await supabase
+    .from('studies')
+    .update({
+      share_token: newToken,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', args.studyId);
+
+  if (error) throw error;
+
+  return { token: newToken };
+}
+
+// Update reel scenes
+export async function updateReelScenes(args: { reelId: string; scenes: any[] }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: reel } = await supabase
+    .from('reels')
+    .select('workspace_id')
+    .eq('id', args.reelId)
+    .single();
+
+  if (!reel) throw new Error('Reel not found');
+
+  // Check editor permission
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', reel.workspace_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
+    throw new Error('Must be an editor');
+  }
+
+  const { error } = await supabase
+    .from('reels')
+    .update({
+      scenes: args.scenes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', args.reelId);
+
+  if (error) throw error;
+}

@@ -317,3 +317,6 @@ export async function acceptInvite(args: { token: string }) {
 
   return typedInvite.workspace_id;
 }
+
+// Alias for listMembers
+export const listWorkspaceMembers = getMembers;
