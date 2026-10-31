@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery } from '@/lib/convex-compat';
 import { Bookmark, CornerDownLeft, Search, SearchX } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog.tsx";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";

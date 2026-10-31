@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AlertTriangle, Check, CircleStop, Play, RotateCcw, Sparkles } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Authenticated, AuthLoading, Unauthenticated, useAction, useQuery } from "convex/react";
+import { Authenticated, AuthLoading, Unauthenticated, useAction, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { Link2Off, Users } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";

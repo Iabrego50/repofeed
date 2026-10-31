@@ -1,7 +1,7 @@
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
-import type { CommentKind, ReactionKind } from "@/convex/schema/validators.ts";
+import { useMutation, useQuery } from '@/lib/convex-compat';
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { CommentKind, ReactionKind } from "@/schema/validators.ts";
 import { useFeedMode } from "./feed-mode.ts";
 
 /** Thrown when a guest closes the name prompt; callers ignore it quietly. */

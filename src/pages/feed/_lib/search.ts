@@ -1,4 +1,4 @@
-import type { Scene } from "@/convex/schema/validators.ts";
+import type { Scene } from "@/schema/validators.ts";
 
 export type SearchableReel = {
   _id: string;

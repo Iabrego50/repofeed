@@ -1,4 +1,4 @@
-import type { Scene } from "@/convex/schema/validators.ts";
+import type { Scene } from "@/schema/validators.ts";
 
 export const clamp = (v: number, min: number, max: number) =>
   Math.min(max, Math.max(min, v));
@@ -11,10 +11,10 @@ export function wordCount(text: string): number {
 export function sceneDuration(scene: Scene): number {
   switch (scene.type) {
     case "hook":
-      return clamp(1.3 + 0.3 * wordCount(scene.text), 2.2, 4.4);
+      return clamp(1.3 + 0.3 * wordCount(scene.text || ''), 2.2, 4.4);
     case "line":
       return clamp(
-        1.3 + 0.3 * wordCount(`${scene.kicker ?? ""} ${scene.text}`),
+        1.3 + 0.3 * wordCount(`${scene.kicker ?? ""} ${scene.text || ''}`),
         2.2,
         4.4,
       );

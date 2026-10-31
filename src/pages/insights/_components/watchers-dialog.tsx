@@ -1,8 +1,8 @@
-import { useQuery } from "convex/react";
+import { useQuery } from '@/lib/convex-compat';
 import { formatDistanceToNow } from "date-fns";
 import { Check, CircleQuestionMark, Users, Zap } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog.tsx";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";

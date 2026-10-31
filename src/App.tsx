@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
-import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import { Authenticated, AuthLoading, Unauthenticated } from '@/lib/convex-compat';
 import { DefaultProviders } from "./components/providers/default.tsx";
 import AuthCallback from "./pages/auth/Callback.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -9,7 +9,6 @@ import AppLayout from "./components/app-layout.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
 import { useWorkspace } from "./hooks/use-workspace.ts";
-import { WorkspaceProvider } from "./components/providers/workspace.tsx";
 import { useServiceWorker } from "./hooks/use-service-worker.ts";
 import { hasStoredSession } from "./lib/stored-session.ts";
 
@@ -87,41 +86,39 @@ export default function App() {
   useServiceWorker();
   return (
     <DefaultProviders>
-      <WorkspaceProvider>
-        <BrowserRouter>
-          <Suspense fallback={<FullScreenLoader />}>
-          <Routes>
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/invite/:token" element={<InvitePage />} />
-            <Route path="/s/:token" element={<SharePage />} />
-            <Route path="/demo" element={<DemoPage />} />
-            <Route path="/demo/insights" element={<DemoInsightsPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route element={<Gate />}>
-              <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
-              <Route element={<RequireWorkspace />}>
-                <Route path="/insights/deck" element={<DeckPage />} />
-                <Route element={<AppLayout />}>
-                  <Route element={<ShellOutlet />}>
-                    <Route path="/" element={<FeedPage />} />
-                    <Route path="/studies" element={<StudiesPage />} />
-                    <Route path="/studies/new" element={<NewStudyPage />} />
-                    <Route path="/studies/:studyId" element={<StudyPage />} />
-                    <Route path="/insights" element={<InsightsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/billing" element={<BillingPage />} />
-                    <Route path="/help" element={<HelpPage />} />
-                  </Route>
+      <BrowserRouter>
+        <Suspense fallback={<FullScreenLoader />}>
+        <Routes>
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
+          <Route path="/s/:token" element={<SharePage />} />
+          <Route path="/demo" element={<DemoPage />} />
+          <Route path="/demo/insights" element={<DemoInsightsPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route element={<Gate />}>
+            <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
+            <Route element={<RequireWorkspace />}>
+              <Route path="/insights/deck" element={<DeckPage />} />
+              <Route element={<AppLayout />}>
+                <Route element={<ShellOutlet />}>
+                  <Route path="/" element={<FeedPage />} />
+                  <Route path="/studies" element={<StudiesPage />} />
+                  <Route path="/studies/new" element={<NewStudyPage />} />
+                  <Route path="/studies/:studyId" element={<StudyPage />} />
+                  <Route path="/insights" element={<InsightsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/billing" element={<BillingPage />} />
+                  <Route path="/help" element={<HelpPage />} />
                 </Route>
               </Route>
             </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </WorkspaceProvider>
+          </Route>
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        </Suspense>
+      </BrowserRouter>
     </DefaultProviders>
   );
 }

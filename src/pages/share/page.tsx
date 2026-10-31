@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from '@/lib/convex-compat';
 import { Link2Off, UserRound, X } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import Logo from "@/components/logo.tsx";

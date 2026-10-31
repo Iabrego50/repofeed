@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
-import type { Doc } from "@/convex/_generated/dataModel.d.ts";
-import { api } from "@/convex/_generated/api.js";
-import { UNTITLED_STUDY } from "@/convex/schema/validators.ts";
+import type { Doc } from "@/convex/_generated/dataModel";
+import { api } from "@/convex/_generated/api";
+import { UNTITLED_STUDY } from "@/schema/validators.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";

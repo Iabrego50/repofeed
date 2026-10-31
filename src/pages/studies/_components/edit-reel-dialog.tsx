@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Doc } from "@/convex/_generated/dataModel.d.ts";
-import type { Scene } from "@/convex/schema/validators.ts";
+import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
+import type { Scene } from "@/schema/validators.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";

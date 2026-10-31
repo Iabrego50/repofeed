@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle2, ClipboardPaste, FileText, Sparkles, Trash2, UploadCloud } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { SAMPLE_FILES } from "@/convex/lib/sample.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";

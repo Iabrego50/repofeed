@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { Archive, ArchiveRestore, EllipsisVertical, Trash2 } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   AlertDialog,
   AlertDialogAction,

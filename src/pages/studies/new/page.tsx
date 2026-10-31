@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAction } from "convex/react";
+import { useAction } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { ArrowRight, FileText, Sparkles, Wand2 } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";

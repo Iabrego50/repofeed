@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { AlertTriangle, Film, Maximize2, Pencil, Send, Undo2, X } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Doc } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";

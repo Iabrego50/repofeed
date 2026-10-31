@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useQuery } from '@/lib/convex-compat';
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Expand, Presentation, RotateCcw, Sparkles } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";

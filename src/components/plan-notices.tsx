@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { AlertTriangle, CreditCard, UserX, X } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";

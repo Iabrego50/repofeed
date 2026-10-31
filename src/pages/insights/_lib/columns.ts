@@ -1,5 +1,5 @@
-import type { FunctionReturnType } from "convex/server";
-import type { api } from "@/convex/_generated/api.js";
+import type { FunctionReturnType } from '@/convex/_generated/server';
+import type { api } from "@/convex/_generated/api";
 
 export type Summary = FunctionReturnType<typeof api.insights.summary>;
 export type Row = Summary["rows"][number];

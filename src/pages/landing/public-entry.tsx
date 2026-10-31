@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
+import { useQuery } from '@/lib/convex-compat';
+import { api } from "@/convex/_generated/api";
 import PublicShell from "@/components/public-shell.tsx";
 import Landing from "./page.tsx";
 

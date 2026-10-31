@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { PLANS, PLAN_LABEL, formatPrice, type Interval } from "@/lib/plans.ts";
-import type { Plan } from "@/convex/schema/validators.ts";
+import type { Plan } from "@/schema/validators.ts";
 
 export type PendingChange = { from: Plan; to: "pro" | "team"; interval: Interval; seats: number };
 

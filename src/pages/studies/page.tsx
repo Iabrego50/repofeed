@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useQuery } from '@/lib/convex-compat';
 import { formatDistanceToNow } from "date-fns";
 import { ChevronDown, FolderPlus, Layers } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { FunctionReturnType } from "convex/server";
+import { api } from "@/convex/_generated/api";
+import type { FunctionReturnType } from '@/convex/_generated/server';
 import { Button } from "@/components/ui/button.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";

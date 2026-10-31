@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { AlertTriangle, CreditCard, Sparkles } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Plan } from "@/convex/schema/validators.ts";
+import { api } from "@/convex/_generated/api";
+import type { Plan } from "@/schema/validators.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";

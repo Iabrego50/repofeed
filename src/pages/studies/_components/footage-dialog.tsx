@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { Check, Film, Trash2, Upload, VideoOff } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";

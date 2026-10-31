@@ -1,4 +1,4 @@
-import type { Scene } from "@/convex/schema/validators.ts";
+import type { Scene } from "@/schema/validators.ts";
 import {
   FONT_DISPLAY,
   FONT_MONO,
@@ -129,17 +129,17 @@ export class ReelPainter {
 
     switch (scene.type) {
       case "hook":
-        push(scene.text, `900 ${FONT_DISPLAY}`, { start: 136, min: 64, maxLines: 5, lh: 1.02 });
+        push(scene.text || '', `900 ${FONT_DISPLAY}`, { start: 136, min: 64, maxLines: 5, lh: 1.02 });
         break;
       case "line":
         if (scene.kicker) {
           push(scene.kicker.toUpperCase(), `700 ${FONT_MONO}`, { start: 34, min: 26, maxLines: 1, color: accent, em: false, lh: 1.6 });
         }
-        push(scene.text, `750 ${FONT_DISPLAY}`, { start: 104, min: 54, maxLines: 6, lh: 1.08 });
+        push(scene.text || '', `750 ${FONT_DISPLAY}`, { start: 104, min: 54, maxLines: 6, lh: 1.08 });
         break;
       case "list":
-        push(scene.title.toUpperCase(), `700 ${FONT_MONO}`, { start: 36, min: 26, maxLines: 2, color: accent, em: false, lh: 1.5 });
-        scene.items.forEach((item, i) => {
+        push((scene.title || '').toUpperCase(), `700 ${FONT_MONO}`, { start: 36, min: 26, maxLines: 2, color: accent, em: false, lh: 1.5 });
+        (scene.items || []).forEach((item, i) => {
           push(item, `700 ${FONT_DISPLAY}`, {
             start: 76,
             min: 44,
@@ -152,17 +152,17 @@ export class ReelPainter {
         });
         break;
       case "stat":
-        push(scene.num, `900 ${FONT_DISPLAY}`, { start: 320, min: 120, maxLines: 2, color: accent, em: false, lh: 0.95, kind: "stat" });
-        push(scene.label, `600 ${FONT_UI}`, { start: 64, min: 40, maxLines: 3, lh: 1.2, delay: 0.2 });
+        push(scene.num || '', `900 ${FONT_DISPLAY}`, { start: 320, min: 120, maxLines: 2, color: accent, em: false, lh: 0.95, kind: "stat" });
+        push(scene.label || '', `600 ${FONT_UI}`, { start: 64, min: 40, maxLines: 3, lh: 1.2, delay: 0.2 });
         break;
       case "quote":
         blocks.push({ lines: [], font: `900 ${FONT_DISPLAY}`, size: 220, lineHeight: 120, color: accent, emColor: accent, y: 0, delay: 0, kind: "quoteMark" });
-        push(scene.text, `600 ${FONT_DISPLAY}`, { start: 80, min: 42, maxLines: 9, em: false, lh: 1.18 });
-        push(`— ${scene.by}`, `500 ${FONT_MONO}`, { start: 32, min: 24, maxLines: 2, color: INK_MUTED, em: false, lh: 1.4, delay: 0.25 });
+        push(scene.text || '', `600 ${FONT_DISPLAY}`, { start: 80, min: 42, maxLines: 9, em: false, lh: 1.18 });
+        push(`— ${scene.by || ''}`, `500 ${FONT_MONO}`, { start: 32, min: 24, maxLines: 2, color: INK_MUTED, em: false, lh: 1.4, delay: 0.25 });
         break;
       case "cta":
-        push(scene.text, `800 ${FONT_DISPLAY}`, { start: 112, min: 56, maxLines: 4, lh: 1.05, kind: "underline" });
-        push(scene.sub, `500 ${FONT_MONO}`, { start: 28, min: 20, maxLines: 3, color: INK_MUTED, em: false, lh: 1.5, delay: 0.3 });
+        push(scene.text || '', `800 ${FONT_DISPLAY}`, { start: 112, min: 56, maxLines: 4, lh: 1.05, kind: "underline" });
+        push(scene.sub || '', `500 ${FONT_MONO}`, { start: 28, min: 20, maxLines: 3, color: INK_MUTED, em: false, lh: 1.5, delay: 0.3 });
         break;
     }
 
@@ -343,7 +343,7 @@ export class ReelPainter {
           ctx.fillStyle = b.emColor;
           ctx.fillRect(SAFE.left, baseline - b.size * 0.42, 32, 10);
         }
-        if (b.kind === "stat" && scene.type === "stat" && !reduced) {
+        if (b.kind === "stat" && scene.type === "stat" && !reduced && scene.num) {
           const m = scene.num.match(DIGITS_ONLY);
           if (m) {
             const target = parseInt(m[2], 10);

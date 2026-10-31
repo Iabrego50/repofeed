@@ -1,4 +1,4 @@
-import type { Plan } from "@/convex/schema/validators.ts";
+import type { Plan } from "@/schema/validators.ts";
 
 export type Interval = "month" | "year";
 

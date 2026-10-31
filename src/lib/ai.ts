@@ -40,9 +40,10 @@ export function getOpenAIClient(): OpenAI {
   return openaiClient;
 }
 
-// Model constants
-export const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'; // Latest Claude Sonnet
-export const OPENAI_IMAGE_MODEL = 'dall-e-3';
+// Model constants - matching original Hercules gateway models
+// Configure via env vars to allow swapping for self-hosted
+export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20241022';
+export const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'dall-e-3'; // OpenAI's closest to gpt-image-2.5-flare
 
 export const CHUNK_CHARS = 70_000;
 export const MAX_COMPOSE_FINDINGS = 180;
@@ -220,7 +221,7 @@ export async function generateImage(prompt: string): Promise<Blob> {
     response_format: 'b64_json',
   });
 
-  const b64 = response.data[0].b64_json;
+  const b64 = response.data?.[0]?.b64_json;
   if (!b64) {
     throw new Error('No image data returned from OpenAI');
   }

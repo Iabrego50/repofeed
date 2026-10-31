@@ -1,4 +1,4 @@
-import type { Doc } from "@/convex/_generated/dataModel.d.ts";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 export type Deck = Doc<"decks">;
 export type DeckSlide = Deck["slides"][number];

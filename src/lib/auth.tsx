@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
@@ -9,6 +9,7 @@ interface AuthContextType {
   signIn: (provider: 'google' | 'azure' | 'apple') => Promise<void>;
   signInWithOtp: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signout: () => Promise<void>; // Alias for compatibility
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signInWithOtp,
         signOut,
+        signout: signOut, // Alias
       }}
     >
       {children}

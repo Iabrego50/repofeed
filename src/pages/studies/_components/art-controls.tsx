@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useAction } from "convex/react";
+import { useAction } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { AlertTriangle, Sparkles, Wand2 } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { toastError } from "@/lib/errors.ts";

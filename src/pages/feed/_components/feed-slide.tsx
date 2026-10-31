@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation } from '@/lib/convex-compat';
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import { Bookmark, Check, CircleQuestionMark, Download, Ellipsis, FileSearch, Link2, MessageCircle, Pause, Play, Type, Zap } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { ReactionKind } from "@/convex/schema/validators.ts";
+import { api } from "@/convex/_generated/api";
+import type { ReactionKind } from "@/schema/validators.ts";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu.tsx";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import { reelScript } from "@/lib/reel/painter.ts";

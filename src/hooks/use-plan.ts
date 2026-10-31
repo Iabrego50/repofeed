@@ -1,8 +1,8 @@
-import { useAction } from "convex/react";
+import { useAction } from '@/lib/convex-compat';
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
-import type { Plan } from "@/convex/schema/validators.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { Plan } from "@/schema/validators.ts";
 
 const planKey = (workspaceId: Id<"workspaces"> | undefined) => ["plan", workspaceId];
 

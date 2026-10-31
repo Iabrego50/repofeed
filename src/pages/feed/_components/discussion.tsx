@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation } from '@/lib/convex-compat';
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { CheckCircle2, CircleDot, CornerDownRight, MessageSquare, Trash2 } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
-import type { CommentKind } from "@/convex/schema/validators.ts";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { CommentKind } from "@/schema/validators.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";

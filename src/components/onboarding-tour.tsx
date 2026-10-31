@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
+import { useMutation, useQuery } from '@/lib/convex-compat';
+import { api } from "@/convex/_generated/api";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import FeedTour from "./feed-tour.tsx";
 

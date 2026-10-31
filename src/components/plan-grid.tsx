@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Check } from "lucide-react";
-import type { Plan } from "@/convex/schema/validators.ts";
+import type { Plan } from "@/schema/validators.ts";
 import { cn } from "@/lib/utils.ts";
 import { PLANS, formatPrice, type Interval } from "@/lib/plans.ts";
 
