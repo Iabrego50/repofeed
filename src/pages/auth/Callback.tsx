@@ -1,83 +1,72 @@
-import { useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth, useAuthCallback } from "@usehercules/auth/react";
-import { useConvexAuth, useMutation } from '@/lib/convex-compat';
-import { api } from "@/convex/_generated/api";
-import { Spinner } from "@/components/ui/spinner.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import {
-  authCallbackMessages,
-  type AuthCallbackMessages,
-} from "./callback-messages.ts";
-import { resolveReturnTo } from "./return-to.ts";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
 
-interface AuthCallbackProps {
-  messages?: AuthCallbackMessages;
-}
-
-export default function AuthCallback({
-  messages: {
-    loading = authCallbackMessages.en.loading,
-    errorTitle = authCallbackMessages.en.errorTitle,
-    missingState = authCallbackMessages.en.missingState,
-    returnHome = authCallbackMessages.en.returnHome,
-    tryAgain = authCallbackMessages.en.tryAgain,
-  } = {},
-}: AuthCallbackProps): React.JSX.Element {
+export default function Callback() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
-  const updateCurrentUser = useMutation(api.users.updateCurrentUser);
+  const [error, setError] = useState<string | null>(null);
 
-  const onSync = useCallback(async () => {
-    await updateCurrentUser();
-  }, [updateCurrentUser]);
+  useEffect(() => {
+    const handleCallback = async () => {
+      try {
+        // Get session from URL hash
+        const { data, error } = await supabase.auth.getSession();
 
-  const navigateHome = useCallback(
-    () => navigate("/", { replace: true }),
-    [navigate],
-  );
+        if (error) {
+          console.error('Auth callback error:', error);
+          setError(error.message);
+          return;
+        }
 
-  // Back to the page the user signed in from, which `signin()` round-trips
-  // through the OIDC state.
-  const returnTo = resolveReturnTo(user?.state);
-  const navigateBack = useCallback(
-    () => navigate(returnTo, { replace: true }),
-    [navigate, returnTo],
-  );
+        if (data.session) {
+          // Create or update user record
+          const { error: upsertError } = await supabase
+            .from('users')
+            .upsert({
+              id: data.session.user.id,
+              email: data.session.user.email,
+              name: data.session.user.user_metadata?.name,
+              avatar: data.session.user.user_metadata?.avatar_url,
+              token_identifier: data.session.user.id,
+            } as any, {
+              onConflict: 'id',
+            });
 
-  const { status, error, retry } = useAuthCallback({
-    isBackendAuthenticated: isConvexAuthenticated,
-    onSync,
-    onSuccess: navigateBack,
-    onNoAuthParams: navigateHome,
-  });
+          if (upsertError) {
+            console.error('Failed to create user:', upsertError);
+          }
 
-  if (status === "error" && error) {
+          // Redirect to home
+          navigate('/');
+        } else {
+          setError('No session found');
+        }
+      } catch (err: any) {
+        console.error('Callback error:', err);
+        setError(err.message);
+      }
+    };
+
+    handleCallback();
+  }, [navigate]);
+
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-svh gap-6 px-4">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <p className="text-destructive font-medium">{errorTitle}</p>
-          <p className="text-sm text-muted-foreground max-w-md">
-            {error === "No matching state found in storage"
-              ? missingState
-              : error}
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={navigateHome}>
-            {returnHome}
-          </Button>
-          <Button onClick={retry}>{tryAgain}</Button>
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600">Authentication Error</h1>
+          <p className="mt-2">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-svh gap-4">
-      <Spinner className="size-8" aria-label={loading} />
-      <p className="text-sm text-muted-foreground">{loading}</p>
+    <div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">Signing you in...</h1>
+        <p className="mt-2">Please wait while we complete your sign in.</p>
+      </div>
     </div>
   );
 }

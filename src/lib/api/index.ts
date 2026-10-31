@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import * as billing from './billing/stripe';
+import * as billing from '../billing/stripe';
 import * as studies from './studies';
 import * as feed from './feed';
 
