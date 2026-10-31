@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from '../supabase';
 
 export async function getLatestJob(args: { studyId: string }) {

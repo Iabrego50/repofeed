@@ -25,8 +25,7 @@ export default function NewStudyPage() {
   const [title, setTitle] = useState("");
 
   const createMutation = useMutation({
-    mutationFn: (args: { workspaceId: string; title: string; audience: string }) =>
-      api.billing.actions.createStudy(args),
+    mutationFn: api.billing.actions.createStudy,
   });
 
   if (!current) return null;
@@ -58,7 +57,8 @@ export default function NewStudyPage() {
             });
             navigate(`/studies/${id}?step=sources`);
           } catch (err) {
-            toast.error(errorMessage(err, "Couldn't create the study"));
+            const msg = err instanceof Error ? err.message : "Couldn't create the study";
+            toast.error(msg);
           }
         }}
       >

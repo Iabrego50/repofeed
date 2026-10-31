@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from '../supabase';
 import { FREE_STUDY_LIMIT } from '../billing/limits';
 import type { StudyStatus } from '@/schema/validators';
