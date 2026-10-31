@@ -1,4 +1,3 @@
-import convexPlugin from "@convex-dev/eslint-plugin";
 import js from "@eslint/js";
 import herculesPlugin from "@usehercules/eslint-plugin";
 import reactHooks from "eslint-plugin-react-hooks";
