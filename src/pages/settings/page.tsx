@@ -1,22 +1,18 @@
-// @ts-nocheck
 import { useState } from "react";
-import { useAction, useMutation, useQuery } from '@/lib/convex-compat';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Link2, Trash2, UserMinus } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { Copy, Link2, Trash2, UserMinus, Loader2 } from "lucide-react";
 import type { Role } from "@/schema/validators.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
-import { Spinner } from "@/components/ui/spinner.tsx";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select.tsx";
 import PageHeader from "@/components/page-header.tsx";
 import UserAvatar from "@/components/user-avatar.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
-import { errorMessage } from "@/lib/errors.ts";
 import { SHAREABLE_ORIGIN } from "@/lib/site.ts";
 import EmailUpdates from "./_components/email-updates.tsx";
 
@@ -31,10 +27,22 @@ async function copy(text: string) {
   }
 }
 
-function Invites({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOwner: boolean }) {
-  const invites = useQuery(api.workspaces.listInvites, { workspaceId });
-  const create = useAction(api.billing.actions.createInvite);
-  const revoke = useMutation(api.workspaces.revokeInvite);
+function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
+  const { data: invites } = useQuery({
+    queryKey: ["workspaces", "invites", workspaceId],
+    queryFn: () => api.workspaces.listInvites({ workspaceId }),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (args: { workspaceId: string; role: Role; expiresInDays: number; maxUses: number }) =>
+      api.billing.actions.createInvite(args),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (args: { workspaceId: string; inviteId: string }) =>
+      api.workspaces.revokeInvite(args),
+  });
+
   const [role, setRole] = useState<"member" | "editor">("member");
   const [days, setDays] = useState("7");
   const [uses, setUses] = useState("10");
@@ -75,16 +83,16 @@ function Invites({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOw
           onClick={async () => {
             setBusy(true);
             try {
-              const token = await create({ workspaceId, role, expiresInDays: Number(days), maxUses: Number(uses) });
+              const token = await createMutation.mutateAsync({ workspaceId, role, expiresInDays: Number(days), maxUses: Number(uses) });
               await copy(inviteUrl(token));
-            } catch (err) {
-              toast.error(errorMessage(err, "Couldn't create the invite"));
+            } catch (err: any) {
+              toast.error(err.message || "Couldn't create the invite");
             } finally {
               setBusy(false);
             }
           }}
         >
-          {busy ? <Spinner /> : <Link2 className="size-4" />} Create link
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />} Create link
         </Button>
       </div>
       <ul className="mt-5 space-y-2">
@@ -93,7 +101,7 @@ function Invites({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOw
         ) : invites.length === 0 ? (
           <li className="text-sm text-muted-foreground">No active invite links.</li>
         ) : (
-          invites.map((inv) => (
+          invites.map((inv: any) => (
             <li key={inv._id} className="flex flex-col gap-2 rounded-xl border border-border p-3 sm:flex-row sm:items-center">
               <Input readOnly value={inviteUrl(inv.token)} className="h-10 min-w-0 flex-1 font-mono text-xs" aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
               <span className="font-mono text-xs text-muted-foreground">
@@ -103,7 +111,7 @@ function Invites({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOw
                 <Button variant="ghost" size="icon" className="size-11" aria-label="Copy invite link" onClick={() => void copy(inviteUrl(inv.token))}>
                   <Copy className="size-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="size-11" aria-label="Revoke invite link" onClick={() => void revoke({ inviteId: inv._id })}>
+                <Button variant="ghost" size="icon" className="size-11" aria-label="Revoke invite link" onClick={() => void revokeMutation.mutate({ workspaceId, inviteId: inv._id })}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>
@@ -115,18 +123,16 @@ function Invites({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOw
   );
 }
 
-function Members({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOwner: boolean }) {
-  const members = useQuery(api.workspaces.members, { workspaceId });
-  const setRole = useAction(api.billing.actions.setMemberRole);
-  const remove = useMutation(api.workspaces.removeMember);
+function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
+  const { data: members } = useQuery({
+    queryKey: ["workspaces", "members", workspaceId],
+    queryFn: () => api.workspaces.listMembers({ workspaceId }),
+  });
 
-  const act = async (fn: () => Promise<unknown>) => {
-    try {
-      await fn();
-    } catch (err) {
-      toast.error(errorMessage(err, "Couldn't update the member"));
-    }
-  };
+  const removeMutation = useMutation({
+    mutationFn: (args: { workspaceId: string; userId: string }) =>
+      api.workspaces.removeMember(args),
+  });
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
@@ -134,31 +140,23 @@ function Members({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOw
       <ul className="mt-4 divide-y divide-border">
         {members === undefined
           ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="my-2 h-12 w-full" />)
-          : members.map((m) => {
-              const isMe = m.isMe;
+          : members.map((m: any) => {
               return (
                 <li key={m._id} className="flex flex-wrap items-center gap-3 py-3">
                   <UserAvatar name={m.name} src={m.avatar} className="size-9" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{m.name}{isMe && <span className="text-muted-foreground"> (you)</span>}</p>
+                    <p className="truncate font-medium">{m.name}{m.isMe && <span className="text-muted-foreground"> (you)</span>}</p>
                     {m.email && <p className="truncate text-xs text-muted-foreground">{m.email}</p>}
                   </div>
-                  {isOwner ? (
-                    <NativeSelect
-                      aria-label={`Role for ${m.name}`}
-                      className="h-10"
-                      value={m.role}
-                      onChange={(e) => void act(() => setRole({ memberId: m._id, role: e.target.value as Role }))}
+                  <span className="font-mono text-xs uppercase text-muted-foreground">{m.role}</span>
+                  {(isOwner || m.isMe) && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="size-11" 
+                      aria-label={m.isMe ? "Leave workspace" : `Remove ${m.name}`} 
+                      onClick={() => removeMutation.mutate({ workspaceId, userId: m._id })}
                     >
-                      <NativeSelectOption value="owner">Owner</NativeSelectOption>
-                      <NativeSelectOption value="editor">Editor</NativeSelectOption>
-                      <NativeSelectOption value="member">Member</NativeSelectOption>
-                    </NativeSelect>
-                  ) : (
-                    <span className="font-mono text-xs uppercase text-muted-foreground">{m.role}</span>
-                  )}
-                  {(isOwner || isMe) && (
-                    <Button variant="ghost" size="icon" className="size-11" aria-label={isMe ? "Leave workspace" : `Remove ${m.name}`} onClick={() => void act(() => remove({ memberId: m._id }))}>
                       <UserMinus className="size-4" />
                     </Button>
                   )}
@@ -172,9 +170,15 @@ function Members({ workspaceId, isOwner }: { workspaceId: Id<"workspaces">; isOw
 
 export default function SettingsPage() {
   const { current, isEditor, isOwner } = useWorkspace();
-  const rename = useMutation(api.workspaces.rename);
+  const renameMutation = useMutation({
+    mutationFn: (args: { workspaceId: string; name: string }) =>
+      api.workspaces.rename(args),
+  });
+  
   const [name, setName] = useState<string | null>(null);
+  
   if (!current) return null;
+  
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-5 py-8 lg:py-12">
       <PageHeader eyebrow="Workspace" title={current.name} description={`You're ${current.role === "owner" ? "an owner" : current.role === "editor" ? "an editor" : "a member"} of this workspace.`} />
@@ -184,11 +188,11 @@ export default function SettingsPage() {
           onSubmit={async (e) => {
             e.preventDefault();
             try {
-              await rename({ workspaceId: current._id, name: name ?? current.name });
+              await renameMutation.mutateAsync({ workspaceId: current._id, name: name ?? current.name });
               toast.success("Workspace renamed");
               setName(null);
-            } catch (err) {
-              toast.error(errorMessage(err, "Couldn't rename"));
+            } catch (err: any) {
+              toast.error(err.message || "Couldn't rename");
             }
           }}
         >
