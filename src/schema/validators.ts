@@ -27,10 +27,11 @@ export interface Scene {
   kicker?: string;
   title?: string;
   items?: string[];
-  num?: string;
+  number?: string;  // For stat scenes
+  unit?: string;     // For stat scenes
   label?: string;
-  by?: string;
-  sub?: string; // For subtitle/secondary text
+  subtitle?: string; // For subtitle/secondary text
+  attribution?: string; // For quote scenes
 }
 
 export interface Chunk {

@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useConvex, useQuery } from '@/lib/convex-compat';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { BarChart3, Download, Presentation } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
@@ -24,10 +23,20 @@ const reelHref = (id: string) => `/?reel=${id}`;
 export default function InsightsPage() {
   const { current, isEditor } = useWorkspace();
   const [params, setParams] = useSearchParams();
-  const studyId = (params.get("study") as Id<"studies"> | null) ?? undefined;
-  const summary = useQuery(api.insights.summary, current && isEditor ? { workspaceId: current._id, studyId } : "skip");
-  const allStudies = useQuery(api.studies.list, current && isEditor ? { workspaceId: current._id } : "skip");
-  const convex = useConvex();
+  const studyId = params.get("study") ?? undefined;
+  
+  const { data: summary } = useQuery({
+    queryKey: ['insights', 'summary', current?._id, studyId],
+    queryFn: () => api.insights.summary({ workspaceId: current!._id, studyId }),
+    enabled: !!(current && isEditor),
+  });
+  
+  const { data: allStudies } = useQuery({
+    queryKey: ['studies', 'list', current?._id],
+    queryFn: () => api.studies.list({ workspaceId: current!._id }),
+    enabled: !!(current && isEditor),
+  });
+  
   const [exporting, setExporting] = useState<"reels" | "comments" | null>(null);
   const [audience, setAudience] = useState<Audience>("everyone");
   const [watching, setWatching] = useState<Row | null>(null);
@@ -50,7 +59,7 @@ export default function InsightsPage() {
   const exportComments = async () => {
     setExporting("comments");
     try {
-      const comments = await convex.query(api.insights.exportComments, { workspaceId: current._id, studyId });
+      const comments = await api.insights.exportComments({ workspaceId: current._id, studyId });
       const csv = toCsv(
         ["Study", "Scene", "Type", "Author", "Comment", "Resolved", "Reply", "Created (UTC)"],
         comments.map((c) => [c.study, c.reel, c.kind, c.author, c.body, c.kind === "note" ? "" : c.resolved ? "yes" : "no", c.isReply ? "yes" : "no", c.createdAt]),

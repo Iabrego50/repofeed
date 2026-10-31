@@ -2,6 +2,7 @@ import { supabase } from '../supabase';
 import * as billing from '../billing/stripe';
 import * as studies from './studies';
 import * as feed from './feed';
+import * as insights from './insights';
 
 // Billing API
 export const billingApi = {
@@ -183,10 +184,18 @@ export const usersApi = {
   },
 };
 
+// Insights API
+export const insightsApi = {
+  summary: insights.summary,
+  watchers: insights.watchers,
+  exportComments: insights.exportComments,
+};
+
 // Combined API object
 export const api = {
   studies: studiesApi,
   feed: feedApi,
   billing: billingApi,
   users: usersApi,
+  insights: insightsApi,
 };
