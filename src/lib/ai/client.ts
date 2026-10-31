@@ -129,7 +129,8 @@ export async function generateImage(prompt: string): Promise<Blob> {
       response_format: 'b64_json',
     });
 
-    const b64 = response.data[0].b64_json;
+    const firstImage = response.data?.[0];
+    const b64 = firstImage?.b64_json;
     if (!b64) {
       throw new StepError('The image service sent back no image.', {
         detail: 'missing b64_json',

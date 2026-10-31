@@ -75,18 +75,18 @@ export function finalizeScenes(
 export function sceneScript(scene: Scene): string {
   switch (scene.type) {
     case 'hook':
-      return stripStars(scene.text);
+      return stripStars(scene.text || '');
     case 'line':
       return stripStars(
-        `${scene.kicker ? `${scene.kicker}: ` : ''}${scene.text}`
+        `${'kicker' in scene && scene.kicker ? `${scene.kicker}: ` : ''}${scene.text || ''}`
       );
     case 'list':
-      return stripStars(`${scene.title}: ${scene.items.join('; ')}`);
+      return stripStars(`${scene.title || 'Key points'}: ${scene.items?.join('; ') || ''}`);
     case 'stat':
-      return stripStars(`${scene.num} ${scene.label}`);
+      return stripStars(`${scene.num || ''} ${scene.label || ''}`);
     case 'quote':
-      return `"${scene.text}" (${scene.by})`;
+      return `"${scene.text || ''}" (${scene.by || 'Participant'})`;
     case 'cta':
-      return `${stripStars(scene.text)} ${scene.sub}`;
+      return `${stripStars(scene.text || "That's the signal.")} ${scene.sub || ''}`;
   }
 }
