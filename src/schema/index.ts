@@ -1,9 +1,72 @@
-// Plan types
-export type Plan = 'free' | 'pro' | 'team';
+export type { StudyStatus, Role, InviteRole, Plan } from './validators';
+export type {
+  SceneStep,
+  SceneItem,
+  Scene,
+  JobStatus,
+  JobPhase,
+  JobContext,
+  CommentKind,
+  ReactionType,
+  DeckSlide,
+} from './validators';
 
-export function isPlan(value: string): value is Plan {
-  return ['free', 'pro', 'team'].includes(value);
+// Database types
+export interface Study {
+  id: string;
+  workspace_id: string;
+  created_by: string;
+  title: string;
+  description?: string;
+  status: 'draft' | 'generating' | 'review' | 'published' | 'archived';
+  is_demo: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-// Re-export all validators
-export * from './validators';
+export interface Workspace {
+  id: string;
+  name: string;
+  created_by: string;
+  customer_id?: string;
+  paid_plan?: 'pro' | 'team';
+  lapsed_plan?: 'pro' | 'team';
+  seat_variant?: string;
+  seats?: number;
+  seat_overage?: boolean;
+  billing_return_url?: string;
+  checkout_by?: string;
+  created_at: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: 'owner' | 'editor' | 'member';
+  created_at: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  token_identifier: string;
+  onboarded_at?: string;
+  trial_used_at?: string;
+  created_at: string;
+}
+
+export interface Reel {
+  id: string;
+  workspace_id: string;
+  study_id: string;
+  created_by: string;
+  title: string;
+  text: string;
+  scenes?: any[];
+  video_url?: string;
+  created_at: string;
+  updated_at: string;
+}

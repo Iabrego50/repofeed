@@ -1,7 +1,106 @@
-// Complete API module - all Convex functions reimplemented with Supabase
 import { supabase } from '../supabase';
+import * as billing from './billing/stripe';
 import * as studies from './studies';
 import * as feed from './feed';
+
+// Billing API
+export const billingApi = {
+  getPlan: async (args: { workspaceId: string }) => {
+    const { data } = await supabase
+      .from('workspaces')
+      .select('customer_id, paid_plan')
+      .eq('id', args.workspaceId)
+      .single();
+
+    if (!data) return { plan: 'free' };
+
+    if (data.customer_id) {
+      const plan = await billing.getPlanFromStripe(data.customer_id);
+      return { plan };
+    }
+
+    return { plan: (data.paid_plan as any) || 'free' };
+  },
+
+  checkout: async (args: {
+    workspaceId: string;
+    plan: 'pro' | 'team';
+    interval: 'month' | 'year';
+    successUrl: string;
+    cancelUrl: string;
+  }) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    return billing.createCheckoutSession({
+      ...args,
+      userId: user.id,
+    });
+  },
+
+  portal: async (args: { workspaceId: string; returnUrl: string }) => {
+    return billing.createPortalSession(args);
+  },
+
+  data: {
+    usage: async (args: { workspaceId: string }) => {
+      const { count: studiesCount } = await supabase
+        .from('studies')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', args.workspaceId)
+        .neq('status', 'archived');
+
+      const { count: editorsCount } = await supabase
+        .from('workspace_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', args.workspaceId)
+        .in('role', ['owner', 'editor']);
+
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('seats, seat_variant, lapsed_plan, seat_overage')
+        .eq('id', args.workspaceId)
+        .single();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userData } = user ? await supabase
+        .from('users')
+        .select('trial_used_at')
+        .eq('id', user.id)
+        .single() : { data: null };
+
+      return {
+        studies: studiesCount || 0,
+        editors: editorsCount || 0,
+        seats: workspace?.seats || null,
+        interval: null, // TODO: Parse from seat_variant
+        lapsedPlan: workspace?.lapsed_plan || null,
+        seatOverage: workspace?.seat_overage || false,
+        trialUsed: !!userData?.trial_used_at,
+      };
+    },
+
+    plan: async (args: { workspaceId: string }) => {
+      const { data } = await supabase
+        .from('workspaces')
+        .select('paid_plan, seat_variant, customer_id')
+        .eq('id', args.workspaceId)
+        .single();
+
+      let plan: any = 'free';
+      if (data?.customer_id) {
+        plan = await billing.getPlanFromStripe(data.customer_id);
+      } else if (data?.paid_plan) {
+        plan = data.paid_plan;
+      }
+
+      return {
+        plan,
+        variant: data?.seat_variant,
+      };
+    },
+  },
+};
 
 // Studies API
 export const studiesApi = {
@@ -35,55 +134,20 @@ export const feedApi = {
   },
 };
 
-// Billing API stubs
-export const billingApi = {
-  data: {
-    usage: async (args: { workspaceId: string }) => {
-      const { count } = await supabase
-        .from('studies')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', args.workspaceId)
-        .neq('status', 'archived');
-      
-      return { studies: count || 0 };
-    },
-    plan: async (args: { workspaceId: string }) => {
-      const { data } = await supabase
-        .from('workspaces')
-        .select('paid_plan, seat_variant')
-        .eq('id', args.workspaceId)
-        .single();
-      
-      return {
-        plan: (data as any)?.paid_plan || 'free',
-        variant: (data as any)?.seat_variant,
-      };
-    },
-  },
-  checkout: async (args: any) => {
-    console.warn('Billing checkout not implemented yet');
-    throw new Error('Billing system not configured');
-  },
-  portal: async (args: any) => {
-    console.warn('Billing portal not implemented yet');
-    throw new Error('Billing system not configured');
-  },
-};
-
 // Users API
 export const usersApi = {
   current: async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-    
+
     const { data } = await supabase
       .from('users')
       .select('*')
       .eq('id', user.id)
       .single();
-    
+
     if (!data) return null;
-    
+
     return {
       ...(data as any),
       _id: (data as any).id,
@@ -96,17 +160,17 @@ export const usersApi = {
   update: async (args: { name?: string; email?: string; onboardedAt?: string }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-    
+
     const updates: any = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.email !== undefined) updates.email = args.email;
     if (args.onboardedAt !== undefined) updates.onboarded_at = args.onboardedAt;
-    
+
     const { error } = await supabase
       .from('users')
       .update(updates as any)
       .eq('id', user.id);
-    
+
     if (error) throw error;
   },
 };

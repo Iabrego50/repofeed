@@ -1,65 +1,70 @@
 import { supabase } from '../supabase';
 
-export async function listReels(args: { workspaceId: string; studyId?: string }): Promise<any[]> {
+export async function listReels(args: { workspaceId: string; studyId?: string }) {
   let query = supabase
     .from('reels')
-    .select('*')
+    .select(`
+      *,
+      study:studies!reels_study_id_fkey(id, title, workspace_id),
+      reactions:reactions(id, type, user_id),
+      views:reel_views(id, user_id, viewed_at),
+      counters:reel_counters(reel_id, views_count, reactions_count, comments_count)
+    `)
     .eq('workspace_id', args.workspaceId)
-    .eq('enabled', true)
-    .order('position', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (args.studyId) {
     query = query.eq('study_id', args.studyId);
   }
 
   const { data, error } = await query;
+
   if (error) throw error;
-  
-  return (data || []).map((reel: any) => ({
-    ...reel,
-    _id: reel.id,
-    _creationTime: new Date(reel.created_at).getTime(),
-    studyId: reel.study_id,
-    workspaceId: reel.workspace_id,
-    findingIds: reel.finding_ids,
-    sourceNames: reel.source_names,
-    trackIndex: reel.track_index,
+
+  return (data || []).map((row: any) => ({
+    ...row,
+    _id: row.id,
+    _creationTime: new Date(row.created_at).getTime(),
+    workspaceId: row.workspace_id,
+    studyId: row.study_id,
+    createdBy: row.created_by,
+    updatedAt: row.updated_at,
   }));
 }
 
-export async function listSavedReels(args: { workspaceId: string; userId: string }): Promise<any[]> {
+export async function searchReels(args: { workspaceId: string; query: string }) {
   const { data, error } = await supabase
-    .from('saved_reels')
-    .select(`
-      reel_id,
-      reels (*)
-    `)
+    .from('reels')
+    .select('*')
     .eq('workspace_id', args.workspaceId)
-    .eq('user_id', args.userId);
+    .or(`title.ilike.%${args.query}%,text.ilike.%${args.query}%`)
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
-  
-  return (data || []).map((saved: any) => ({
-    ...saved.reels,
-    _id: saved.reels.id,
-    _creationTime: new Date(saved.reels.created_at).getTime(),
-    studyId: saved.reels.study_id,
-    workspaceId: saved.reels.workspace_id,
-    findingIds: saved.reels.finding_ids,
-    sourceNames: saved.reels.source_names,
-    trackIndex: saved.reels.track_index,
+
+  return (data || []).map((row: any) => ({
+    ...row,
+    _id: row.id,
+    _creationTime: new Date(row.created_at).getTime(),
+    workspaceId: row.workspace_id,
+    studyId: row.study_id,
   }));
 }
 
-export async function saveReel(args: { reelId: string; workspaceId: string; studyId: string; userId: string }) {
+export async function saveReel(args: {
+  reelId: string;
+  userId: string;
+  workspaceId: string;
+  studyId: string;
+}) {
   const { error } = await supabase
     .from('saved_reels')
-    .upsert({
+    .insert({
       reel_id: args.reelId,
+      user_id: args.userId,
       workspace_id: args.workspaceId,
       study_id: args.studyId,
-      user_id: args.userId,
-    } as any);
+    });
 
   if (error) throw error;
 }
@@ -74,29 +79,23 @@ export async function unsaveReel(args: { reelId: string; userId: string }) {
   if (error) throw error;
 }
 
-export async function searchReels(args: { workspaceId: string; query: string }): Promise<any[]> {
+export async function listSavedReels(args: { workspaceId: string; userId: string }) {
   const { data, error } = await supabase
-    .from('reels')
+    .from('saved_reels')
     .select(`
       *,
-      studies (id, title)
+      reel:reels!saved_reels_reel_id_fkey(*)
     `)
     .eq('workspace_id', args.workspaceId)
-    .eq('enabled', true)
-    .ilike('title', `%${args.query}%`)
-    .limit(20);
+    .eq('user_id', args.userId)
+    .order('saved_at', { ascending: false });
 
   if (error) throw error;
-  
-  return (data || []).map((reel: any) => ({
-    ...reel,
-    _id: reel.id,
-    _creationTime: new Date(reel.created_at).getTime(),
-    studyId: reel.study_id,
-    workspaceId: reel.workspace_id,
-    findingIds: reel.finding_ids,
-    sourceNames: reel.source_names,
-    trackIndex: reel.track_index,
-    studyTitle: reel.studies?.title,
+
+  return (data || []).map((row: any) => ({
+    ...row.reel,
+    _id: row.reel.id,
+    _creationTime: new Date(row.reel.created_at).getTime(),
+    savedAt: row.saved_at,
   }));
 }

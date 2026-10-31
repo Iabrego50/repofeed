@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { supabase } from './supabase';
+import { useAuth } from './auth';
 
 interface Workspace {
   _id: string; // Keep _id for compatibility
@@ -28,7 +28,7 @@ interface WorkspaceContextType {
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
-export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [current, setCurrent] = useState<Workspace | null>(null);

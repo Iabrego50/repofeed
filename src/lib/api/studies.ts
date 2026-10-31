@@ -1,70 +1,131 @@
 import { supabase } from '../supabase';
-import type { Database } from '../database.types';
+import type { Study, StudyStatus } from '@/schema';
 
-type Study = Database['public']['Tables']['studies']['Row'];
-type StudyInsert = Database['public']['Tables']['studies']['Insert'];
-
-export async function listStudies(workspaceId: string): Promise<any[]> {
+export async function listStudies(args: { workspaceId: string }) {
   const { data, error } = await supabase
     .from('studies')
     .select('*')
-    .eq('workspace_id', workspaceId)
+    .eq('workspace_id', args.workspaceId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+
+  return (data || []).map((row: any) => ({
+    ...row,
+    _id: row.id,
+    _creationTime: new Date(row.created_at).getTime(),
+    workspaceId: row.workspace_id,
+    createdBy: row.created_by,
+    updatedAt: row.updated_at,
+    status: row.status as StudyStatus,
+    isDemo: row.is_demo,
+  }));
 }
 
-export async function getStudy(id: string) {
+export async function getStudy(args: { studyId: string }) {
   const { data, error } = await supabase
     .from('studies')
     .select('*')
-    .eq('id', id)
+    .eq('id', args.studyId)
     .single();
 
   if (error) throw error;
-  return data;
+  if (!data) return null;
+
+  return {
+    ...data,
+    _id: data.id,
+    _creationTime: new Date(data.created_at).getTime(),
+    workspaceId: data.workspace_id,
+    createdBy: data.created_by,
+    updatedAt: data.updated_at,
+    status: data.status as StudyStatus,
+    isDemo: data.is_demo,
+  };
 }
 
-export async function createStudy(study: any) {
+export async function createStudy(args: {
+  workspaceId: string;
+  title: string;
+  description?: string;
+}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const { data, error } = await supabase
     .from('studies')
-    .insert(study as any)
+    .insert({
+      workspace_id: args.workspaceId,
+      created_by: user.id,
+      title: args.title,
+      description: args.description,
+      status: 'draft',
+      is_demo: false,
+    })
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+
+  return {
+    ...data,
+    _id: data.id,
+    _creationTime: new Date(data.created_at).getTime(),
+    workspaceId: data.workspace_id,
+    createdBy: data.created_by,
+  };
 }
 
-export async function updateStudy(id: string, updates: any) {
-  const { data, error} = await supabase
+export async function updateStudy(args: {
+  studyId: string;
+  title?: string;
+  description?: string;
+  status?: StudyStatus;
+}) {
+  const updates: any = {
+    updated_at: new Date().toISOString(),
+  };
+  if (args.title !== undefined) updates.title = args.title;
+  if (args.description !== undefined) updates.description = args.description;
+  if (args.status !== undefined) updates.status = args.status;
+
+  const { error } = await supabase
     .from('studies')
-    .update(updates as any)
-    .eq('id', id)
-    .select()
-    .single();
+    .update(updates)
+    .eq('id', args.studyId);
 
   if (error) throw error;
-  return data;
 }
 
-export async function deleteStudy(id: string) {
+export async function deleteStudy(args: { studyId: string }) {
   const { error } = await supabase
     .from('studies')
     .delete()
-    .eq('id', id);
+    .eq('id', args.studyId);
 
   if (error) throw error;
 }
 
-export async function publishStudy(id: string) {
-  return updateStudy(id, {
-    status: 'published',
-    published_at: new Date().toISOString(),
-  });
+export async function publishStudy(args: { studyId: string }) {
+  const { error } = await supabase
+    .from('studies')
+    .update({
+      status: 'published',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', args.studyId);
+
+  if (error) throw error;
 }
 
-export async function archiveStudy(id: string) {
-  return updateStudy(id, { status: 'archived' as any });
+export async function archiveStudy(args: { studyId: string }) {
+  const { error } = await supabase
+    .from('studies')
+    .update({
+      status: 'archived',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', args.studyId);
+
+  if (error) throw error;
 }
