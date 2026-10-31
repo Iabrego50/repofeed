@@ -170,6 +170,28 @@ export const api = {
       return { secret };
     },
   },
+  art: {
+    paintReel: async (args: { reelId: string }) => {
+      // Stub: Art painting will be implemented
+      console.log('Art painting not yet implemented for reel:', args.reelId);
+      return { status: 'pending' };
+    },
+    paintStudy: async (args: { studyId: string }) => {
+      // Stub: Art painting will be implemented
+      console.log('Art painting not yet implemented for study:', args.studyId);
+      return { status: 'pending' };
+    },
+  },
+  footage: {
+    listClips: async (args: { reelId: string }) => {
+      // Stub: Footage management will be implemented
+      return [];
+    },
+    selectClip: async (args: { reelId: string; clipId: string }) => {
+      // Stub: Footage selection will be implemented
+      return { success: true };
+    },
+  },
 };
 
 // Export types

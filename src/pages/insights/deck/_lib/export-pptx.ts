@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type PptxGenJS from "pptxgenjs";
 import { COLORS, KICKERS, deckFileName, headlineStats, kickerFor, pct, reactionData, topByCompletion, topByViews, truncate, type Deck, type DeckSlide } from "./deck.ts";
 

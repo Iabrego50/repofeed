@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Scene } from "@/schema/validators.ts";
 
 export type SearchableReel = {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useConvex, useQuery } from '@/lib/convex-compat';

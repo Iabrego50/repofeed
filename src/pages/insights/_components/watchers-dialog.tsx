@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery } from '@/lib/convex-compat';
 import { formatDistanceToNow } from "date-fns";
 import { Check, CircleQuestionMark, Users, Zap } from "lucide-react";

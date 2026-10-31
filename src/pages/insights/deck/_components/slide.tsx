@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ReactNode } from "react";
 import { Quote } from "lucide-react";
 import Logo from "@/components/logo.tsx";
