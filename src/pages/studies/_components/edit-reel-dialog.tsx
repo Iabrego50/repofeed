@@ -1,18 +1,14 @@
-// @ts-nocheck
 import { useState } from "react";
-import { useMutation } from '@/lib/convex-compat';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import type { Scene } from "@/schema/validators.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Label } from "@/components/ui/label.tsx";
-import { Spinner } from "@/components/ui/spinner.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog.tsx";
-import { errorMessage } from "@/lib/errors.ts";
 
 const TYPE_LABEL: Record<Scene["type"], string> = {
   hook: "Hook",
@@ -82,44 +78,60 @@ function SceneFields({ scene, onChange, id }: { scene: Scene; onChange: (s: Scen
       );
     case "stat":
       return (
-        <div className="grid gap-2 sm:grid-cols-[160px_1fr]">
+        <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
           <div className="space-y-2">
-            <Label htmlFor={`${id}-num`}>Number</Label>
-            <Input id={`${id}-num`} className="h-11 font-mono" value={scene.num} onChange={(e) => onChange({ ...scene, num: e.target.value })} />
+            <Label htmlFor={`${id}-number`}>Number</Label>
+            <Input id={`${id}-number`} className="h-11" value={scene.number} onChange={(e) => onChange({ ...scene, number: e.target.value })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${id}-label`}>Label</Label>
-            <Input id={`${id}-label`} className="h-11" value={scene.label} onChange={(e) => onChange({ ...scene, label: e.target.value })} />
+            <Label htmlFor={`${id}-unit`}>Unit</Label>
+            <Input id={`${id}-unit`} className="h-11" value={scene.unit} onChange={(e) => onChange({ ...scene, unit: e.target.value })} />
+          </div>
+          <div className="col-span-2 space-y-2">
+            <Label htmlFor={`${id}-subtitle`}>Subtitle</Label>
+            <Input id={`${id}-subtitle`} className="h-11" value={scene.subtitle ?? ""} onChange={(e) => onChange({ ...scene, subtitle: e.target.value || undefined })} />
           </div>
         </div>
       );
     case "quote":
       return (
         <div className="space-y-2">
-          <Label htmlFor={`${id}-text`}>Quote (must match the source word-for-word)</Label>
+          <Label htmlFor={`${id}-text`}>Quote</Label>
           <Textarea id={`${id}-text`} rows={3} value={scene.text} onChange={(e) => onChange({ ...scene, text: e.target.value })} />
-          <Label htmlFor={`${id}-by`}>Speaker role</Label>
-          <Input id={`${id}-by`} className="h-11" value={scene.by} onChange={(e) => onChange({ ...scene, by: e.target.value })} />
+          <Label htmlFor={`${id}-attribution`}>Attribution</Label>
+          <Input id={`${id}-attribution`} className="h-11" value={scene.attribution} onChange={(e) => onChange({ ...scene, attribution: e.target.value })} />
         </div>
       );
   }
 }
 
-export default function EditReelDialog({ reel, open, onOpenChange }: { reel: Doc<"reels">; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const update = useMutation(api.studies.updateReelScenes);
-  const [title, setTitle] = useState(reel.title);
+interface EditReelDialogProps {
+  reel: { _id: string; title: string; scenes: Scene[] };
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export default function EditReelDialog({ reel, open, onOpenChange }: EditReelDialogProps) {
+  const queryClient = useQueryClient();
   const [scenes, setScenes] = useState<Scene[]>(reel.scenes);
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
+  const updateMutation = useMutation({
+    mutationFn: () => api.studies.updateReelScenes({ reelId: reel._id, scenes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies", "reviewReels"] });
+      toast.success("Reel updated");
+      onOpenChange(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to update reel");
+    },
+  });
+
+  const handleSave = async () => {
     setSaving(true);
     try {
-      const { warning } = await update({ reelId: reel._id, title, scenes });
-      if (warning) toast.warning(`Saved, but flagged: ${warning}. The scene is now excluded.`);
-      else toast.success("Saved. Every quote and number checks out.");
-      onOpenChange(false);
-    } catch (err) {
-      toast.error(errorMessage(err, "Couldn't save the scene"));
+      await updateMutation.mutateAsync();
     } finally {
       setSaving(false);
     }
@@ -127,30 +139,54 @@ export default function EditReelDialog({ reel, open, onOpenChange }: { reel: Doc
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display">Edit scene</DialogTitle>
-          <DialogDescription>Saving re-checks every quote and number against your sources.</DialogDescription>
+          <DialogTitle>Edit {reel.title}</DialogTitle>
+          <DialogDescription>
+            Modify the scenes in this reel. Changes will update the video immediately.
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="reel-title">Title</Label>
-            <Input id="reel-title" className="h-11" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <p className="text-xs text-muted-foreground">Wrap a word in *asterisks* to highlight it in the accent color.</p>
-          {scenes.map((s, i) => (
-            <fieldset key={i} className="rounded-xl border border-border p-4">
-              <legend className="px-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                {i + 1} · {TYPE_LABEL[s.type]}
-              </legend>
-              <SceneFields id={`scene-${i}`} scene={s} onChange={(next) => setScenes((l) => l.map((x, j) => (j === i ? next : x)))} />
-            </fieldset>
+
+        <div className="space-y-6 py-4">
+          {scenes.map((scene, i) => (
+            <div key={i} className="space-y-3 rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Scene {i + 1} · {TYPE_LABEL[scene.type]}
+                </p>
+                {scenes.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setScenes(scenes.filter((_, j) => j !== i))}
+                  >
+                    <Trash2 className="size-4" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <SceneFields
+                scene={scene}
+                onChange={(updated) => setScenes(scenes.map((s, j) => (j === i ? updated : s)))}
+                id={`scene-${i}`}
+              />
+            </div>
           ))}
         </div>
+
         <DialogFooter>
-          <Button variant="ghost" className="h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="h-11 font-semibold" onClick={() => void save()} disabled={saving}>
-            {saving && <Spinner />} Save and verify
+          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save changes"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
