@@ -108,6 +108,68 @@ export const api = {
       };
     },
   },
+  share: {
+    feed: async (args: { token: string; secret?: string }) => {
+      const { data, error } = await supabase
+        .from('share_links')
+        .select('*, studies(id, title)')
+        .eq('token', args.token)
+        .eq('enabled', true)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      // Get reels for this study
+      const { data: reels } = await supabase
+        .from('reels')
+        .select('*')
+        .eq('study_id', data.study_id)
+        .eq('enabled', true);
+
+      // Get guest info if secret provided
+      let guest = null;
+      if (args.secret) {
+        const { data: guestData } = await supabase
+          .from('share_guests')
+          .select('*')
+          .eq('share_link_id', data.id)
+          .eq('secret', args.secret)
+          .maybeSingle();
+        guest = guestData;
+      }
+
+      return {
+        studyTitle: data.studies.title,
+        reels: reels || [],
+        guest,
+      };
+    },
+    join: async (args: { token: string; name: string }) => {
+      const { data: link } = await supabase
+        .from('share_links')
+        .select('id')
+        .eq('token', args.token)
+        .eq('enabled', true)
+        .maybeSingle();
+
+      if (!link) throw new Error('Invalid share link');
+
+      const secret = Math.random().toString(36).substring(2, 15);
+      const { data: guest, error } = await supabase
+        .from('share_guests')
+        .insert({
+          share_link_id: link.id,
+          name: args.name,
+          secret,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return { secret };
+    },
+  },
 };
 
 // Export types

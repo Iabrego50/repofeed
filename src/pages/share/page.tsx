@@ -1,13 +1,11 @@
-// @ts-nocheck
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useMutation, useQuery } from '@/lib/convex-compat';
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api/complete";
 import { Link2Off, UserRound, X } from "lucide-react";
-import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import Logo from "@/components/logo.tsx";
-import { errorMessage } from "@/lib/errors.ts";
 import ReelFeed from "../feed/_components/reel-feed.tsx";
 import { FeedModeContext, type FeedMode } from "../feed/_lib/feed-mode.ts";
 import NamePrompt from "./_components/name-prompt.tsx";
@@ -15,16 +13,23 @@ import NamePrompt from "./_components/name-prompt.tsx";
 const secretKey = (token: string) => `fieldreel.guest.${token}`;
 const welcomeKey = (token: string) => `fieldreel.shareWelcome.${token}`;
 
-/** Public, view-only feed for a share link. Viewers name themselves only when they interact. */
 export default function SharePage() {
   const { token = "" } = useParams();
   const [params] = useSearchParams();
   const [secret, setSecret] = useState<string | null>(() => localStorage.getItem(secretKey(token)));
-  const data = useQuery(api.share.feed, { token, secret: secret ?? undefined });
-  const join = useMutation(api.share.join);
+  
+  const { data } = useQuery({
+    queryKey: ["share", "feed", token, secret],
+    queryFn: () => api.share.feed({ token, secret: secret ?? undefined }),
+    enabled: !!token,
+  });
+
+  const joinMutation = useMutation({
+    mutationFn: (args: { token: string; name: string }) => api.share.join(args),
+  });
+
   const [prompting, setPrompting] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(() => !localStorage.getItem(welcomeKey(token)));
-  // Pending interactions wait on the name prompt and resume once it closes.
   const waiters = useRef<Array<(s: string | null) => void>>([]);
 
   const settle = (value: string | null) => {
@@ -34,7 +39,6 @@ export default function SharePage() {
     setPrompting(false);
   };
 
-  // A stored secret that no longer matches a guest (e.g. link reset) is dropped.
   const knownGuest = data?.guest ?? null;
   const validSecret = data === undefined ? secret : knownGuest ? secret : null;
 
@@ -127,12 +131,12 @@ export default function SharePage() {
         onCancel={() => settle(null)}
         onSubmit={async (name) => {
           try {
-            const res = await join({ token, name });
+            const res = await joinMutation.mutateAsync({ token, name });
             localStorage.setItem(secretKey(token), res.secret);
             setSecret(res.secret);
             settle(res.secret);
-          } catch (err) {
-            throw new Error(errorMessage(err, "Couldn't save your name"), { cause: err });
+          } catch (err: any) {
+            throw new Error(err.message || "Couldn't save your name", { cause: err });
           }
         }}
       />
