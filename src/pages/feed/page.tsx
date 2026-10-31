@@ -20,12 +20,32 @@ export default function FeedPage() {
   const { current, isEditor } = useWorkspace();
   const [params, setParams] = useSearchParams();
   const savedView = params.get("view") === "saved";
-  const studyFilter = savedView ? undefined : ((params.get("study") as Id<"studies"> | null) ?? undefined);
-  const studies = useQuery(api.studies.list, current ? { workspaceId: current._id } : "skip");
-  const feedReels = useQuery(api.feed.list, current && !savedView ? { workspaceId: current._id, studyId: studyFilter } : "skip");
-  const savedReels = useQuery(api.feed.saved, current && savedView ? { workspaceId: current._id } : "skip");
+  const studyFilter = savedView ? undefined : (params.get("study") ?? undefined);
+  
+  const { data: studies } = useQuery({
+    queryKey: ["studies", "list", current?._id],
+    queryFn: () => api.studies.list({ workspaceId: current!._id }),
+    enabled: !!current,
+  });
+  
+  const { data: feedReels } = useQuery({
+    queryKey: ["feed", "list", current?._id, studyFilter],
+    queryFn: () => api.feed.list({ workspaceId: current!._id, studyId: studyFilter }),
+    enabled: !!current && !savedView,
+  });
+  
+  const { data: savedReels } = useQuery({
+    queryKey: ["feed", "saved", current?._id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      return api.feed.saved({ workspaceId: current!._id, userId: user.id });
+    },
+    enabled: !!current && savedView,
+  });
+  
   const reels = savedView ? savedReels : feedReels;
-  const published = useMemo(() => studies?.filter((s) => s.status === "published") ?? [], [studies]);
+  const published = useMemo(() => studies?.filter((s: any) => s.status === "published") ?? [], [studies]);
   const [searchOpen, setSearchOpen] = useState(false);
   // Bumped on every search pick so choosing the same scene again still jumps to it.
   const [jumpKey, setJumpKey] = useState(0);
@@ -49,7 +69,7 @@ export default function FeedPage() {
   const chips: Array<{ key: string; label: string; active: boolean; onClick: () => void }> = [
     { key: "all", label: "All studies", active: !savedView && !studyFilter, onClick: () => setParams({}) },
     ...(published.length > 1
-      ? published.map((s) => ({ key: s._id, label: s.title, active: studyFilter === s._id, onClick: () => setParams({ study: s._id }) }))
+      ? published.map((s: any) => ({ key: s._id, label: s.title, active: studyFilter === s._id, onClick: () => setParams({ study: s._id }) }))
       : []),
   ];
 
