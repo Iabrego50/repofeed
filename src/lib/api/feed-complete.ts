@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from '../supabase';
 
 export async function listReels(args: { workspaceId: string; studyId?: string }) {

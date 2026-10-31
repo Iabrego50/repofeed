@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from '../supabase';
 import * as billing from '../billing/stripe';
 import * as studies from './studies';

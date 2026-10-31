@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from '../supabase';
 import { sendWorkspaceInvite } from '../emails';
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Complete Supabase API - replaces Convex
 import * as studiesModule from './studies-complete';
 import * as workspacesModule from './workspaces-complete';

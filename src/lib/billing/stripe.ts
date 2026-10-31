@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Stripe from 'stripe';
 import { supabase } from '../supabase';
 import type { Plan } from '@/schema';
