@@ -1,121 +1,90 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
-import { Authenticated, AuthLoading, Unauthenticated } from '@/lib/convex-compat';
-import { DefaultProviders } from "./components/providers/default.tsx";
-import AuthCallback from "./pages/auth/Callback.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import PublicEntry from "./pages/landing/public-entry.tsx";
-import AppLayout from "./components/app-layout.tsx";
-import Logo from "./components/logo.tsx";
-import { Spinner } from "./components/ui/spinner.tsx";
-import { useWorkspace } from "./hooks/use-workspace.ts";
-import { useServiceWorker } from "./hooks/use-service-worker.ts";
-import { hasStoredSession } from "./lib/stored-session.ts";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
+import Layout from "./layout.tsx";
+import LandingPage from "./pages/landing/page.tsx";
+import StudiesPage from "./pages/studies/page.tsx";
+import StudyDetailPage from "./pages/studies/detail/page.tsx";
+import NewStudyPage from "./pages/studies/new/page.tsx";
+import FeedPage from "./pages/feed/page.tsx";
+import InsightsPage from "./pages/insights/page.tsx";
+import InsightsDeckPage from "./pages/insights/deck/page.tsx";
+import BillingPage from "./pages/billing/page.tsx";
+import SettingsPage from "./pages/settings/page.tsx";
+import WelcomePage from "./pages/welcome/page.tsx";
+import InvitePage from "./pages/invite/page.tsx";
+import SharePage from "./pages/share/page.tsx";
+import PrivacyPage from "./pages/privacy.tsx";
+import TermsPage from "./pages/terms.tsx";
 
-// Each page downloads only when first visited, so the first load stays small.
-const Welcome = lazy(() => import("./pages/welcome/page.tsx"));
-const InvitePage = lazy(() => import("./pages/invite/page.tsx"));
-const SharePage = lazy(() => import("./pages/share/page.tsx"));
-const FeedPage = lazy(() => import("./pages/feed/page.tsx"));
-const StudiesPage = lazy(() => import("./pages/studies/page.tsx"));
-const NewStudyPage = lazy(() => import("./pages/studies/new/page.tsx"));
-const StudyPage = lazy(() => import("./pages/studies/detail/page.tsx"));
-const InsightsPage = lazy(() => import("./pages/insights/page.tsx"));
-const DeckPage = lazy(() => import("./pages/insights/deck/page.tsx"));
-const SettingsPage = lazy(() => import("./pages/settings/page.tsx"));
-const BillingPage = lazy(() => import("./pages/billing/page.tsx"));
-const HelpPage = lazy(() => import("./pages/help/page.tsx"));
-const TermsPage = lazy(() => import("./pages/legal/terms.tsx"));
-const PrivacyPage = lazy(() => import("./pages/legal/privacy.tsx"));
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-function PageLoader() {
-  return (
-    <div className="flex h-full min-h-40 items-center justify-center">
-      <Spinner className="size-6 text-primary" />
-    </div>
-  );
+function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
 }
 
-/** Inside the app shell, so the sidebar stays put while a page downloads. */
-function ShellOutlet() {
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <Outlet />
-    </Suspense>
-  );
-}
-
-function FullScreenLoader() {
-  return (
-    <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background">
-      <Logo />
-      <Spinner className="size-6 text-primary" />
-    </div>
-  );
-}
-
-/** Signed-in users with no workspace go to onboarding. */
-function RequireWorkspace() {
-  const { workspaces } = useWorkspace();
-  if (workspaces === undefined) return <FullScreenLoader />;
-  if (workspaces.length === 0) return <Navigate to="/welcome" replace />;
-  return <Outlet />;
-}
-
-function Gate() {
-  // Visitors with no saved sign-in see the homepage at once instead of a spinner.
-  const signedOutVisitor = !hasStoredSession();
-  return (
-    <>
-      <AuthLoading>
-        {signedOutVisitor ? <PublicEntry loader={<FullScreenLoader />} /> : <FullScreenLoader />}
-      </AuthLoading>
-      <Unauthenticated>
-        <PublicEntry loader={<FullScreenLoader />} />
-      </Unauthenticated>
-      <Authenticated>
-        <Outlet />
-      </Authenticated>
-    </>
-  );
+function UnauthenticatedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+  
+  if (user) {
+    return <Navigate to="/feed" replace />;
+  }
+  
+  return <>{children}</>;
 }
 
 export default function App() {
-  useServiceWorker();
   return (
-    <DefaultProviders>
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Suspense fallback={<FullScreenLoader />}>
         <Routes>
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/invite/:token" element={<InvitePage />} />
-          <Route path="/share/:slug" element={<SharePage />} />
-          <Route path="/s/:slug" element={<SharePage />} />
-          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/" element={<UnauthenticatedRoute><LandingPage /></UnauthenticatedRoute>} />
           <Route path="/privacy" element={<PrivacyPage />} />
-          <Route element={<Gate />}>
-            <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
-            <Route element={<RequireWorkspace />}>
-              <Route path="/insights/deck" element={<DeckPage />} />
-              <Route element={<AppLayout />}>
-                <Route element={<ShellOutlet />}>
-                  <Route path="/" element={<FeedPage />} />
-                  <Route path="/studies" element={<StudiesPage />} />
-                  <Route path="/studies/new" element={<NewStudyPage />} />
-                  <Route path="/studies/:studyId" element={<StudyPage />} />
-                  <Route path="/insights" element={<InsightsPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/billing" element={<BillingPage />} />
-                  <Route path="/help" element={<HelpPage />} />
-                </Route>
-              </Route>
-            </Route>
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/share/:token" element={<SharePage />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
+          <Route element={<AuthenticatedRoute><Layout /></AuthenticatedRoute>}>
+            <Route path="/welcome" element={<WelcomePage />} />
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/studies" element={<StudiesPage />} />
+            <Route path="/studies/new" element={<NewStudyPage />} />
+            <Route path="/studies/:id" element={<StudyDetailPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/insights/deck" element={<InsightsDeckPage />} />
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
         </Routes>
-        </Suspense>
       </BrowserRouter>
-    </DefaultProviders>
+    </QueryClientProvider>
   );
 }
