@@ -132,7 +132,7 @@ export async function summary({ workspaceId, studyId }: { workspaceId: string; s
     if (reelsError) throw reelsError;
     if (!reels || reels.length === 0) continue;
 
-    const reelIds = reels.map(r => r.id);
+    const reelIds = (reels as any[]).map((r: any) => r.id);
 
     // Get counters for all reels
     const { data: counters, error: countersError } = await supabase
@@ -158,18 +158,18 @@ export async function summary({ workspaceId, studyId }: { workspaceId: string; s
       .in('reel_id', reelIds);
     if (guestViewsError) throw guestViewsError;
 
-    const viewsData = views ?? [];
-    const guestViewsData = guestViews ?? [];
+    const viewsData = (views ?? []) as any[];
+    const guestViewsData = (guestViews ?? []) as any[];
     
-    const team = tallyByReel(viewsData.map(v => ({ reelId: v.reel_id, completed: v.completed })));
-    const guests = tallyByReel(guestViewsData.map(v => ({ reelId: v.reel_id, completed: v.completed })));
+    const team = tallyByReel(viewsData.map((v: any) => ({ reelId: v.reel_id, completed: v.completed })));
+    const guests = tallyByReel(guestViewsData.map((v: any) => ({ reelId: v.reel_id, completed: v.completed })));
 
     for (const vw of viewsData) reached.add(vw.user_id);
     for (const gv of guestViewsData) guestsSeen.add(gv.guest_id);
 
-    const byReel = new Map((counters ?? []).map(c => [c.reel_id, c]));
+    const byReel = new Map(((counters ?? []) as any[]).map((c: any) => [c.reel_id, c]));
 
-    for (const reel of reels) {
+    for (const reel of (reels as any[])) {
       const c = byReel.get(reel.id);
       const t = team.get(reel.id) ?? EMPTY_TALLY;
       const g = guests.get(reel.id) ?? EMPTY_TALLY;
@@ -249,7 +249,7 @@ export async function watchers({ reelId }: { reelId: string }): Promise<Watcher[
   if (guestViewsError) throw guestViewsError;
 
   const team: Watcher[] = [];
-  for (const vw of views ?? []) {
+  for (const vw of (views ?? []) as any[]) {
     const { data: user } = await supabase
       .from('users')
       .select('name, email')
@@ -268,13 +268,13 @@ export async function watchers({ reelId }: { reelId: string }): Promise<Watcher[
       name: user?.name ?? user?.email ?? 'Someone',
       isGuest: false,
       completed: vw.completed,
-      reaction: reaction?.kind ?? null,
+      reaction: (reaction as any)?.kind ?? null,
       lastViewedAt: vw.last_viewed_at,
     });
   }
 
   const guests: Watcher[] = [];
-  for (const gv of guestViews ?? []) {
+  for (const gv of (guestViews ?? []) as any[]) {
     const { data: guest } = await supabase
       .from('guests')
       .select('name')
@@ -293,7 +293,7 @@ export async function watchers({ reelId }: { reelId: string }): Promise<Watcher[
       name: guest?.name ?? 'Guest',
       isGuest: true,
       completed: gv.completed,
-      reaction: reaction?.kind ?? null,
+      reaction: (reaction as any)?.kind ?? null,
       lastViewedAt: gv.last_viewed_at,
     });
   }
@@ -321,7 +321,7 @@ export async function exportComments({ workspaceId, studyId }: { workspaceId: st
 
   const out: ExportedComment[] = [];
 
-  for (const study of studies) {
+  for (const study of (studies as any[])) {
     // Get reels for this study
     const { data: reels, error: reelsError } = await supabase
       .from('reels')
@@ -331,8 +331,8 @@ export async function exportComments({ workspaceId, studyId }: { workspaceId: st
     if (reelsError) throw reelsError;
     if (!reels) continue;
 
-    const titles = new Map(reels.map(r => [r.id, r.title]));
-    const reelIds = reels.map(r => r.id);
+    const titles = new Map((reels as any[]).map((r: any) => [r.id, r.title]));
+    const reelIds = (reels as any[]).map((r: any) => r.id);
 
     // Get comments for this study
     const { data: comments, error: commentsError } = await supabase
@@ -344,7 +344,7 @@ export async function exportComments({ workspaceId, studyId }: { workspaceId: st
     if (commentsError) throw commentsError;
     if (!comments) continue;
 
-    for (const c of comments) {
+    for (const c of (comments as any[])) {
       let author = 'Unknown';
       if (c.user_id) {
         const { data: user } = await supabase
