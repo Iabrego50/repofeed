@@ -24,6 +24,7 @@ export const api = {
   },
   workspaces: {
     list: workspacesModule.listWorkspaces,
+    mine: workspacesModule.listWorkspaces,
     create: workspacesModule.createWorkspace,
     rename: workspacesModule.renameWorkspace,
     members: workspacesModule.getMembers,
