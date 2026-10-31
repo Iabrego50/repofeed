@@ -1,8 +1,38 @@
-import type { Doc } from "@/convex/_generated/dataModel";
+// Deck types for Supabase
+export interface DeckSlide {
+  type: 'title' | 'summary' | 'finding' | 'figures' | 'voices' | 'reactions' | 'next_steps' | 'closing' | 'numbers' | 'reach' | 'completion' | 'spotlight';
+  [key: string]: any;
+}
 
-export type Deck = Doc<"decks">;
-export type DeckSlide = Deck["slides"][number];
-export type DeckReel = Deck["reels"][number];
+export interface DeckReel {
+  id: string;
+  title: string;
+  viewers: number;
+  [key: string]: any;
+}
+
+export interface DeckStats {
+  reached: number;
+  memberCount: number;
+  guestsReached: number;
+  completionRate: number;
+  openItems: number;
+  totalViews: number;
+  reactions: {
+    true: number;
+    surprised: number;
+    pushback: number;
+  };
+}
+
+export interface Deck {
+  id: string;
+  scopeLabel: string;
+  slides: DeckSlide[];
+  reels: DeckReel[];
+  stats: DeckStats;
+  [key: string]: any;
+}
 
 /** Slides are designed on a fixed canvas and scaled to fit, so charts and type stay in proportion. */
 export const SLIDE_W = 1280;

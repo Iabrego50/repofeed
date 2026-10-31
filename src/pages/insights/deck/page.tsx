@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useAction, useQuery } from '@/lib/convex-compat';
+import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Expand, Presentation, RotateCcw, Sparkles } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -22,9 +20,18 @@ import { useElementSize } from "./_lib/use-element-size.ts";
 export default function DeckPage() {
   const { current, isEditor } = useWorkspace();
   const [params] = useSearchParams();
-  const studyId = (params.get("study") as Id<"studies"> | null) ?? undefined;
-  const deck = useQuery(api.decks.latest, current && isEditor ? { workspaceId: current._id, studyId } : "skip");
-  const generate = useAction(api.decks.generate);
+  const studyId = params.get("study") ?? undefined;
+  
+  // Stub: Deck API not yet implemented
+  const { data: deck } = useQuery({
+    queryKey: ['decks', 'latest', current?._id, studyId],
+    queryFn: async (): Promise<Deck | null> => {
+      // Stub: Decks will be implemented
+      return null;
+    },
+    enabled: !!(current && isEditor),
+  });
+  
   const [busy, setBusy] = useState(false);
   const backTo = studyId ? `/insights?study=${studyId}` : "/insights";
 
@@ -32,8 +39,8 @@ export default function DeckPage() {
     if (!current) return;
     setBusy(true);
     try {
-      await generate({ workspaceId: current._id, studyId });
-      toast.success("Your deck is ready.");
+      // Stub: Deck generation will be implemented
+      toast.info("Deck generation not yet implemented");
     } catch (err) {
       toastError(err, "Couldn't create the deck. Try again.");
     } finally {

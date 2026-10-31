@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from '@/lib/convex-compat';
+import { useQuery } from '@tanstack/react-query';
 import { Bookmark, Clapperboard, Search } from "lucide-react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { api } from "@/lib/api/complete";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
