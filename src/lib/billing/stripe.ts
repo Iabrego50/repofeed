@@ -12,21 +12,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export async function getOrCreateCustomer(workspaceId: string): Promise<string> {
-  const { data: workspace, error } = await supabase
+  const { data, error } = await supabase
     .from('workspaces')
     .select('customer_id, name, created_by')
     .eq('id', workspaceId)
     .single();
 
+  const workspace = data as any;
   if (error || !workspace) throw new Error('Workspace not found');
   if (workspace.customer_id) return workspace.customer_id;
 
   // Get user email
-  const { data: user } = await supabase
+  const { data: userData } = await supabase
     .from('users')
     .select('email')
     .eq('id', workspace.created_by)
     .single();
+
+  const user = userData as any;
 
   // Create Stripe customer
   const customer = await stripe.customers.create({
@@ -40,7 +43,7 @@ export async function getOrCreateCustomer(workspaceId: string): Promise<string> 
   // Save customer ID
   await supabase
     .from('workspaces')
-    .update({ customer_id: customer.id })
+    .update({ customer_id: customer.id } as any)
     .eq('id', workspaceId);
 
   return customer.id;
@@ -75,11 +78,13 @@ export async function createCheckoutSession(args: {
   }
 
   // Check if user has used trial
-  const { data: user } = await supabase
+  const { data: userData } = await supabase
     .from('users')
     .select('trial_used_at')
     .eq('id', args.userId)
     .single();
+
+  const user = userData as any;
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -112,7 +117,7 @@ export async function createCheckoutSession(args: {
     .update({
       checkout_by: args.userId,
       billing_return_url: args.cancelUrl,
-    })
+    } as any)
     .eq('id', args.workspaceId);
 
   return { url: session.url };
@@ -155,12 +160,13 @@ export async function getPlanFromStripe(customerId: string): Promise<Plan> {
 }
 
 export async function syncPlanToDatabase(workspaceId: string, plan: Plan): Promise<void> {
-  const { data: workspace } = await supabase
+  const { data } = await supabase
     .from('workspaces')
     .select('paid_plan, lapsed_plan, checkout_by')
     .eq('id', workspaceId)
     .single();
 
+  const workspace = data as any;
   if (!workspace) return;
 
   const paid = plan === 'free' ? null : plan;
@@ -171,21 +177,22 @@ export async function syncPlanToDatabase(workspaceId: string, plan: Plan): Promi
 
   await supabase
     .from('workspaces')
-    .update(updates)
+    .update(updates as any)
     .eq('id', workspaceId);
 
   // Mark trial as used
   if (paid && workspace.checkout_by) {
-    const { data: user } = await supabase
+    const { data: userData } = await supabase
       .from('users')
       .select('trial_used_at')
       .eq('id', workspace.checkout_by)
       .single();
 
+    const user = userData as any;
     if (user && !user.trial_used_at) {
       await supabase
         .from('users')
-        .update({ trial_used_at: new Date().toISOString() })
+        .update({ trial_used_at: new Date().toISOString() } as any)
         .eq('id', workspace.checkout_by);
     }
   }

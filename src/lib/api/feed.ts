@@ -21,7 +21,7 @@ export async function listReels(args: { workspaceId: string; studyId?: string })
 
   if (error) throw error;
 
-  return (data || []).map((row: any) => ({
+  return ((data as any[]) || []).map((row) => ({
     ...row,
     _id: row.id,
     _creationTime: new Date(row.created_at).getTime(),
@@ -42,7 +42,7 @@ export async function searchReels(args: { workspaceId: string; query: string }) 
 
   if (error) throw error;
 
-  return (data || []).map((row: any) => ({
+  return ((data as any[]) || []).map((row) => ({
     ...row,
     _id: row.id,
     _creationTime: new Date(row.created_at).getTime(),
@@ -64,7 +64,7 @@ export async function saveReel(args: {
       user_id: args.userId,
       workspace_id: args.workspaceId,
       study_id: args.studyId,
-    });
+    } as any);
 
   if (error) throw error;
 }
@@ -92,7 +92,7 @@ export async function listSavedReels(args: { workspaceId: string; userId: string
 
   if (error) throw error;
 
-  return (data || []).map((row: any) => ({
+  return ((data as any[]) || []).map((row) => ({
     ...row.reel,
     _id: row.reel.id,
     _creationTime: new Date(row.reel.created_at).getTime(),

@@ -68,12 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('id', userId)
       .single();
 
-    if (data) {
+    const user = data as any;
+    if (user) {
       setProfile({
-        id: data.id,
-        email: data.email || '',
-        name: data.name || undefined,
-        avatar: data.avatar || undefined,
+        id: user.id,
+        email: user.email || '',
+        name: user.name || undefined,
+        avatar: user.avatar || undefined,
       });
     }
     setLoading(false);

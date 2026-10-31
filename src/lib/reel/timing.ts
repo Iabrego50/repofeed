@@ -19,11 +19,11 @@ export function sceneDuration(scene: Scene): number {
         4.4,
       );
     case "list":
-      return 1.3 + 0.6 * scene.items.length + 0.9;
+      return 1.3 + 0.6 * (scene.items?.length || 0) + 0.9;
     case "stat":
       return 3.2;
     case "quote":
-      return clamp(1.6 + 0.3 * wordCount(scene.text), 4, 10);
+      return clamp(1.6 + 0.3 * wordCount(scene.text || ''), 4, 10);
     case "cta":
       return 2.9;
   }

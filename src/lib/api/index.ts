@@ -12,14 +12,15 @@ export const billingApi = {
       .eq('id', args.workspaceId)
       .single();
 
-    if (!data) return { plan: 'free' };
+    const workspace = data as any;
+    if (!workspace) return { plan: 'free' };
 
-    if (data.customer_id) {
-      const plan = await billing.getPlanFromStripe(data.customer_id);
+    if (workspace.customer_id) {
+      const plan = await billing.getPlanFromStripe(workspace.customer_id);
       return { plan };
     }
 
-    return { plan: (data.paid_plan as any) || 'free' };
+    return { plan: workspace.paid_plan || 'free' };
   },
 
   checkout: async (args: {
@@ -56,11 +57,13 @@ export const billingApi = {
         .eq('workspace_id', args.workspaceId)
         .in('role', ['owner', 'editor']);
 
-      const { data: workspace } = await supabase
+      const { data: workspaceData } = await supabase
         .from('workspaces')
         .select('seats, seat_variant, lapsed_plan, seat_overage')
         .eq('id', args.workspaceId)
         .single();
+
+      const workspace = workspaceData as any;
 
       const { data: { user } } = await supabase.auth.getUser();
       const { data: userData } = user ? await supabase
@@ -69,6 +72,8 @@ export const billingApi = {
         .eq('id', user.id)
         .single() : { data: null };
 
+      const userInfo = userData as any;
+
       return {
         studies: studiesCount || 0,
         editors: editorsCount || 0,
@@ -76,7 +81,7 @@ export const billingApi = {
         interval: null, // TODO: Parse from seat_variant
         lapsedPlan: workspace?.lapsed_plan || null,
         seatOverage: workspace?.seat_overage || false,
-        trialUsed: !!userData?.trial_used_at,
+        trialUsed: !!userInfo?.trial_used_at,
       };
     },
 
@@ -87,16 +92,17 @@ export const billingApi = {
         .eq('id', args.workspaceId)
         .single();
 
+      const workspace = data as any;
       let plan: any = 'free';
-      if (data?.customer_id) {
-        plan = await billing.getPlanFromStripe(data.customer_id);
-      } else if (data?.paid_plan) {
-        plan = data.paid_plan;
+      if (workspace?.customer_id) {
+        plan = await billing.getPlanFromStripe(workspace.customer_id);
+      } else if (workspace?.paid_plan) {
+        plan = workspace.paid_plan;
       }
 
       return {
         plan,
-        variant: data?.seat_variant,
+        variant: workspace?.seat_variant,
       };
     },
   },
@@ -146,15 +152,16 @@ export const usersApi = {
       .eq('id', user.id)
       .single();
 
-    if (!data) return null;
+    const userInfo = data as any;
+    if (!userInfo) return null;
 
     return {
-      ...(data as any),
-      _id: (data as any).id,
-      _creationTime: new Date((data as any).created_at).getTime(),
-      tokenIdentifier: (data as any).token_identifier,
-      onboardedAt: (data as any).onboarded_at,
-      trialUsedAt: (data as any).trial_used_at,
+      ...userInfo,
+      _id: userInfo.id,
+      _creationTime: new Date(userInfo.created_at).getTime(),
+      tokenIdentifier: userInfo.token_identifier,
+      onboardedAt: userInfo.onboarded_at,
+      trialUsedAt: userInfo.trial_used_at,
     };
   },
   update: async (args: { name?: string; email?: string; onboardedAt?: string }) => {
@@ -168,7 +175,7 @@ export const usersApi = {
 
     const { error } = await supabase
       .from('users')
-      .update(updates as any)
+      .update(updates)
       .eq('id', user.id);
 
     if (error) throw error;

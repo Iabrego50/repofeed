@@ -1,5 +1,4 @@
 import { supabase } from '../supabase';
-import type { Study, StudyStatus } from '@/schema';
 
 export async function listStudies(args: { workspaceId: string }) {
   const { data, error } = await supabase
@@ -10,14 +9,14 @@ export async function listStudies(args: { workspaceId: string }) {
 
   if (error) throw error;
 
-  return (data || []).map((row: any) => ({
+  return ((data as any[]) || []).map((row) => ({
     ...row,
     _id: row.id,
     _creationTime: new Date(row.created_at).getTime(),
     workspaceId: row.workspace_id,
     createdBy: row.created_by,
     updatedAt: row.updated_at,
-    status: row.status as StudyStatus,
+    status: row.status,
     isDemo: row.is_demo,
   }));
 }
@@ -32,15 +31,16 @@ export async function getStudy(args: { studyId: string }) {
   if (error) throw error;
   if (!data) return null;
 
+  const row = data as any;
   return {
-    ...data,
-    _id: data.id,
-    _creationTime: new Date(data.created_at).getTime(),
-    workspaceId: data.workspace_id,
-    createdBy: data.created_by,
-    updatedAt: data.updated_at,
-    status: data.status as StudyStatus,
-    isDemo: data.is_demo,
+    ...row,
+    _id: row.id,
+    _creationTime: new Date(row.created_at).getTime(),
+    workspaceId: row.workspace_id,
+    createdBy: row.created_by,
+    updatedAt: row.updated_at,
+    status: row.status,
+    isDemo: row.is_demo,
   };
 }
 
@@ -61,18 +61,19 @@ export async function createStudy(args: {
       description: args.description,
       status: 'draft',
       is_demo: false,
-    })
+    } as any)
     .select()
     .single();
 
   if (error) throw error;
 
+  const row = data as any;
   return {
-    ...data,
-    _id: data.id,
-    _creationTime: new Date(data.created_at).getTime(),
-    workspaceId: data.workspace_id,
-    createdBy: data.created_by,
+    ...row,
+    _id: row.id,
+    _creationTime: new Date(row.created_at).getTime(),
+    workspaceId: row.workspace_id,
+    createdBy: row.created_by,
   };
 }
 
@@ -80,7 +81,7 @@ export async function updateStudy(args: {
   studyId: string;
   title?: string;
   description?: string;
-  status?: StudyStatus;
+  status?: string;
 }) {
   const updates: any = {
     updated_at: new Date().toISOString(),
@@ -91,7 +92,7 @@ export async function updateStudy(args: {
 
   const { error } = await supabase
     .from('studies')
-    .update(updates)
+    .update(updates as any)
     .eq('id', args.studyId);
 
   if (error) throw error;
@@ -112,7 +113,7 @@ export async function publishStudy(args: { studyId: string }) {
     .update({
       status: 'published',
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('id', args.studyId);
 
   if (error) throw error;
@@ -124,7 +125,7 @@ export async function archiveStudy(args: { studyId: string }) {
     .update({
       status: 'archived',
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('id', args.studyId);
 
   if (error) throw error;

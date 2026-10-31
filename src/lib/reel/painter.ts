@@ -420,17 +420,17 @@ export function reelScript(scenes: Scene[]): string {
     .map((s) => {
       switch (s.type) {
         case "hook":
-          return strip(s.text);
+          return strip(s.text || "");
         case "line":
-          return strip(s.kicker ? `${s.kicker}: ${s.text}` : s.text);
+          return strip(s.kicker ? `${s.kicker}: ${s.text || ""}` : s.text);
         case "list":
-          return `${strip(s.title)}: ${s.items.map(strip).join("; ")}.`;
+          return `${strip(s.title || "")}: ${(s.items || []).map(strip).join("; ")}.`;
         case "stat":
-          return `${s.num} ${strip(s.label)}.`;
+          return `${s.num || ""} ${strip(s.label || "")}.`;
         case "quote":
-          return `“${s.text}” — ${s.by}.`;
+          return `“${s.text || ""}” — ${s.by || "Unknown"}.`;
         case "cta":
-          return `${strip(s.text)} ${s.sub}`;
+          return `${strip(s.text || "")} ${s.sub || ""}`;
       }
     })
     .join(" ");
