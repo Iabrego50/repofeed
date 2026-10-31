@@ -16,9 +16,10 @@ export function useReelComments(reelId: string) {
     enabled: mode.kind === "member",
   });
   
+  // Stub for share comments
   const { data: sharedComments } = useQuery({
     queryKey: ['share', 'comments', mode.kind === 'share' ? mode.token : null, reelId],
-    queryFn: () => api.share.comments!({ token: mode.kind === 'share' ? mode.token : '', reelId, secret: mode.kind === 'share' ? mode.secret : undefined }),
+    queryFn: async () => [],
     enabled: mode.kind === "share",
   });
   
@@ -28,15 +29,16 @@ export function useReelComments(reelId: string) {
 export function useReelEvidence(reelId: string) {
   const mode = useFeedMode();
   
+  // Stub for evidence - will need to be implemented
   const { data: memberEvidence } = useQuery({
     queryKey: ['feed', 'evidence', reelId],
-    queryFn: () => api.feed.evidence!({ reelId }),
+    queryFn: async () => [],
     enabled: mode.kind === "member",
   });
   
   const { data: sharedEvidence } = useQuery({
     queryKey: ['share', 'evidence', mode.kind === 'share' ? mode.token : null, reelId],
-    queryFn: () => api.share.evidence!({ token: mode.kind === 'share' ? mode.token : '', reelId }),
+    queryFn: async () => [],
     enabled: mode.kind === "share",
   });
   
@@ -56,42 +58,25 @@ export function useFeedActions() {
 
   return {
     react: async (reelId: string, kind: ReactionType) => {
-      if (mode.kind === "member") {
-        // Member reaction - implement via API
-        console.log('Member reaction not yet implemented', reelId, kind);
-      } else {
-        // Guest reaction - implement via share API
-        const secret = await guestSecret();
-        console.log('Guest reaction not yet implemented', mode.token, secret, reelId, kind);
-      }
+      // Stub: reactions not yet implemented
+      console.log('Reaction not yet implemented', reelId, kind);
     },
     recordView: async (reelId: string, completed: boolean) => {
-      if (mode.kind === "member") {
-        // Member view - implement via API
-        console.log('Member view not yet implemented', reelId, completed);
-      } else {
-        // Guest view - implement via share API
-        console.log('Guest view not yet implemented', mode.token, reelId, completed);
-      }
+      // Stub: view tracking not yet implemented
+      console.log('View recording not yet implemented', reelId, completed);
     },
     addComment: async (args: { reelId: string; kind: CommentKind; body: string; parentId?: string }) => {
       if (mode.kind === "member") {
         await api.feed.addComment(args);
       } else {
+        // Stub: guest comments not yet implemented
         const secret = await guestSecret();
-        // Guest comment - implement via share API
         console.log('Guest comment not yet implemented', mode.token, secret, args);
       }
     },
     deleteComment: async (commentId: string) => {
-      if (mode.kind === "member") {
-        // Member delete - implement via API
-        console.log('Member delete comment not yet implemented', commentId);
-      } else {
-        const secret = await guestSecret();
-        // Guest delete - implement via share API
-        console.log('Guest delete comment not yet implemented', mode.token, secret, commentId);
-      }
+      // Stub: delete comment not yet implemented
+      console.log('Delete comment not yet implemented', commentId);
     },
   };
 }
