@@ -26,7 +26,7 @@ export default function SourcesStep({ studyId, study, sources, onNext }: Sources
   const [uploading, setUploading] = useState(false);
 
   const removeMutation = useMutation({
-    mutationFn: (sourceId: string) => api.studies.removeSource({ studyId, sourceId }),
+    mutationFn: (sourceId: string) => api.studies.removeSource({ sourceId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studies", "sources", studyId] });
       toast.success("Source removed");
