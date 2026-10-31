@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { lazy, Suspense } from "react";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery } from '@/lib/convex-compat';

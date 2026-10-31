@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
 import { SignInButton } from "@/components/ui/signin.tsx";
