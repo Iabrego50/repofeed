@@ -85,12 +85,12 @@ export function verifyScenes(
   source: SourceIndex,
 ): string | null {
   for (const scene of scenes) {
-    if (scene.type === "quote") {
+    if (scene.type === "quote" && scene.text) {
       const r = verifyQuote(scene.text, source);
       if (r === "close") return WARNINGS.quoteClose(scene.text);
       if (r === "missing") return WARNINGS.quoteMissing(scene.text);
     }
-    if (scene.type === "stat") {
+    if (scene.type === "stat" && scene.num) {
       const missing = verifyNumber(scene.num, source);
       if (missing) return WARNINGS.number(scene.num);
     }
