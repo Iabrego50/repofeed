@@ -140,9 +140,9 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
     );
   }
 
-  const flagged = reels.filter((r: Reel) => r.warning);
+  const flagged = reels.filter((r: any) => r.warning);
   const shown = onlyFlagged ? flagged : reels;
-  const enabled = reels.filter((r: Reel) => r.enabled);
+  const enabled = reels.filter((r: any) => r.enabled);
   const isPublished = study.status === "published";
 
   return (
@@ -176,8 +176,8 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
       {isPublished && <ShareLinkCard studyId={studyId} />}
 
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {shown.map((reel: Reel) => (
-          <ReelCard key={reel._id} reel={reel} studyTitle={study.title} onPreview={() => setPreview(reel)} />
+        {shown.map((reel: any) => (
+          <ReelCard key={reel.id} reel={reel} studyTitle={study.title} onPreview={() => setPreview(reel)} />
         ))}
       </ul>
 
