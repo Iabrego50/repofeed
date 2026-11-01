@@ -133,11 +133,8 @@ export default function FeedPage() {
     <>
     <FeedSearch
       workspaceId={current._id}
-      open={searchOpen}
-      onOpenChange={setSearchOpen}
-      onPick={(reel) => {
-        // Results come from the full feed, so jump there with the scene selected.
-        setParams({ reel: reel._id });
+      onSelectReel={(reelId: string) => {
+        setParams({ reel: reelId });
         setJumpKey((k) => k + 1);
       }}
     />
