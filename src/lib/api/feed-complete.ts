@@ -184,3 +184,85 @@ export async function addComment(args: {
   if (error) throw error;
   return data.id;
 }
+
+export async function deleteComment(args: { commentId: string }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: comment, error: commentError } = await supabase
+    .from('comments')
+    .select('reel_id, user_id')
+    .eq('id', args.commentId)
+    .single();
+
+  if (commentError || !comment) throw new Error('Comment not found');
+  if (comment.user_id !== user.id) throw new Error('Not authorized');
+
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', args.commentId);
+
+  if (error) throw error;
+}
+
+export async function react(args: { reelId: string; kind: string }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: reel, error: reelError } = await supabase
+    .from('reels')
+    .select('study_id, workspace_id')
+    .eq('id', args.reelId)
+    .single();
+
+  if (reelError || !reel) throw new Error('Reel not found');
+
+  const { data: existing } = await supabase
+    .from('reactions')
+    .select('id, kind')
+    .eq('reel_id', args.reelId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existing?.kind === args.kind) {
+    await supabase.from('reactions').delete().eq('id', existing.id);
+    return null;
+  }
+
+  if (existing) {
+    await supabase.from('reactions').update({ kind: args.kind }).eq('id', existing.id);
+  } else {
+    await supabase.from('reactions').insert({
+      reel_id: args.reelId,
+      study_id: reel.study_id,
+      user_id: user.id,
+      kind: args.kind,
+    });
+  }
+
+  return args.kind;
+}
+
+export async function getEvidence(args: { reelId: string }) {
+  const { data: reel, error } = await supabase
+    .from('reels')
+    .select('finding_ids')
+    .eq('id', args.reelId)
+    .single();
+
+  if (error || !reel || !reel.finding_ids) return [];
+
+  const findingIds = (Array.isArray(reel.finding_ids) 
+    ? reel.finding_ids 
+    : JSON.parse(reel.finding_ids as string)) as string[];
+  
+  if (findingIds.length === 0) return [];
+
+  const { data: findings } = await supabase
+    .from('findings')
+    .select('id, type, text, speaker, number, label')
+    .in('id', findingIds);
+
+  return findings || [];
+}
