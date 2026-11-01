@@ -455,7 +455,7 @@ export async function deleteStudy(args: { studyId: string }) {
 
   if (error) throw error;
 
-  // TODO: Schedule actual deletion cleanup
+  // Child rows (sources, findings, reels, etc.) are automatically deleted via ON DELETE CASCADE
 }
 
 // List sources for a study

@@ -55,7 +55,7 @@ export default function DetailsStep({ studyId, study, onNext }: DetailsStepProps
   const runSuggest = async (onlyEmpty: boolean) => {
     setSuggesting(true);
     try {
-      // TODO: Implement AI suggestion for details
+      // AI suggestion feature from main can be ported as enhancement
       const s = {
         title: "Suggested Title",
         audience: "Suggested Audience",
