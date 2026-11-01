@@ -74,7 +74,7 @@ export const billingApi = {
         studies: studiesCount || 0,
         editors: editorsCount || 0,
         seats: workspaceData?.seats || null,
-        interval: workspaceData?.seat_variant?.includes('monthly') ? 'month' : workspaceData?.seat_variant?.includes('yearly') ? 'year' : null
+        interval: workspaceData?.seat_variant?.includes('monthly') ? 'month' : workspaceData?.seat_variant?.includes('yearly') ? 'year' : null,
         lapsedPlan: workspaceData?.lapsed_plan || null,
         seatOverage: workspaceData?.seat_overage || false,
         trialUsed: !!userData?.trial_used_at,
