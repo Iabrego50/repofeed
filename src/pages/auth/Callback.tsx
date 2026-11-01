@@ -28,7 +28,7 @@ export default function Callback() {
               name: data.session.user.user_metadata?.name,
               avatar: data.session.user.user_metadata?.avatar_url,
               token_identifier: data.session.user.id,
-            } as any, {
+            }, {
               onConflict: 'id',
             });
 

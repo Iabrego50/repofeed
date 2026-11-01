@@ -18,33 +18,29 @@ export async function getOrCreateCustomer(workspaceId: string): Promise<string> 
     .eq('id', workspaceId)
     .single();
 
-  const workspace = data as any;
-  if (error || !workspace) throw new Error('Workspace not found');
-  if (workspace.customer_id) return workspace.customer_id;
+  if (error || !data) throw new Error('Workspace not found');
+  if (data.customer_id) return data.customer_id;
 
   // Get user email
   const { data: userData } = await supabase
     .from('users')
     .select('email')
-    .eq('id', workspace.created_by)
+    .eq('id', data.created_by)
     .single();
-
-  const user = userData as any;
 
   // Create Stripe customer
   const customer = await stripe.customers.create({
-    name: workspace.name,
-    email: user?.email || undefined,
+    name: data.name,
+    email: userData?.email || undefined,
     metadata: {
       workspace_id: workspaceId,
     },
   });
 
   // Save customer ID
-  // @ts-expect-error - Supabase update type
   await supabase
     .from('workspaces')
-    .update({ customer_id: customer.id } as any)
+    .update({ customer_id: customer.id })
     .eq('id', workspaceId);
 
   return customer.id;
@@ -85,8 +81,6 @@ export async function createCheckoutSession(args: {
     .eq('id', args.userId)
     .single();
 
-  const user = userData as any;
-
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
@@ -99,7 +93,7 @@ export async function createCheckoutSession(args: {
     success_url: args.successUrl,
     cancel_url: args.cancelUrl,
     subscription_data: {
-      trial_period_days: user?.trial_used_at ? 0 : TRIAL_DAYS,
+      trial_period_days: userData?.trial_used_at ? 0 : TRIAL_DAYS,
       metadata: {
         workspace_id: args.workspaceId,
         plan: args.plan,
@@ -113,13 +107,12 @@ export async function createCheckoutSession(args: {
   });
 
   // Record checkout attempt
-  // @ts-expect-error - Supabase update type
   await supabase
     .from('workspaces')
     .update({
       checkout_by: args.userId,
       billing_return_url: args.cancelUrl,
-    } as any)
+    })
     .eq('id', args.workspaceId);
 
   return { url: session.url };
@@ -168,36 +161,35 @@ export async function syncPlanToDatabase(workspaceId: string, plan: Plan): Promi
     .eq('id', workspaceId)
     .single();
 
-  const workspace = data as any;
-  if (!workspace) return;
+  if (!data) return;
 
   const paid = plan === 'free' ? null : plan;
-  const updates: any = {
+  const updates: {
+    paid_plan: string | null;
+    lapsed_plan: string | null;
+  } = {
     paid_plan: paid,
-    lapsed_plan: paid ? null : (workspace.paid_plan || workspace.lapsed_plan),
+    lapsed_plan: paid ? null : (data.paid_plan || data.lapsed_plan),
   };
 
-  // @ts-expect-error - Supabase update type
   await supabase
     .from('workspaces')
-    .update(updates as any)
+    .update(updates)
     .eq('id', workspaceId);
 
   // Mark trial as used
-  if (paid && workspace.checkout_by) {
+  if (paid && data.checkout_by) {
     const { data: userData } = await supabase
       .from('users')
       .select('trial_used_at')
-      .eq('id', workspace.checkout_by)
+      .eq('id', data.checkout_by)
       .single();
 
-    const user = userData as any;
-    if (user && !user.trial_used_at) {
-      // @ts-expect-error - Supabase update type
+    if (userData && !userData.trial_used_at) {
       await supabase
         .from('users')
-        .update({ trial_used_at: new Date().toISOString() } as any)
-        .eq('id', workspace.checkout_by);
+        .update({ trial_used_at: new Date().toISOString() })
+        .eq('id', data.checkout_by);
     }
   }
 }
