@@ -1,6 +1,8 @@
 import { supabase } from '../supabase';
+import { mapReel, mapComment, mapFinding, type FeedReel, type Comment, type Finding } from './mappers';
+import type { CommentKind } from '@/schema/validators';
 
-export async function listReels(args: { workspaceId: string; studyId?: string }) {
+export async function listReels(args: { workspaceId: string; studyId?: string }): Promise<FeedReel[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -34,10 +36,10 @@ export async function listReels(args: { workspaceId: string; studyId?: string })
   const { data, error } = await query;
   if (error) throw error;
 
-  return data || [];
+  return (data || []).map(mapReel);
 }
 
-export async function listSavedReels(args: { workspaceId: string; userId: string }) {
+export async function listSavedReels(args: { workspaceId: string; userId: string }): Promise<FeedReel[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || user.id !== args.userId) throw new Error('Not authorized');
 
@@ -58,7 +60,7 @@ export async function listSavedReels(args: { workspaceId: string; userId: string
     .select('*, studies!inner(title)')
     .in('id', reelIds);
 
-  return reels || [];
+  return (reels || []).map(mapReel);
 }
 
 export async function saveReel(args: { reelId: string; userId: string }) {
@@ -99,7 +101,7 @@ export async function unsaveReel(args: { reelId: string; userId: string }) {
   if (error) throw error;
 }
 
-export async function searchReels(args: { workspaceId: string; query: string }) {
+export async function searchReels(args: { workspaceId: string; query: string }): Promise<FeedReel[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -125,28 +127,28 @@ export async function searchReels(args: { workspaceId: string; query: string }) 
     .limit(50);
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(mapReel);
 }
 
-export async function getComments(args: { reelId: string }) {
+export async function getComments(args: { reelId: string }): Promise<Comment[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data } = await supabase
     .from('comments')
-    .select('*')
+    .select('*, users(name, email)')
     .eq('reel_id', args.reelId)
     .order('created_at', { ascending: true});
 
-  return data || [];
+  return (data || []).map(mapComment);
 }
 
 export async function addComment(args: {
   reelId: string;
-  kind: 'comment' | 'reply';
+  kind: CommentKind;
   body: string;
   parentId?: string;
-}) {
+}): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -177,6 +179,7 @@ export async function addComment(args: {
       body: args.body.trim(),
       parent_id: args.parentId || null,
       user_id: user.id,
+      resolved: false,
     })
     .select()
     .single();
@@ -206,7 +209,7 @@ export async function deleteComment(args: { commentId: string }) {
   if (error) throw error;
 }
 
-export async function react(args: { reelId: string; kind: string }) {
+export async function react(args: { reelId: string; kind: 'true' | 'surprised' | 'pushback' }): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -244,7 +247,7 @@ export async function react(args: { reelId: string; kind: string }) {
   return args.kind;
 }
 
-export async function getEvidence(args: { reelId: string }) {
+export async function getEvidence(args: { reelId: string }): Promise<Finding[]> {
   const { data: reel, error } = await supabase
     .from('reels')
     .select('finding_ids')
@@ -261,8 +264,8 @@ export async function getEvidence(args: { reelId: string }) {
 
   const { data: findings } = await supabase
     .from('findings')
-    .select('id, type, text, speaker, number, label')
+    .select('id, study_id, type, text, speaker, number, label, created_at')
     .in('id', findingIds);
 
-  return findings || [];
+  return (findings || []).map(mapFinding);
 }

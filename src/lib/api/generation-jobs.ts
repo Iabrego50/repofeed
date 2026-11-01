@@ -1,7 +1,8 @@
 import { supabase } from '../supabase';
 import { unwrapSingleOrNull } from '../supabase-helpers';
+import { mapJob, type Job } from './mappers';
 
-export async function getLatestJob(args: { studyId: string }) {
+export async function getLatestJob(args: { studyId: string }): Promise<Job | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -35,16 +36,7 @@ export async function getLatestJob(args: { studyId: string }) {
 
   if (!job) return null;
 
-  return {
-    _id: job.id,
-    status: job.status,
-    phase: job.phase,
-    cursor: job.cursor,
-    totalChunks: Array.isArray(job.chunks) ? job.chunks.length : 0,
-    log: Array.isArray(job.log) ? job.log : [],
-    error: job.error,
-    _creationTime: new Date(job.created_at).getTime(),
-  };
+  return mapJob(job);
 }
 
 export async function startGeneration(args: { studyId: string }) {
@@ -121,12 +113,12 @@ export async function cancelGeneration(args: { studyId: string }) {
     .from('generation_jobs')
     .select('id')
     .eq('study_id', args.studyId)
-    .in('status', ['pending', 'running']);
+    .in('status', ['queued', 'running']);
 
   if (jobs && jobs.length > 0) {
     await supabase
       .from('generation_jobs')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .in('id', jobs.map(j => j.id));
   }
 

@@ -1,7 +1,7 @@
 import { supabase } from '../supabase';
 import * as billing from '../billing/stripe';
 import * as studies from './studies';
-import * as feed from './feed';
+import * as feedApi from './feed-complete';
 import * as insights from './insights';
 
 // Billing API
@@ -115,24 +115,29 @@ export const studiesApi = {
 };
 
 // Feed API
-export const feedApi = {
-  list: feed.listReels,
+export const feed = {
+  list: feedApi.listReels,
   saved: async (args: { workspaceId: string }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
-    return feed.listSavedReels({ ...args, userId: user.id });
+    return feedApi.listSavedReels({ ...args, userId: user.id });
   },
-  search: feed.searchReels,
-  save: async (args: { reelId: string; workspaceId: string; studyId: string }) => {
+  search: feedApi.searchReels,
+  save: async (args: { reelId: string }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-    return feed.saveReel({ ...args, userId: user.id });
+    return feedApi.saveReel({ ...args, userId: user.id });
   },
   unsave: async (args: { reelId: string }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-    return feed.unsaveReel({ ...args, userId: user.id });
+    return feedApi.unsaveReel({ ...args, userId: user.id });
   },
+  react: feedApi.react,
+  getComments: feedApi.getComments,
+  addComment: feedApi.addComment,
+  deleteComment: feedApi.deleteComment,
+  getEvidence: feedApi.getEvidence,
 };
 
 // Users API
@@ -190,7 +195,7 @@ export const insightsApi = {
 // Combined API object
 export const api = {
   studies: studiesApi,
-  feed: feedApi,
+  feed: feed,
   billing: billingApi,
   users: usersApi,
   insights: insightsApi,
