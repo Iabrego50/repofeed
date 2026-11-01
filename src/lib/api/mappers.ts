@@ -123,6 +123,8 @@ export interface FeedReel {
     reactions?: number;
     comments?: number;
   };
+  reactions?: { heart: number };
+  commentCount?: number;
 }
 
 export interface Scene {

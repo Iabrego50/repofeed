@@ -55,7 +55,7 @@ export default function FeedSlide({ reel, onShowComments, onShowEvidence }: Feed
             footage: reel.footage,
           }}
           playing={playing}
-          onPlayingChange={setPlaying}
+          onEnded={() => setPlaying(false)}
           className="size-full"
         />
 

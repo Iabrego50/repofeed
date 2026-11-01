@@ -36,8 +36,8 @@ export default function ReelPanel({
               )}
             >
               {t}
-              {t === "discussion" && reel.counts.commentCount > 0 && (
-                <span className="ml-1.5 font-mono text-xs text-muted-foreground">{reel.counts.commentCount}</span>
+              {t === "discussion" && (reel.counts?.comments || reel.commentCount || 0) > 0 && (
+                <span className="ml-1.5 font-mono text-xs text-muted-foreground">{reel.counts?.comments || reel.commentCount || 0}</span>
               )}
             </button>
           ))}

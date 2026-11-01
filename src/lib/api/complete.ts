@@ -40,9 +40,29 @@ export const api = {
   },
   feed: {
     list: feedModule.listReels,
-    saved: feedModule.listSavedReels,
-    save: feedModule.saveReel,
-    unsave: feedModule.unsaveReel,
+    saved: async (args: { workspaceId: string; userId: string }) => {
+      return feedModule.listSavedReels(args);
+    },
+    save: async (args: { reelId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      // Get workspace_id and study_id from the reel
+      const { data: reel } = await supabase
+        .from('reels')
+        .select('workspace_id, study_id')
+        .eq('id', args.reelId)
+        .single();
+
+      if (!reel) throw new Error('Reel not found');
+
+      return feedModule.saveReel({ ...args, userId: user.id });
+    },
+    unsave: async (args: { reelId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      return feedModule.unsaveReel({ ...args, userId: user.id });
+    },
     search: feedModule.searchReels,
     getComments: feedModule.getComments,
     addComment: feedModule.addComment,
