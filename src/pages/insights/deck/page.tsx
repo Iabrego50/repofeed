@@ -23,12 +23,25 @@ export default function DeckPage() {
   const [params] = useSearchParams();
   const studyId = params.get("study") ?? undefined;
   
-  // Stub: Deck API not yet implemented
   const { data: deck } = useQuery({
     queryKey: ['decks', 'latest', current?._id, studyId],
     queryFn: async (): Promise<Deck | null> => {
-      // Stub: Decks will be implemented
-      return null;
+      if (!current?._id) return null;
+      
+      const { supabase } = await import('@/lib/supabase');
+      const query = supabase
+        .from('decks')
+        .select('*')
+        .eq('workspace_id', current._id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (studyId) {
+        query.eq('study_id', studyId);
+      }
+      
+      const { data } = await query.maybeSingle();
+      return data as Deck | null;
     },
     enabled: !!(current && isEditor),
   });
@@ -40,8 +53,18 @@ export default function DeckPage() {
     if (!current) return;
     setBusy(true);
     try {
-      // Stub: Deck generation will be implemented
-      toast.info("Deck generation not yet implemented");
+      const response = await fetch('/api/decks/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: current._id, studyId }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate deck');
+      }
+      
+      window.location.reload();
     } catch (err) {
       toast.error(getErrorMessage(err, "Couldn't create the deck. Try again."));
     } finally {
