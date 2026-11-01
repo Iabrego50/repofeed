@@ -315,6 +315,7 @@ export async function guestReact(args: { reelId: string; kind: 'true' | 'surpris
     .from('guest_reactions')
     .upsert({
       reel_id: args.reelId,
+      study_id: links.study_id,
       guest_id: guest.id,
       kind: args.kind,
     });
