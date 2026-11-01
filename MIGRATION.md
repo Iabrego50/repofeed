@@ -108,8 +108,9 @@ You have a Convex database export (`db-snapshot.zip`). Import it:
 export SUPABASE_URL=https://xxxxx.supabase.co
 export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Preview mapping (no writes)
+# Preview mapping (no writes). Accepts a zip or an already-extracted snapshot directory.
 node scripts/import-convex-data.mjs /path/to/db-snapshot.zip --dry-run
+node scripts/import-convex-data.mjs /path/to/extracted-snapshot --dry-run
 
 # Import (creates auth users, then upserts public tables)
 node scripts/import-convex-data.mjs /path/to/db-snapshot.zip
@@ -117,9 +118,13 @@ node scripts/import-convex-data.mjs /path/to/db-snapshot.zip
 
 This script:
 - Creates or reuses `auth.users` via `supabase.auth.admin.createUser` (find-by-email on reruns) and upserts `public.users` with that id
+- Dedupes Convex users that share an email (case-insensitive): one auth + `public.users` row, latest profile fields, every Convex user id mapped to that Supabase id
+- Drops rows that then collide on unique keys (`workspace_members`, `saved_reels`, `reactions`, …) and logs each collapse
 - Maps Convex camelCase folders (`workspaceMembers`, `shareLinks`, …) to snake_case tables
 - Derives deterministic UUIDs (v5) from Convex `_id` for non-user rows and upserts on `id`
-- Skips transient `rateLimits` and exits non-zero if an unmapped folder has records
+- Skips transient `rateLimits` and Convex system folders (`_tables`, `_storage`, any `_…`)
+- Reads zips that JSZip rejects (empty/lying central directory) and extracted directories
+- Exits non-zero if an unmapped folder has records
 - Preserves timestamps and remaps foreign keys, including JSON ids such as `reels.footage.storageId`
 
 **⚠️ Important:** File uploads stored in Convex's storage are NOT migrated. Users will need to re-upload files or you'll need to download and re-upload them manually to Supabase Storage.

@@ -8,13 +8,21 @@
  *   export SUPABASE_URL=https://xxxxx.supabase.co
  *   export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
  *   node scripts/import-convex-data.mjs /path/to/db-snapshot.zip
- *   node scripts/import-convex-data.mjs /path/to/db-snapshot.zip --dry-run
+ *   node scripts/import-convex-data.mjs /path/to/extracted-snapshot --dry-run
  */
 
 import { createClient } from "@supabase/supabase-js";
 import { createHash, randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve as resolvePath } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { inflateRawSync } from "node:zlib";
 import JSZip from "jszip";
+
+const execFileAsync = promisify(execFile);
 
 /** Fixed namespace so non-user rows get the same UUID on every rerun. */
 export const CONVEX_ID_NAMESPACE = "a1b2c3d4-e5f6-4789-a012-3456789abcde";
@@ -128,6 +136,25 @@ const INVITE_ROLE = {
   viewer: "member",
 };
 
+const MEMBER_ROLE_RANK = { owner: 3, editor: 2, member: 1 };
+
+/** Unique keys that collide after duplicate Convex users merge onto one auth id. */
+export const UNIQUE_KEYS = {
+  workspace_members: ["workspace_id", "user_id"],
+  workspace_removals: ["workspace_id", "user_id"],
+  email_prefs: ["workspace_id", "user_id"],
+  reactions: ["reel_id", "user_id", "kind"],
+  saved_reels: ["reel_id", "user_id"],
+  reel_views: ["reel_id", "user_id"],
+  guest_reactions: ["reel_id", "guest_id", "kind"],
+  guest_views: ["reel_id", "guest_id"],
+  reel_counters: ["reel_id"],
+  share_links: ["token"],
+  guests: ["secret"],
+  workspace_invites: ["token"],
+  users: ["id"],
+};
+
 export function uuidFromConvexId(convexId, namespace = CONVEX_ID_NAMESPACE) {
   const ns = Buffer.from(namespace.replace(/-/g, ""), "hex");
   const hash = createHash("sha1").update(ns).update(String(convexId)).digest();
@@ -160,16 +187,30 @@ function mapEnum(value, table, fallback) {
   return mapped ?? fallback ?? value;
 }
 
+export function folderFromDocumentsPath(name) {
+  const match = String(name)
+    .replace(/\\/g, "/")
+    .match(/(?:^|\/)([^/]+)\/documents\.jsonl$/);
+  return match ? match[1] : null;
+}
+
 export function parseSnapshotTables(zip) {
   /** @type {Map<string, object[]>} */
   const tables = new Map();
   for (const [name, file] of Object.entries(zip.files)) {
     if (file.dir) continue;
-    const match = name.match(/(?:^|\/)([^/]+)\/documents\.jsonl$/);
-    if (!match) continue;
-    tables.set(match[1], null);
+    const folder = folderFromDocumentsPath(name);
+    if (folder) tables.set(folder, null);
   }
   return tables;
+}
+
+function parseJsonl(text) {
+  const records = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    if (line.trim()) records.push(JSON.parse(line));
+  }
+  return records;
 }
 
 async function readJsonlFromZip(zip, folder) {
@@ -179,11 +220,155 @@ async function readJsonlFromZip(zip, folder) {
   });
   if (!file) return [];
   const text = await file.async("string");
-  const records = [];
-  for (const line of text.split(/\r?\n/)) {
-    if (line.trim()) records.push(JSON.parse(line));
+  return parseJsonl(text);
+}
+
+function collectZipFolderNames(zip) {
+  const folders = new Set();
+  for (const name of Object.keys(zip.files)) {
+    const top = String(name).replace(/\\/g, "/").split("/").filter(Boolean)[0];
+    if (top) folders.add(top);
   }
-  return records;
+  return folders;
+}
+
+function isCorruptZipError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /corrupted zip|central dir|end of central directory|invalid zip|can't find end of central/i.test(
+    message,
+  );
+}
+
+async function loadTablesFromJsZip(buffer) {
+  const zip = await JSZip.loadAsync(buffer);
+  const tables = new Map();
+  for (const folder of collectZipFolderNames(zip)) {
+    tables.set(folder, []);
+  }
+  for (const folder of parseSnapshotTables(zip).keys()) {
+    tables.set(folder, await readJsonlFromZip(zip, folder));
+  }
+  return tables;
+}
+
+async function loadTablesFromDirectory(dir) {
+  /** @type {Map<string, object[]>} */
+  const tables = new Map();
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const jsonlPath = join(dir, entry.name, "documents.jsonl");
+    try {
+      const text = await readFile(jsonlPath, "utf8");
+      tables.set(entry.name, parseJsonl(text));
+    } catch {
+      tables.set(entry.name, []);
+    }
+  }
+  return tables;
+}
+
+async function loadTablesFromUnzip(buffer) {
+  const work = await mkdtemp(join(tmpdir(), "convex-import-"));
+  const zipFile = join(work, "snapshot.zip");
+  const dest = join(work, "out");
+  await writeFile(zipFile, buffer);
+  try {
+    try {
+      await execFileAsync("unzip", ["-o", "-q", zipFile, "-d", dest]);
+    } catch {
+      await execFileAsync("unzip", ["-FF", "-o", "-q", zipFile, "-d", dest]);
+    }
+    return await loadTablesFromDirectory(dest);
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Walk ZIP local-file headers. Survives an empty / lying central directory
+ * (Convex exports have been seen with "expected 51 records in central dir, got 0").
+ */
+export function readZipLocalHeaders(buffer) {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  /** @type {Map<string, Buffer>} */
+  const files = new Map();
+  let offset = 0;
+  while (offset + 30 <= buf.length) {
+    if (buf.readUInt32LE(offset) !== 0x04034b50) break;
+    const method = buf.readUInt16LE(offset + 8);
+    const compressedSize = buf.readUInt32LE(offset + 18);
+    const filenameLen = buf.readUInt16LE(offset + 26);
+    const extraLen = buf.readUInt16LE(offset + 28);
+    const nameStart = offset + 30;
+    const nameEnd = nameStart + filenameLen;
+    const dataStart = nameEnd + extraLen;
+    const dataEnd = dataStart + compressedSize;
+    if (nameEnd > buf.length || dataEnd > buf.length) break;
+    const name = buf.subarray(nameStart, nameEnd).toString("utf8");
+    const compressed = buf.subarray(dataStart, dataEnd);
+    let data;
+    if (method === 0) data = Buffer.from(compressed);
+    else if (method === 8) data = inflateRawSync(compressed);
+    else throw new Error(`Unsupported zip compression method ${method} for ${name}`);
+    files.set(name, data);
+    offset = dataEnd;
+  }
+  return files;
+}
+
+function loadTablesFromLocalHeaders(buffer) {
+  const files = readZipLocalHeaders(buffer);
+  /** @type {Map<string, object[]>} */
+  const tables = new Map();
+  for (const [name, data] of files) {
+    const top = name.replace(/\\/g, "/").split("/").filter(Boolean)[0];
+    if (top && !tables.has(top)) tables.set(top, []);
+    const folder = folderFromDocumentsPath(name);
+    if (!folder) continue;
+    tables.set(folder, parseJsonl(data.toString("utf8")));
+  }
+  return tables;
+}
+
+export async function loadSnapshotTables(options) {
+  if (options.recordsByFolder) return options.recordsByFolder;
+  if (options.zip) {
+    const tables = new Map();
+    for (const folder of collectZipFolderNames(options.zip)) tables.set(folder, []);
+    for (const folder of parseSnapshotTables(options.zip).keys()) {
+      tables.set(folder, await readJsonlFromZip(options.zip, folder));
+    }
+    return tables;
+  }
+
+  const engine = options.zipEngine ?? "auto";
+  const snapshotPath = options.snapshotDir ?? options.zipPath ?? null;
+
+  if (snapshotPath) {
+    const info = await stat(snapshotPath).catch(() => null);
+    if (info?.isDirectory()) return loadTablesFromDirectory(snapshotPath);
+  }
+
+  let buffer = options.zipBuffer ? Buffer.from(options.zipBuffer) : null;
+  if (!buffer && snapshotPath) buffer = await readFile(snapshotPath);
+  if (!buffer) throw new Error("zipPath, zipBuffer, snapshotDir, or zip is required");
+
+  if (engine === "jszip") return loadTablesFromJsZip(buffer);
+  if (engine === "local") return loadTablesFromLocalHeaders(buffer);
+
+  try {
+    return await loadTablesFromJsZip(buffer);
+  } catch (error) {
+    if (!isCorruptZipError(error)) throw error;
+    try {
+      return await loadTablesFromUnzip(buffer);
+    } catch {
+      const tables = loadTablesFromLocalHeaders(buffer);
+      if (tables.size === 0) throw error;
+      return tables;
+    }
+  }
 }
 
 async function loadZip(options) {
@@ -223,13 +408,93 @@ function userEmail(record) {
   return `convex-${slug}@imported.local`;
 }
 
+export function emailKey(email) {
+  return String(email).trim().toLowerCase();
+}
+
+export function recordRecency(record) {
+  const candidates = [record.updatedAt, record.updated_at, record._creationTime, record.createdAt];
+  let best = 0;
+  for (const value of candidates) {
+    const n = typeof value === "number" ? value : Number(value);
+    if (Number.isFinite(n) && n > best) best = n;
+  }
+  return best;
+}
+
+/**
+ * One Convex profile per lowercased email. Winner is the most recently
+ * created/updated record; every Convex `_id` in the group is retained.
+ */
+export function dedupeUsersByEmail(records) {
+  /** @type {Map<string, { winner: object, convexIds: string[], records: object[] }>} */
+  const groups = new Map();
+  for (const record of records) {
+    const key = emailKey(userEmail(record));
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, { winner: record, convexIds: [String(record._id)], records: [record] });
+      continue;
+    }
+    existing.convexIds.push(String(record._id));
+    existing.records.push(record);
+    if (recordRecency(record) >= recordRecency(existing.winner)) {
+      existing.winner = record;
+    }
+  }
+  return [...groups.values()];
+}
+
+export function uniqueRowKey(table, row) {
+  const cols = UNIQUE_KEYS[table];
+  if (!cols) return null;
+  return cols.map((col) => String(row[col] ?? "")).join("\0");
+}
+
+function rowRecency(row) {
+  const ts = row.updated_at ?? row.created_at ?? row.last_viewed_at;
+  const n = ts ? Date.parse(String(ts)) : 0;
+  return Number.isFinite(n) ? n : 0;
+}
+
+function preferUniqueRow(table, current, incoming) {
+  if (table === "workspace_members") {
+    const currentRank = MEMBER_ROLE_RANK[current.role] ?? 0;
+    const incomingRank = MEMBER_ROLE_RANK[incoming.role] ?? 0;
+    if (incomingRank !== currentRank) return incomingRank > currentRank ? incoming : current;
+  }
+  return rowRecency(incoming) >= rowRecency(current) ? incoming : current;
+}
+
+export function dedupeUniqueConstraintRows(table, rows, log = defaultLog) {
+  const cols = UNIQUE_KEYS[table];
+  if (!cols || rows.length === 0) return rows;
+  /** @type {Map<string, object>} */
+  const kept = new Map();
+  let dropped = 0;
+  for (const row of rows) {
+    const key = uniqueRowKey(table, row);
+    if (!kept.has(key)) {
+      kept.set(key, row);
+      continue;
+    }
+    dropped += 1;
+    kept.set(key, preferUniqueRow(table, kept.get(key), row));
+  }
+  if (dropped > 0) {
+    log(`  ↷ ${table}: dropped ${dropped} duplicate row(s) on (${cols.join(", ")}) after user merge`);
+  }
+  return [...kept.values()];
+}
+
 async function findAuthUserByEmail(supabase, email) {
   if (!email || !supabase.auth?.admin) return null;
   if (typeof supabase.auth.admin.listUsers === "function") {
     const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (error) throw error;
     const users = data?.users ?? [];
-    return users.find((u) => u.email === email) ?? null;
+    const wanted = emailKey(email);
+    return users.find((u) => u.email && emailKey(u.email) === wanted) ?? null;
   }
   return null;
 }
@@ -253,11 +518,12 @@ async function ensureAuthUser(supabase, record, ids, log) {
     avatar_url: record.avatar ?? record.avatarUrl ?? null,
   };
 
-  const { data: existingPublic, error: publicError } = await supabase
-    .from("users")
-    .select("id, email")
-    .eq("email", email)
-    .maybeSingle();
+  const users = supabase.from("users").select("id, email");
+  const lookup =
+    typeof users.ilike === "function"
+      ? users.ilike("email", email)
+      : users.eq("email", email);
+  const { data: existingPublic, error: publicError } = await lookup.maybeSingle();
   if (publicError) throw new Error(`lookup public.users by email: ${publicError.message}`);
   if (existingPublic?.id) {
     ids.remember(record._id, existingPublic.id);
@@ -588,11 +854,17 @@ function transformRecord(folder, record, resolve) {
   }
 }
 
-function planSnapshot(folderNames, recordsByFolder, log) {
+export function planSnapshot(folderNames, recordsByFolder, log, options = {}) {
+  const ignoreUnderscoreFolders = options.ignoreUnderscoreFolders !== false;
   const unknown = [];
   const planned = [];
   for (const folder of folderNames) {
     const records = recordsByFolder.get(folder) ?? [];
+    if (ignoreUnderscoreFolders && folder.startsWith("_")) {
+      log(`  ↷ ${folder}: Convex system folder skipped`);
+      planned.push({ folder, table: null, count: records.length, skip: "convex system folder" });
+      continue;
+    }
     if (SKIP_TABLES[folder]) {
       log(`  ↷ ${folder}: ${records.length} record(s) skipped (${SKIP_TABLES[folder]})`);
       planned.push({ folder, table: null, count: records.length, skip: SKIP_TABLES[folder] });
@@ -621,26 +893,28 @@ function planSnapshot(folderNames, recordsByFolder, log) {
  *   zipPath?: string,
  *   zipBuffer?: Buffer | Uint8Array,
  *   zip?: import("jszip"),
+ *   snapshotDir?: string,
+ *   recordsByFolder?: Map<string, object[]>,
+ *   zipEngine?: "auto" | "jszip" | "local",
  *   supabase?: object,
  *   dryRun?: boolean,
  *   log?: (msg: string) => void,
+ *   dedupeUsers?: boolean,
+ *   dedupeUniqueKeys?: boolean,
+ *   ignoreUnderscoreFolders?: boolean,
  * }} options
  * @returns {Promise<ImportResult>}
  */
 export async function runImport(options) {
   const log = options.log ?? defaultLog;
   const dryRun = Boolean(options.dryRun);
-  const zip = await loadZip(options);
-  const folders = [...parseSnapshotTables(zip).keys()].sort();
-
-  /** @type {Map<string, object[]>} */
-  const recordsByFolder = new Map();
-  for (const folder of folders) {
-    recordsByFolder.set(folder, await readJsonlFromZip(zip, folder));
-  }
+  const recordsByFolder = await loadSnapshotTables(options);
+  const folders = [...recordsByFolder.keys()].sort();
 
   log(dryRun ? "🔍 Dry run — mapping snapshot tables\n" : "🚀 Importing Convex snapshot\n");
-  const planned = planSnapshot(folders, recordsByFolder, log);
+  const planned = planSnapshot(folders, recordsByFolder, log, {
+    ignoreUnderscoreFolders: options.ignoreUnderscoreFolders,
+  });
 
   const counts = {};
   for (const item of planned) {
@@ -658,6 +932,8 @@ export async function runImport(options) {
 
   const ids = createIdResolver();
   const supabase = options.supabase;
+  const dedupeUsers = options.dedupeUsers !== false;
+  const dedupeUniqueKeys = options.dedupeUniqueKeys !== false;
 
   for (const folder of IMPORT_ORDER) {
     if (!recordsByFolder.has(folder)) continue;
@@ -670,9 +946,14 @@ export async function runImport(options) {
     }
 
     if (folder === "users") {
+      const groups = dedupeUsers
+        ? dedupeUsersByEmail(records)
+        : records.map((record) => ({ winner: record, convexIds: [String(record._id)] }));
       const rows = [];
-      for (const record of records) {
+      for (const group of groups) {
+        const record = group.winner;
         const authId = await ensureAuthUser(supabase, record, ids, log);
+        for (const convexId of group.convexIds) ids.remember(convexId, authId);
         rows.push({
           id: authId,
           token_identifier: record.tokenIdentifier || record.token_identifier || `convex:${record._id}`,
@@ -682,11 +963,12 @@ export async function runImport(options) {
           onboarded_at: convertTimestamp(record.onboardedAt),
           trial_used_at: convertTimestamp(record.trialUsedAt),
           created_at: convertTimestampOrNow(record._creationTime),
-          updated_at: convertTimestampOrNow(record._creationTime),
+          updated_at: convertTimestampOrNow(record.updatedAt ?? record._creationTime),
         });
       }
-      await upsertRows(supabase, "users", rows);
-      log(`  ✓ users: upserted ${rows.length} (auth + public)`);
+      const uniqueRows = dedupeUniqueKeys ? dedupeUniqueConstraintRows("users", rows, log) : rows;
+      await upsertRows(supabase, "users", uniqueRows);
+      log(`  ✓ users: upserted ${uniqueRows.length} (auth + public) from ${records.length} Convex record(s)`);
       continue;
     }
 
@@ -696,6 +978,9 @@ export async function runImport(options) {
         ...transformed.filter((row) => !row.parent_id),
         ...transformed.filter((row) => row.parent_id),
       ];
+    }
+    if (dedupeUniqueKeys) {
+      transformed = dedupeUniqueConstraintRows(table, transformed, log);
     }
     await upsertRows(supabase, table, transformed);
     log(`  ✓ ${folder} → ${table}: upserted ${transformed.length}`);
@@ -745,16 +1030,40 @@ function parseArgs(argv) {
   };
 }
 
+/**
+ * True when this file is the process entrypoint. Compares `import.meta.url`
+ * to `pathToFileURL(process.argv[1])` so copies / renamed files still run.
+ * The previous `endsWith("import-convex-data.mjs")` check exited silently
+ * whenever the file was not literally named that.
+ */
+export function isLaunchedAsMain(metaUrl = import.meta.url, argv1 = process.argv[1]) {
+  if (!argv1) return false;
+  try {
+    return String(metaUrl) === pathToFileURL(resolvePath(argv1)).href;
+  } catch {
+    try {
+      return fileURLToPath(metaUrl) === resolvePath(argv1);
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** Old filename-only check. Exported so tests can prove it misses renamed entrypoints. */
+export function isLaunchedAsMainLegacy(argv1 = process.argv[1]) {
+  return Boolean(argv1?.endsWith("import-convex-data.mjs"));
+}
+
 export async function main(argv = process.argv) {
   const major = Number(process.versions.node.split(".")[0]);
   if (major < 22) {
-    console.error(`Error: Node 22+ is required (supabase-js needs WebSocket). Running ${process.version}.`);
+    console.error(`Error: Node 22+ is required (supabase-js uses WebSocket). Running ${process.version}.`);
     process.exitCode = 1;
     return;
   }
   const { dryRun, zipPath } = parseArgs(argv);
   if (!zipPath) {
-    console.error("Usage: node scripts/import-convex-data.mjs <path-to-db-snapshot.zip> [--dry-run]");
+    console.error("Usage: node scripts/import-convex-data.mjs <path-to-db-snapshot.zip|extracted-dir> [--dry-run]");
     process.exitCode = 1;
     return;
   }
@@ -776,8 +1085,7 @@ export async function main(argv = process.argv) {
   await runImport({ zipPath, supabase, dryRun });
 }
 
-const launchedDirectly = Boolean(process.argv[1]?.endsWith("import-convex-data.mjs"));
-if (launchedDirectly) {
+if (isLaunchedAsMain()) {
   main().catch((error) => {
     console.error("\n❌ Import failed:", error.message);
     process.exitCode = 1;
