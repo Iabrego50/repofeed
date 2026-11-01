@@ -496,6 +496,8 @@ export async function listSources(args: { studyId: string }) {
     kind: s.kind,
     storageId: s.storage_id,
     chars: s.chars,
+    size: s.chars,
+    uploadedAt: new Date(s.created_at).getTime(),
   }));
 }
 

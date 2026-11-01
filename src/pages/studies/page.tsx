@@ -12,6 +12,7 @@ import PermissionDenied from "@/components/permission-denied.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { usePlan } from "@/hooks/use-plan.ts";
 import { cn } from "@/lib/utils.ts";
+import type { StudyStatus } from "@/schema/validators.ts";
 import StatusBadge from "./_components/status-badge.tsx";
 import StudyActions from "./_components/study-actions.tsx";
 
@@ -20,7 +21,7 @@ interface Study {
   _creationTime: number;
   title: string;
   audience: string;
-  status: string;
+  status: StudyStatus;
   isDemo?: boolean;
 }
 

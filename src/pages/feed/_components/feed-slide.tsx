@@ -7,14 +7,18 @@ import { Button } from "@/components/ui/button.tsx";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import { cn } from "@/lib/utils.ts";
 import type { FeedReel } from "../_lib/types";
+import type { PanelTab } from "./reel-panel";
 
 interface FeedSlideProps {
   reel: FeedReel;
-  onShowComments: () => void;
-  onShowEvidence: () => void;
+  active: boolean;
+  isNew: boolean;
+  onEnded: () => void;
+  onOpenPanel: (tab: PanelTab) => void;
+  onExport: () => void;
 }
 
-export default function FeedSlide({ reel, onShowComments, onShowEvidence }: FeedSlideProps) {
+export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel, onExport }: FeedSlideProps) {
   const queryClient = useQueryClient();
   const [playing, setPlaying] = useState(false);
 
@@ -54,8 +58,11 @@ export default function FeedSlide({ reel, onShowComments, onShowEvidence }: Feed
             scenes: reel.scenes || [],
             footage: reel.footage,
           }}
-          playing={playing}
-          onEnded={() => setPlaying(false)}
+          playing={active && playing}
+          onEnded={() => {
+            setPlaying(false);
+            onEnded();
+          }}
           className="size-full"
         />
 
@@ -82,7 +89,7 @@ export default function FeedSlide({ reel, onShowComments, onShowEvidence }: Feed
             </button>
 
             <button
-              onClick={onShowComments}
+              onClick={() => onOpenPanel("discussion")}
               className="flex flex-col items-center gap-1 text-white"
             >
               <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
@@ -113,7 +120,7 @@ export default function FeedSlide({ reel, onShowComments, onShowEvidence }: Feed
             </button>
 
             <button
-              onClick={onShowEvidence}
+              onClick={() => onOpenPanel("evidence")}
               className="flex flex-col items-center gap-1 text-white"
             >
               <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">

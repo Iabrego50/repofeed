@@ -21,7 +21,7 @@ export type ReelData = {
   title: string;
   track: string;
   trackIndex: number;
-  studyTitle: string;
+  studyTitle?: string;
   scenes: Scene[];
   /** Optional backdrop drawn behind the text: a fieldwork clip, or an AI-painted still ("image"). */
   footage?: { url: string; caption: string; media?: "image" } | null;
@@ -293,7 +293,7 @@ export class ReelPainter {
     ctx.fillText(truncate(ctx, this.reel.track.toUpperCase(), 760), 156, 219);
     ctx.font = `500 30px ${FONT_UI}`;
     ctx.fillStyle = INK_MUTED;
-    ctx.fillText(truncate(ctx, `${this.reel.studyTitle} · repofeed.ai`, 860), 96, 272);
+    ctx.fillText(truncate(ctx, `${this.reel.studyTitle || ''} · repofeed.ai`, 860), 96, 272);
     ctx.textBaseline = "alphabetic";
   }
 

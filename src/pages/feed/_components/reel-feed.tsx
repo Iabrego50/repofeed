@@ -142,7 +142,14 @@ export default function ReelFeed({
                     isNew={showBadges && fresh.has(r._id) && !r.seen}
                     onEnded={() => scrollTo(i + 1)}
                     onOpenPanel={openPanel}
-                    onExport={() => setExporting(r)}
+                    onExport={() => setExporting({
+                      title: r.title,
+                      track: r.track,
+                      trackIndex: r.trackIndex,
+                      studyTitle: r.studyTitle,
+                      scenes: r.scenes || [],
+                      footage: r.footage,
+                    })}
                   />
                 ) : (
                   <div className="h-full w-full snap-start bg-black" aria-hidden />

@@ -53,7 +53,7 @@ function StudyBody({ studyId }: { studyId: string }) {
   
   const step = (params.get("step") as StepKey | null) ?? defaultStep(study.status);
   const go = (s: StepKey) => setParams({ step: s });
-  const hasReels = study.status === "review" || study.status === "published" || (study.tracks && study.tracks.length > 0);
+  const hasReels = study.status === "review" || study.status === "published" || (Array.isArray(study.tracks) && study.tracks.length > 0);
 
   return (
     <>

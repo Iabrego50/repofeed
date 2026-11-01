@@ -14,8 +14,10 @@ interface Reel {
     error?: string;
   };
   footage?: {
-    media: string;
-  };
+    url?: string;
+    caption?: string;
+    media?: string;
+  } | null;
 }
 
 export function ArtBadge({ reel }: { reel: Reel }) {

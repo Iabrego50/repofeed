@@ -17,19 +17,23 @@ import ShareLinkCard from "./share-link-card.tsx";
 import { ArtBadge, PaintReelButton, PaintStudyButton } from "./art-controls.tsx";
 import HelpHint from "@/components/help-hint.tsx";
 
-interface Reel {
+interface ReviewReel {
   _id: string;
   title: string;
   track: string;
   trackIndex: number;
   scenes: any[];
-  footage: any[];
+  footage?: { url: string; caption: string; media?: "image" } | null;
   sourceNames: string[];
   enabled: boolean;
   warning?: string;
+  art?: {
+    status: "pending" | "failed" | "completed";
+    error?: string;
+  };
 }
 
-function ReelCard({ reel, studyTitle, onPreview }: { reel: Reel; studyTitle: string; onPreview: () => void }) {
+function ReelCard({ reel, studyTitle, onPreview }: { reel: ReviewReel; studyTitle: string; onPreview: () => void }) {
   const queryClient = useQueryClient();
   const setEnabledMutation = useMutation({
     mutationFn: (enabled: boolean) => api.studies.setReelEnabled({ reelId: reel._id, enabled }),
@@ -128,7 +132,7 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
     },
   });
 
-  const [preview, setPreview] = useState<Reel | null>(null);
+  const [preview, setPreview] = useState<ReviewReel | null>(null);
   const [busy, setBusy] = useState(false);
   const [onlyFlagged, setOnlyFlagged] = useState(false);
 
