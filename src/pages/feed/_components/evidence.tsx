@@ -5,7 +5,7 @@ import type { FeedReel } from "../_lib/types.ts";
 import { useReelEvidence } from "../_lib/use-feed-data.ts";
 
 export default function Evidence({ reel }: { reel: FeedReel }) {
-  const findings = useReelEvidence(reel._id);
+  const findings = useReelEvidence(reel._id || reel.id || '');
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4">
       <section>
