@@ -12,7 +12,7 @@ export function useReelComments(reelId: string) {
   
   const { data: memberComments } = useQuery({
     queryKey: ['feed', 'comments', reelId],
-    queryFn: () => api.feed.comments({ reelId }),
+    queryFn: () => api.feed.getComments({ reelId }),
     enabled: mode.kind === "member",
   });
   
@@ -29,10 +29,9 @@ export function useReelComments(reelId: string) {
 export function useReelEvidence(reelId: string) {
   const mode = useFeedMode();
   
-  // Stub for evidence - will need to be implemented
   const { data: memberEvidence } = useQuery({
     queryKey: ['feed', 'evidence', reelId],
-    queryFn: async () => [],
+    queryFn: () => api.feed.getEvidence({ reelId }),
     enabled: mode.kind === "member",
   });
   

@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { CheckCircle2, CircleDot, CornerDownRight, Loader2, MessageSquare, Trash2 } from "lucide-react";
 import type { CommentKind } from "@/schema/validators.ts";
+import type { Comment } from "@/lib/api/mappers";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -12,28 +13,46 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import UserAvatar from "@/components/user-avatar.tsx";
 import { cn } from "@/lib/utils.ts";
 
-interface Comment {
-  _id: string;
-  _creationTime: number;
-  kind: CommentKind;
-  body: string;
-  author: {
-    name: string;
-    avatar?: string;
-  };
-  isMe?: boolean;
-  replies?: Comment[];
+type CommentWithReplies = Comment & { replies?: CommentWithReplies[] };
+
+function buildCommentTree(comments: Comment[]): CommentWithReplies[] {
+  const commentMap = new Map<string, CommentWithReplies>();
+  const roots: CommentWithReplies[] = [];
+
+  // Create map of all comments
+  comments.forEach(comment => {
+    commentMap.set(comment._id, { ...comment, replies: [] });
+  });
+
+  // Build tree
+  comments.forEach(comment => {
+    const node = commentMap.get(comment._id)!;
+    if (comment.parentId) {
+      const parent = commentMap.get(comment.parentId);
+      if (parent) {
+        parent.replies = parent.replies || [];
+        parent.replies.push(node);
+      } else {
+        roots.push(node);
+      }
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
 }
 
 const KINDS: Array<{ key: CommentKind; label: string; cls: string }> = [
-  { key: "comment", label: "Comment", cls: "bg-secondary text-foreground" },
-  { key: "reply", label: "Reply", cls: "bg-[#B98CFF]/15 text-[#B98CFF]" },
+  { key: "note", label: "Note", cls: "bg-secondary text-foreground" },
+  { key: "question", label: "Question", cls: "bg-[#B98CFF]/15 text-[#B98CFF]" },
+  { key: "action", label: "Action", cls: "bg-[#FF8C8C]/15 text-[#FF8C8C]" },
 ];
 const kindMeta = (k: CommentKind) => KINDS.find((x) => x.key === k) ?? KINDS[0];
 
 function Composer({ reelId, parentId, onDone, autoFocus }: { reelId: string; parentId?: string; onDone?: () => void; autoFocus?: boolean }) {
   const queryClient = useQueryClient();
-  const [kind, setKind] = useState<CommentKind>(parentId ? "reply" : "comment");
+  const [kind, setKind] = useState<CommentKind>(parentId ? "note" : "note");
   const [body, setBody] = useState("");
 
   const addMutation = useMutation({
@@ -99,7 +118,7 @@ function Composer({ reelId, parentId, onDone, autoFocus }: { reelId: string; par
   );
 }
 
-function CommentCard({ comment, reelId, level }: { comment: Comment; reelId: string; level: number }) {
+function CommentCard({ comment, reelId, level }: { comment: CommentWithReplies; reelId: string; level: number }) {
   const queryClient = useQueryClient();
   const [replying, setReplying] = useState(false);
 
@@ -110,6 +129,7 @@ function CommentCard({ comment, reelId, level }: { comment: Comment; reelId: str
   };
 
   const meta = kindMeta(comment.kind);
+  const safeLevel = Math.min(level, 3);
 
   return (
     <div className={cn("space-y-2", safeLevel > 0 && "ml-6 border-l-2 border-border pl-3")}>
@@ -117,7 +137,7 @@ function CommentCard({ comment, reelId, level }: { comment: Comment; reelId: str
         <UserAvatar name={comment.author?.name || 'User'} src={comment.author?.avatar} className="size-8 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium">{comment.author.name}</p>
+            <p className="truncate text-sm font-medium">{comment.author?.name || 'User'}</p>
             <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}>
               {meta.label}
             </span>
@@ -131,21 +151,19 @@ function CommentCard({ comment, reelId, level }: { comment: Comment; reelId: str
               <CornerDownRight className="size-3" />
               Reply
             </Button>
-            {comment.isMe && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => deleteMutation.mutate()}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? (
-                  <Loader2 className="size-3 animate-spin" />
-                ) : (
-                  <Trash2 className="size-3" />
-                )}
-                Delete
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Trash2 className="size-3" />
+              )}
+              Delete
+            </Button>
           </div>
         </div>
       </div>
@@ -174,7 +192,7 @@ interface DiscussionProps {
 export default function Discussion({ reelId }: DiscussionProps) {
   const { data: comments, isLoading } = useQuery({
     queryKey: ["feed", "comments", reelId],
-    queryFn: () => api.feed.comments({ reelId }),
+    queryFn: () => api.feed.getComments({ reelId }),
   });
 
   if (isLoading) {
@@ -187,7 +205,7 @@ export default function Discussion({ reelId }: DiscussionProps) {
     );
   }
 
-  const topLevel = comments?.filter((c: Comment) => !c.replies) || [];
+  const topLevel = comments ? buildCommentTree(comments) : [];
 
   return (
     <div className="space-y-6 p-4">
@@ -203,7 +221,7 @@ export default function Discussion({ reelId }: DiscussionProps) {
         </Empty>
       ) : (
         <div className="space-y-4">
-          {topLevel.map((comment: Comment) => (
+          {topLevel.map((comment) => (
             <CommentCard key={comment._id} comment={comment} reelId={reelId} level={0} />
           ))}
         </div>
