@@ -40,10 +40,10 @@ export function getOpenAIClient(): OpenAI {
   return openaiClient;
 }
 
-// Model constants - matching original Hercules gateway models
+// Model constants - using direct Anthropic and OpenAI SDKs
 // Configure via env vars to allow swapping for self-hosted
 export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20241022';
-export const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'dall-e-3'; // OpenAI's closest to gpt-image-2.5-flare
+export const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'dall-e-3';
 
 export const CHUNK_CHARS = 70_000;
 export const MAX_COMPOSE_FINDINGS = 180;

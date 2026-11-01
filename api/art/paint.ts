@@ -33,11 +33,16 @@ const artSchema = z.object({
   caption: z.string().default(""),
 });
 
-const IMAGE_MODEL = "openai/gpt-image-2.5-flare";
-const IMAGE_URL = "https://ai-gateway.hercules.app/v1/images/generations";
-const IMAGE_TIMEOUT_MS = 3 * 60_000;
-const AI_TIMEOUT_MS = 6 * 60_000;
-const GATEWAY_URL = "https://ai-gateway.hercules.app/v1/chat/completions";
+import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 interface Scene {
   type: string;
@@ -75,64 +80,41 @@ async function callTool<T>(args: {
   schema: z.ZodType<T>;
   maxTokens: number;
 }): Promise<T> {
-  const apiKey = process.env.HERCULES_API_KEY;
-  if (!apiKey) {
-    throw new Error("AI isn't set up for this app yet. HERCULES_API_KEY is missing");
-  }
-
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: "anthropic/claude-sonnet-5-5",
-      messages: [
-        { role: "system", content: args.system },
-        { role: "user", content: args.user },
-      ],
-      tools: [args.tool],
-      tool_choice: { type: "tool", name: args.tool.name },
-      max_tokens: args.maxTokens,
-    }),
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-5-5',
+    max_tokens: args.maxTokens,
+    system: args.system,
+    messages: [{ role: 'user', content: args.user }],
+    tools: [
+      {
+        name: args.tool.name,
+        description: args.tool.description,
+        input_schema: args.tool.parameters,
+      },
+    ],
+    tool_choice: { type: 'tool', name: args.tool.name },
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`AI call failed: ${res.status} ${text}`);
+  const toolUse = response.content.find((block) => block.type === 'tool_use');
+  if (!toolUse || toolUse.type !== 'tool_use') {
+    throw new Error('No tool call in AI response');
   }
 
-  const data = await res.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) {
-    throw new Error("No tool call in AI response");
-  }
-
-  const parsed = JSON.parse(toolCall.function.arguments);
-  return args.schema.parse(parsed);
+  return args.schema.parse(toolUse.input);
 }
 
 async function generateImage(prompt: string): Promise<Buffer> {
-  const apiKey = process.env.HERCULES_API_KEY;
-  if (!apiKey) {
-    throw new Error("AI isn't set up for this app yet. HERCULES_API_KEY is missing");
-  }
-
-  const res = await fetch(IMAGE_URL, {
-    method: "POST",
-    signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: IMAGE_MODEL, prompt, size: "1024x1536", quality: "medium", n: 1 }),
+  const response = await openai.images.generate({
+    model: 'gpt-image-2.5-flare',
+    prompt,
+    size: '1024x1536',
+    quality: 'standard',
+    n: 1,
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Image generation failed: ${res.status} ${text}`);
-  }
-
-  const data = await res.json();
-  const imageUrl = data.data?.[0]?.url;
+  const imageUrl = response.data[0]?.url;
   if (!imageUrl) {
-    throw new Error("No image URL in response");
+    throw new Error('No image URL in response');
   }
 
   const imageRes = await fetch(imageUrl);
