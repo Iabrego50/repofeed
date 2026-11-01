@@ -65,7 +65,8 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
   const { data: job } = useQuery({
     queryKey: ["generation", "jobs", "latest", studyId],
     queryFn: () => api.generation.jobs.latestForStudy({ studyId }),
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
+      const data = query.state.data;
       if (!data) return false;
       return data.status === "running" ? 2000 : false;
     },
@@ -106,7 +107,7 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
   };
 
   const isRunning = job?.status === "running";
-  const isDone = job?.status === "completed";
+  const isDone = job?.status === "done";
   const isFailed = job?.status === "failed";
 
   return (
@@ -147,7 +148,8 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
                     : PHASES.findIndex((p) => p.key === job.phase) > i
                       ? "done"
                       : "waiting";
-              return <StepCard key={phase.key} index={i} label={phase.label} hint={phase.hint} state={state} progress={job.progress} />;
+              const progress = job.totalChunks > 0 ? Math.round((job.cursor / job.totalChunks) * 100) : 0;
+              return <StepCard key={phase.key} index={i} label={phase.label} hint={phase.hint} state={state} progress={progress} />;
             })}
           </ul>
         )}
