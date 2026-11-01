@@ -240,14 +240,41 @@ export const api = {
   },
   art: {
     paintReel: async (args: { reelId: string }) => {
-      // Stub: Art painting will be implemented
-      console.log('Art painting not yet implemented for reel:', args.reelId);
-      return { status: 'pending' };
+      const response = await fetch('/api/art/paint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reelId: args.reelId }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Art painting failed' }));
+        throw new Error(error.error || 'Art painting failed');
+      }
+      
+      return await response.json();
     },
     paintStudy: async (args: { studyId: string }) => {
-      // Stub: Art painting will be implemented
-      console.log('Art painting not yet implemented for study:', args.studyId);
-      return { status: 'pending' };
+      const { data: reels, error } = await supabase
+        .from('reels')
+        .select('id')
+        .eq('study_id', args.studyId)
+        .eq('enabled', true)
+        .is('footage', null);
+      
+      if (error) throw error;
+      
+      const results = await Promise.allSettled(
+        (reels || []).map(reel => 
+          fetch('/api/art/paint', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reelId: reel.id }),
+          })
+        )
+      );
+      
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      return { status: 'pending', queued: successful };
     },
   },
   footage: {
