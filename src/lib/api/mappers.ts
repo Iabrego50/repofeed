@@ -1,4 +1,4 @@
-import type { Scene, CommentKind, JobStatus, JobPhase } from '@/schema/validators';
+import type { CommentKind, JobStatus, JobPhase } from '@/schema/validators';
 
 // Database row types (snake_case from Supabase)
 export interface DbReel {
@@ -36,9 +36,10 @@ export interface DbComment {
   created_at: string;
   updated_at: string;
   users?: {
-    name?: string;
-    email?: string;
-  };
+    name: string | null;
+    email: string | null;
+    avatar?: string | null;
+  } | null;
 }
 
 export interface DbJob {
@@ -48,7 +49,7 @@ export interface DbJob {
   status: JobStatus;
   phase: JobPhase;
   cursor: number;
-  total_chunks: number;
+  chunks: any;
   log: any;
   error: string | null;
   created_at: string;
@@ -85,9 +86,9 @@ export interface DbFinding {
   study_id: string;
   type: string;
   text: string;
-  speaker?: string;
-  number?: string;
-  label?: string;
+  speaker?: string | null;
+  number?: string | null;
+  label?: string | null;
   created_at: string;
 }
 
@@ -256,13 +257,14 @@ export function mapComment(row: DbComment): Comment {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     author: row.users ? {
-      name: row.users.name,
-      email: row.users.email,
+      name: row.users.name || undefined,
+      email: row.users.email || undefined,
     } : undefined,
   };
 }
 
 export function mapJob(row: DbJob): Job {
+  const chunks = parseJson(row.chunks) || [];
   return {
     _id: row.id,
     id: row.id,
@@ -272,7 +274,7 @@ export function mapJob(row: DbJob): Job {
     status: row.status,
     phase: row.phase,
     cursor: row.cursor,
-    totalChunks: row.total_chunks,
+    totalChunks: Array.isArray(chunks) ? chunks.length : 0,
     log: parseJson(row.log) || [],
     error: row.error,
     createdAt: row.created_at,
@@ -319,9 +321,9 @@ export function mapFinding(row: DbFinding): Finding {
     studyId: row.study_id,
     type: row.type,
     text: row.text,
-    speaker: row.speaker,
-    number: row.number,
-    label: row.label,
+    speaker: row.speaker || undefined,
+    number: row.number || undefined,
+    label: row.label || undefined,
     createdAt: row.created_at,
   };
 }

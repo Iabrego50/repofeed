@@ -44,8 +44,11 @@ export const api = {
     save: feedModule.saveReel,
     unsave: feedModule.unsaveReel,
     search: feedModule.searchReels,
-    comments: feedModule.getComments,
+    getComments: feedModule.getComments,
     addComment: feedModule.addComment,
+    deleteComment: feedModule.deleteComment,
+    react: feedModule.react,
+    getEvidence: feedModule.getEvidence,
   },
   generation: {
     jobs: {
