@@ -3,13 +3,7 @@ import { supabase } from '../supabase';
 export async function listReels(args: { workspaceId: string; studyId?: string }) {
   let query = supabase
     .from('reels')
-    .select(`
-      *,
-      study:studies!reels_study_id_fkey(id, title, workspace_id),
-      reactions:reactions(id, type, user_id),
-      views:reel_views(id, user_id, viewed_at),
-      counters:reel_counters(reel_id, views_count, reactions_count, comments_count)
-    `)
+    .select('*')
     .eq('workspace_id', args.workspaceId)
     .order('created_at', { ascending: false });
 
@@ -27,7 +21,6 @@ export async function listReels(args: { workspaceId: string; studyId?: string })
     _creationTime: new Date(row.created_at).getTime(),
     workspaceId: row.workspace_id,
     studyId: row.study_id,
-    createdBy: row.created_by,
     updatedAt: row.updated_at,
   }));
 }
@@ -82,20 +75,29 @@ export async function unsaveReel(args: { reelId: string; userId: string }) {
 export async function listSavedReels(args: { workspaceId: string; userId: string }) {
   const { data, error } = await supabase
     .from('saved_reels')
-    .select(`
-      *,
-      reel:reels!saved_reels_reel_id_fkey(*)
-    `)
+    .select('reel_id, created_at')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', args.userId)
-    .order('saved_at', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
+  if (!data || data.length === 0) return [];
 
-  return (data || []).map((row) => ({
-    ...row.reel,
-    _id: row.reel.id,
-    _creationTime: new Date(row.reel.created_at).getTime(),
-    savedAt: row.saved_at,
+  // Get the actual reels
+  const { data: reels } = await supabase
+    .from('reels')
+    .select('*')
+    .in('id', data.map(s => s.reel_id));
+
+  if (!reels) return [];
+
+  // Create a map of savedAt times
+  const savedAtMap = new Map(data.map(s => [s.reel_id, s.created_at]));
+
+  return reels.map((reel) => ({
+    ...reel,
+    _id: reel.id,
+    _creationTime: new Date(reel.created_at).getTime(),
+    savedAt: savedAtMap.get(reel.id),
   }));
 }

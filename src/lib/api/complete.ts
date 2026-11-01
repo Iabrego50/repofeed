@@ -97,13 +97,13 @@ export const api = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (!data) return null;
+      if (error || !data) return null;
 
       return {
         ...data,
@@ -116,12 +116,19 @@ export const api = {
     feed: async (args: { token: string; secret?: string }) => {
       const { data, error } = await supabase
         .from('share_links')
-        .select('*, studies(id, title)')
+        .select('*')
         .eq('token', args.token)
-        .eq('enabled', true)
+        .eq('revoked', false)
         .maybeSingle();
 
       if (error || !data) return null;
+
+      // Get study info
+      const { data: study } = await supabase
+        .from('studies')
+        .select('id, title')
+        .eq('id', data.study_id)
+        .single();
 
       // Get reels for this study
       const { data: reels } = await supabase
@@ -134,35 +141,36 @@ export const api = {
       let guest = null;
       if (args.secret) {
         const { data: guestData } = await supabase
-          .from('share_guests')
+          .from('guests')
           .select('*')
-          .eq('share_link_id', data.id)
+          .eq('link_id', data.id)
           .eq('secret', args.secret)
           .maybeSingle();
         guest = guestData;
       }
 
       return {
-        studyTitle: data.studies.title,
+        studyTitle: study?.title || 'Untitled Study',
         reels: reels || [],
         guest,
       };
     },
     join: async (args: { token: string; name: string }) => {
-      const { data: link } = await supabase
+      const { data: link, error: linkError } = await supabase
         .from('share_links')
-        .select('id')
+        .select('id, study_id')
         .eq('token', args.token)
-        .eq('enabled', true)
+        .eq('revoked', false)
         .maybeSingle();
 
-      if (!link) throw new Error('Invalid share link');
+      if (linkError || !link) throw new Error('Invalid share link');
 
       const secret = Math.random().toString(36).substring(2, 15);
       const { data: guest, error } = await supabase
-        .from('share_guests')
+        .from('guests')
         .insert({
-          share_link_id: link.id,
+          study_id: link.study_id,
+          link_id: link.id,
           name: args.name,
           secret,
         })
