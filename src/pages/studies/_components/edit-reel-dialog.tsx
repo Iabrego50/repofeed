@@ -49,28 +49,28 @@ function SceneFields({ scene, onChange, id }: { scene: Scene; onChange: (s: Scen
           <Label htmlFor={`${id}-title`}>Title</Label>
           <Input id={`${id}-title`} className="h-11" value={scene.title} onChange={(e) => onChange({ ...scene, title: e.target.value })} />
           <Label>Items</Label>
-          {scene.items.map((item, i) => (
+          {(scene.items || []).map((item, i) => (
             <div key={i} className="flex gap-2">
               <Input
                 className="h-11"
                 aria-label={`Item ${i + 1}`}
                 value={item}
-                onChange={(e) => onChange({ ...scene, items: scene.items.map((it, j) => (j === i ? e.target.value : it)) })}
+                onChange={(e) => onChange({ ...scene, items: (scene.items || []).map((it, j) => (j === i ? e.target.value : it)) })}
               />
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-11"
                 aria-label={`Remove item ${i + 1}`}
-                disabled={scene.items.length <= 2}
-                onClick={() => onChange({ ...scene, items: scene.items.filter((_, j) => j !== i) })}
+                disabled={(scene.items || []).length <= 2}
+                onClick={() => onChange({ ...scene, items: (scene.items || []).filter((_, j) => j !== i) })}
               >
                 <Trash2 className="size-4" />
               </Button>
             </div>
           ))}
-          {scene.items.length < 5 && (
-            <Button variant="ghost" className="h-10" onClick={() => onChange({ ...scene, items: [...scene.items, ""] })}>
+          {(scene.items || []).length < 5 && (
+            <Button variant="ghost" className="h-10" onClick={() => onChange({ ...scene, items: [...(scene.items || []), ""] })}>
               <Plus className="size-4" /> Add item
             </Button>
           )}
