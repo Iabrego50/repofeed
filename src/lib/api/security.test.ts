@@ -1,33 +1,30 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { assertPaid, assertStudySlot, assertEditorSeat } from "../billing/limits";
+
+vi.mock("../supabase", () => ({
+  supabase: {
+    from: vi.fn(),
+    auth: { getUser: vi.fn() },
+  },
+}));
 
 describe("security safeguards", () => {
-  it("rate limits prevent abuse", () => {
-    // Rate limiting is enforced at API level
-    expect(true).toBe(true);
+  it("assertPaid blocks free users from pro features", () => {
+    expect(() => assertPaid("free", "Share links")).toThrow(/part of Pro/);
+    expect(() => assertPaid("pro", "Share links")).not.toThrow();
+    expect(() => assertPaid("team", "Share links")).not.toThrow();
   });
 
-  it("workspace creation is rate limited", () => {
-    // Users can create limited workspaces per day
-    expect(true).toBe(true);
+  it("assertStudySlot allows pro users unlimited studies", async () => {
+    await expect(assertStudySlot("ws1", "pro")).resolves.not.toThrow();
   });
 
-  it("single-use invites stop working after one join", () => {
-    // Invite tokens have maxUses enforcement
-    expect(true).toBe(true);
+  it("assertEditorSeat allows team plan unlimited editors", async () => {
+    await expect(assertEditorSeat("ws1", "team")).resolves.not.toThrow();
   });
 
-  it("uploads cannot be attached by second workspace", () => {
-    // Storage uploads are workspace-scoped
-    expect(true).toBe(true);
-  });
-
-  it("editors can delete guest comments", () => {
-    // Editors have moderation powers
-    expect(true).toBe(true);
-  });
-
-  it("guests don't see team comments by default", () => {
-    // Comment visibility is role-based
-    expect(true).toBe(true);
+  it("plan limits protect free tier resources", () => {
+    // Free plan: max 3 studies, 1 editor
+    expect(() => assertPaid("free", "Advanced analytics")).toThrow();
   });
 });
