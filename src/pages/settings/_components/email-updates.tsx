@@ -22,23 +22,19 @@ const OPTIONS: Array<{ key: PrefKey; title: string; description: string }> = [
 ];
 
 export default function EmailUpdates({ workspaceId }: { workspaceId: string }) {
-  // TODO: Implement email preferences API
   const { data: prefs } = useQuery({
     queryKey: ['emailPrefs', workspaceId],
     queryFn: async () => {
-      // Stub: return default preferences
-      return {
-        email: null,
-        newStudies: false,
-        feedback: false,
-      };
+      const { getEmailPrefs } = await import('@/lib/api/email-prefs');
+      return await getEmailPrefs(workspaceId);
     },
+    enabled: !!workspaceId,
   });
 
   const setMutation = useMutation({
     mutationFn: async (update: Partial<{ newStudies: boolean; feedback: boolean }>) => {
-      // Stub: email preferences will be implemented
-      console.log('Email preferences update not yet implemented:', workspaceId, update);
+      const { setEmailPrefs } = await import('@/lib/api/email-prefs');
+      await setEmailPrefs({ workspaceId, ...update });
     },
   });
 
