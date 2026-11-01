@@ -27,8 +27,7 @@ export async function listReels(args: { workspaceId: string; studyId?: string })
   }
 
   // Only show reels from published studies for non-editors
-  const membershipData = membership as any;
-  if (membershipData.role === 'member') {
+  if (membership.role === 'member') {
     query = query.eq('studies.status', 'published');
   }
 
@@ -49,14 +48,13 @@ export async function listSavedReels(args: { workspaceId: string; userId: string
     .eq('reels.workspace_id', args.workspaceId)
     .order('created_at', { ascending: false });
 
-  return (data || []).map((s: any) => s.reels);
+  return (data || []).map((s) => s.reels);
 }
 
 export async function saveReel(args: { reelId: string; userId: string }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || user.id !== args.userId) throw new Error('Not authorized');
 
-  // @ts-expect-error - Supabase typing
   const { error } = await supabase
     .from('saved_reels')
     .upsert({

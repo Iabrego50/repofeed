@@ -7,10 +7,10 @@ export async function listWorkspaces() {
 
   const { data } = await supabase
     .from('workspace_members')
-    .select('workspace_id, role, workspaces!inner(*)')
+    .select('workspace_id, role, workspaces!inner(name, created_at)')
     .eq('user_id', user.id);
 
-  return (data || []).map((m: any) => ({
+  return (data || []).map((m) => ({
     _id: m.workspace_id,
     name: m.workspaces.name,
     role: m.role,
@@ -29,7 +29,7 @@ export async function createWorkspace(args: { name: string }) {
       created_by: user.id,
     })
     .select()
-    .single() as any;
+    .single();
 
   if (wsError) throw wsError;
 
@@ -56,7 +56,7 @@ export async function renameWorkspace(args: { workspaceId: string; name: string 
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single() as any;
+    .single();
 
   if (!membership || membership.role !== 'owner') {
     throw new Error('Must be workspace owner');
@@ -80,7 +80,7 @@ export async function getMembers(args: { workspaceId: string }) {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .maybeSingle() as any;
+    .maybeSingle();
 
   if (!membership) throw new Error('Not authorized');
 
@@ -110,7 +110,7 @@ export async function removeMember(args: { workspaceId: string; userId: string }
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single() as any;
+    .single();
 
   if (!membership || membership.role !== 'owner') {
     throw new Error('Must be workspace owner');
@@ -152,7 +152,7 @@ export async function createInvite(args: {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single() as any;
+    .single();
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be owner or editor');
@@ -173,7 +173,7 @@ export async function createInvite(args: {
       max_uses: args.maxUses || null,
     })
     .select()
-    .single() as any;
+    .single();
 
   if (error) throw error;
   return { token, url: `${process.env.VITE_SITE_URL}/invite/${token}` };
@@ -189,7 +189,7 @@ export async function listInvites(args: { workspaceId: string }) {
     .select('role')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single() as any;
+    .single();
 
   if (!membership) throw new Error('Not authorized');
 
@@ -211,7 +211,7 @@ export async function revokeInvite(args: { inviteId: string }) {
     .from('workspace_invites')
     .select('workspace_id')
     .eq('id', args.inviteId)
-    .single() as any;
+    .single();
 
   if (!invite) throw new Error('Invite not found');
 
@@ -221,7 +221,7 @@ export async function revokeInvite(args: { inviteId: string }) {
     .select('role')
     .eq('workspace_id', invite.workspace_id)
     .eq('user_id', user.id)
-    .maybeSingle() as any;
+    .maybeSingle();
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be owner or editor');
@@ -241,18 +241,17 @@ export async function peekInvite(args: { token: string }) {
     .from('workspace_invites')
     .select('workspace_id, role, expires_at, revoked, max_uses, uses, workspaces!inner(name)')
     .eq('token', args.token)
-    .maybeSingle() as any;
+    .maybeSingle();
 
   if (error || !invite) return null;
   
-  const typedInvite = invite as any;
-  if (typedInvite.revoked) return null;
-  if (new Date(typedInvite.expires_at) < new Date()) return null;
-  if (typedInvite.max_uses && typedInvite.uses >= typedInvite.max_uses) return null;
+  if (invite.revoked) return null;
+  if (new Date(invite.expires_at) < new Date()) return null;
+  if (invite.max_uses && invite.uses >= invite.max_uses) return null;
 
   return {
-    workspaceName: typedInvite.workspaces.name,
-    role: typedInvite.role,
+    workspaceName: invite.workspaces.name,
+    role: invite.role,
   };
 }
 
@@ -264,58 +263,55 @@ export async function acceptInvite(args: { token: string }) {
     .from('workspace_invites')
     .select('*')
     .eq('token', args.token)
-    .single() as any;
+    .single();
 
   if (inviteError || !invite) throw new Error('Invite not found');
   
-  const typedInvite = invite as any;
-  if (typedInvite.revoked) throw new Error('Invite has been revoked');
-  if (new Date(typedInvite.expires_at) < new Date()) throw new Error('Invite has expired');
-  if (typedInvite.max_uses && typedInvite.uses >= typedInvite.max_uses) throw new Error('Invite has been fully used');
+  if (invite.revoked) throw new Error('Invite has been revoked');
+  if (new Date(invite.expires_at) < new Date()) throw new Error('Invite has expired');
+  if (invite.max_uses && invite.uses >= invite.max_uses) throw new Error('Invite has been fully used');
 
   // Check if already a member
   const { data: existing } = await supabase
     .from('workspace_members')
     .select('id')
-    .eq('workspace_id', typedInvite.workspace_id)
+    .eq('workspace_id', invite.workspace_id)
     .eq('user_id', user.id)
-    .maybeSingle() as any;
+    .maybeSingle();
 
   if (existing) {
-    return typedInvite.workspace_id; // Already a member
+    return invite.workspace_id; // Already a member
   }
 
   // Check if previously removed
   const { data: removed } = await supabase
     .from('workspace_removals')
     .select('id')
-    .eq('workspace_id', typedInvite.workspace_id)
+    .eq('workspace_id', invite.workspace_id)
     .eq('user_id', user.id)
-    .maybeSingle() as any;
+    .maybeSingle();
 
   if (removed) {
     throw new Error('You were removed from this workspace and cannot rejoin');
   }
 
-  // @ts-expect-error - Supabase typing
   const { error: insertError } = await supabase
     .from('workspace_members')
     .insert({
-      workspace_id: typedInvite.workspace_id,
+      workspace_id: invite.workspace_id,
       user_id: user.id,
-      role: typedInvite.role,
+      role: invite.role,
     });
 
   if (insertError) throw insertError;
 
-  // Increment uses - cast to any for type safety
-  const updateData: any = { uses: typedInvite.uses + 1 };
+  // Increment uses
   await supabase
     .from('workspace_invites')
-    .update(updateData)
-    .eq('id', typedInvite.id);
+    .update({ uses: invite.uses + 1 })
+    .eq('id', invite.id);
 
-  return typedInvite.workspace_id;
+  return invite.workspace_id;
 }
 
 // Alias for listMembers

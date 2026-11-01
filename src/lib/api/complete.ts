@@ -105,11 +105,10 @@ export const api = {
 
       if (!data) return null;
 
-      const userData = data as any;
       return {
-        ...userData,
-        _id: userData.id,
-        _creationTime: new Date(userData.created_at).getTime(),
+        ...data,
+        _id: data.id,
+        _creationTime: new Date(data.created_at).getTime(),
       };
     },
   },
