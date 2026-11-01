@@ -104,12 +104,39 @@ export async function updateStudy(args: {
 }
 
 export async function deleteStudy(args: { studyId: string }) {
-  const { error } = await supabase
+  // First, get all storage objects associated with this study's sources
+  const { data: sources } = await supabase
+    .from('sources')
+    .select('storage_id')
+    .eq('study_id', args.studyId)
+    .not('storage_id', 'is', null);
+
+  // Delete the study (cascades to sources, reels, etc.)
+  const { error: deleteError } = await supabase
     .from('studies')
     .delete()
     .eq('id', args.studyId);
 
-  if (error) throw error;
+  if (deleteError) throw deleteError;
+
+  // Clean up storage objects
+  if (sources && sources.length > 0) {
+    const storageIds = sources
+      .map(s => s.storage_id)
+      .filter((id): id is string => id !== null);
+
+    if (storageIds.length > 0) {
+      // Delete from storage bucket
+      const { error: storageError } = await supabase.storage
+        .from('uploads')
+        .remove(storageIds.map(id => id));
+
+      // Log but don't throw - storage cleanup is best-effort
+      if (storageError) {
+        console.error('Failed to clean up storage objects:', storageError);
+      }
+    }
+  }
 }
 
 export async function publishStudy(args: { studyId: string }) {
