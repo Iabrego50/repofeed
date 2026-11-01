@@ -3,6 +3,7 @@ import * as studiesModule from './studies-complete';
 import * as workspacesModule from './workspaces-complete';
 import * as feedModule from './feed-complete';
 import * as generationModule from './generation-jobs';
+import { mapReel } from './mappers';
 import { supabase } from '../supabase';
 import * as billing from '../billing/stripe';
 
@@ -136,6 +137,38 @@ export const api = {
     },
   },
   share: {
+    publicTokenForReel: async (args: { reelId: string }): Promise<string | null> => {
+      // Get the reel
+      const { data: reel } = await supabase
+        .from('reels')
+        .select('study_id, enabled')
+        .eq('id', args.reelId)
+        .maybeSingle();
+
+      if (!reel || !reel.enabled) return null;
+
+      // Check if study is published
+      const { data: study } = await supabase
+        .from('studies')
+        .select('id, status')
+        .eq('id', reel.study_id)
+        .single();
+
+      if (!study || study.status !== 'published') return null;
+
+      // Get or create the share link for this study
+      const { data: shareLink } = await supabase
+        .from('share_links')
+        .select('token')
+        .eq('study_id', study.id)
+        .eq('revoked', false)
+        .maybeSingle();
+
+      if (shareLink) return shareLink.token;
+
+      // No share link exists, return null (study owner needs to enable sharing first)
+      return null;
+    },
     feed: async (args: { token: string; secret?: string }) => {
       const { data, error } = await supabase
         .from('share_links')
@@ -156,7 +189,7 @@ export const api = {
       // Get reels for this study
       const { data: reels } = await supabase
         .from('reels')
-        .select('*')
+        .select('*, studies!inner(title)')
         .eq('study_id', data.study_id)
         .eq('enabled', true);
 
@@ -174,7 +207,7 @@ export const api = {
 
       return {
         studyTitle: study?.title || 'Untitled Study',
-        reels: reels || [],
+        reels: (reels || []).map(mapReel),
         guest,
       };
     },
