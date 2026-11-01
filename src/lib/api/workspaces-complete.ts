@@ -1,5 +1,4 @@
 import { supabase } from '../supabase';
-import { sendWorkspaceInvite } from '../emails';
 
 export async function listWorkspaces() {
   const { data: { user } } = await supabase.auth.getUser();
