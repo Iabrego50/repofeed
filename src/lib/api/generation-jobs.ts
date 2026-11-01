@@ -80,7 +80,44 @@ export async function startGeneration(args: { studyId: string }) {
 }
 
 export async function resumeGeneration(args: { studyId: string }) {
-  // For now, just start a new generation
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  
+  const { data: job, error: jobError } = await supabase
+    .from('generation_jobs')
+    .select('*')
+    .eq('study_id', args.studyId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  
+  if (jobError || !job) {
+    return startGeneration(args);
+  }
+  
+  if (job.status === 'running') {
+    return { jobId: job.id, status: 'running' as const };
+  }
+  
+  if (job.status === 'failed') {
+    await supabase
+      .from('generation_jobs')
+      .update({
+        status: 'queued',
+        error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', job.id);
+    
+    await fetch('/api/generation/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id }),
+    });
+    
+    return { jobId: job.id, status: 'running' as const };
+  }
+  
   return startGeneration(args);
 }
 

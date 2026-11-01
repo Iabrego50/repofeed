@@ -279,11 +279,39 @@ export const api = {
   },
   footage: {
     listClips: async (args: { reelId: string }) => {
-      // Stub: Footage management will be implemented
-      return [];
+      const { data: reel } = await supabase
+        .from('reels')
+        .select('workspace_id')
+        .eq('id', args.reelId)
+        .single();
+      
+      if (!reel) return [];
+      
+      const stockClips = [
+        { url: "/footage/receipts.mp4", label: "Budget review" },
+        { url: "/footage/mother-cooking.mp4", label: "Home visit" },
+        { url: "/footage/box-at-door.mp4", label: "Doorstep cam" },
+        { url: "/footage/calendar.mp4", label: "Planning session" },
+        { url: "/footage/family-dinner.mp4", label: "Dinner obs" },
+        { url: "/footage/wall-clock.mp4", label: "Cook-along" },
+        { url: "/footage/half-onion.mp4", label: "Prep cam" },
+        { url: "/footage/frustrated-phone.mp4", label: "Cancel flow" },
+        { url: "/footage/takeout-tv.mp4", label: "Evening obs" },
+        { url: "/footage/mushrooms.mp4", label: "Cook-along" },
+      ];
+      
+      return stockClips;
     },
     selectClip: async (args: { reelId: string; clipId: string }) => {
-      // Stub: Footage selection will be implemented
+      const { error } = await supabase
+        .from('reels')
+        .update({
+          footage: { url: args.clipId, caption: '', media: 'video' },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', args.reelId);
+      
+      if (error) throw error;
       return { success: true };
     },
   },
