@@ -5,7 +5,7 @@ type Order = { key: string | undefined; ids: string[]; fresh: Set<string> };
 
 /** Unwatched first, keeping each group in publish order. */
 function initialOrder(reels: FeedReel[]): string[] {
-  return [...reels.filter((r) => !r.seen), ...reels.filter((r) => r.seen)].map((r) => r._id);
+  return [...reels.filter((r) => !r.seen), ...reels.filter((r) => r.seen)].map((r) => r._id || r.id).filter((id): id is string => !!id);
 }
 
 /**
