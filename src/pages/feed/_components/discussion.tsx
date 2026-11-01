@@ -26,15 +26,14 @@ interface Comment {
 }
 
 const KINDS: Array<{ key: CommentKind; label: string; cls: string }> = [
-  { key: "note", label: "Note", cls: "bg-secondary text-foreground" },
-  { key: "question", label: "Question", cls: "bg-[#B98CFF]/15 text-[#B98CFF]" },
-  { key: "action", label: "Action item", cls: "bg-primary/15 text-primary" },
+  { key: "comment", label: "Comment", cls: "bg-secondary text-foreground" },
+  { key: "reply", label: "Reply", cls: "bg-[#B98CFF]/15 text-[#B98CFF]" },
 ];
 const kindMeta = (k: CommentKind) => KINDS.find((x) => x.key === k) ?? KINDS[0];
 
 function Composer({ reelId, parentId, onDone, autoFocus }: { reelId: string; parentId?: string; onDone?: () => void; autoFocus?: boolean }) {
   const queryClient = useQueryClient();
-  const [kind, setKind] = useState<CommentKind>(parentId ? "note" : "question");
+  const [kind, setKind] = useState<CommentKind>(parentId ? "reply" : "comment");
   const [body, setBody] = useState("");
 
   const addMutation = useMutation({
@@ -104,16 +103,8 @@ function CommentCard({ comment, reelId, level }: { comment: Comment; reelId: str
   const queryClient = useQueryClient();
   const [replying, setReplying] = useState(false);
 
-  const deleteMutation = useMutation({
-    mutationFn: () => api.feed.deleteComment({ commentId: comment._id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["feed", "comments", reelId] });
-      toast.success("Comment deleted");
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to delete comment");
-    },
-  });
+  // Delete comment API method not implemented yet
+  const deleteMutation = { mutate: () => console.log('Delete not implemented') };
 
   const meta = kindMeta(comment.kind);
 
