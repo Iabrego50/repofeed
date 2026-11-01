@@ -1,13 +1,13 @@
 import { supabase } from '../supabase';
 
 export async function loadProfile(userId: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('users')
     .select('id, email, name, avatar')
     .eq('id', userId)
     .single();
 
-  if (!data) return null;
+  if (error || !data) return null;
 
   return {
     id: data.id,

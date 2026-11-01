@@ -28,10 +28,13 @@ export interface Scene {
   title?: string;
   items?: string[];
   number?: string;  // For stat scenes
+  num?: string;     // For stat scenes (alias)
   unit?: string;     // For stat scenes
   label?: string;
   subtitle?: string; // For subtitle/secondary text
   attribution?: string; // For quote scenes
+  by?: string;       // For quote scenes (alias)
+  sub?: string;      // For cta scenes
 }
 
 export interface Chunk {

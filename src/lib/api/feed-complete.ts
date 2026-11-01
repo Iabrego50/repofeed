@@ -43,24 +43,45 @@ export async function listSavedReels(args: { workspaceId: string; userId: string
 
   const { data } = await supabase
     .from('saved_reels')
-    .select('reel_id, reels!inner(*, studies!inner(title))')
+    .select('reel_id')
     .eq('user_id', args.userId)
-    .eq('reels.workspace_id', args.workspaceId)
+    .eq('workspace_id', args.workspaceId)
     .order('created_at', { ascending: false });
 
-  return (data || []).map((s) => s.reels);
+  if (!data) return [];
+
+  const reelIds = data.map((s) => s.reel_id);
+  if (reelIds.length === 0) return [];
+
+  const { data: reels } = await supabase
+    .from('reels')
+    .select('*, studies!inner(title)')
+    .in('id', reelIds);
+
+  return reels || [];
 }
 
 export async function saveReel(args: { reelId: string; userId: string }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || user.id !== args.userId) throw new Error('Not authorized');
 
+  // Get workspace_id and study_id from the reel
+  const { data: reel } = await supabase
+    .from('reels')
+    .select('workspace_id, study_id')
+    .eq('id', args.reelId)
+    .single();
+
+  if (!reel) throw new Error('Reel not found');
+
   const { error } = await supabase
     .from('saved_reels')
     .upsert({
       user_id: args.userId,
       reel_id: args.reelId,
-    }, { onConflict: 'user_id,reel_id' });
+      workspace_id: reel.workspace_id,
+      study_id: reel.study_id,
+    }, { onConflict: 'reel_id,user_id' });
 
   if (error) throw error;
 }
@@ -113,18 +134,11 @@ export async function getComments(args: { reelId: string }) {
 
   const { data } = await supabase
     .from('comments')
-    .select('*, users!inner(name, email, avatar)')
+    .select('*')
     .eq('reel_id', args.reelId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true});
 
-  return (data || []).map((c: any) => ({
-    ...c,
-    author: {
-      name: c.users.name,
-      email: c.users.email,
-      avatar: c.users.avatar,
-    },
-  }));
+  return data || [];
 }
 
 export async function addComment(args: {
@@ -136,28 +150,29 @@ export async function addComment(args: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: reel } = await supabase
+  const { data: reel, error: reelError } = await supabase
     .from('reels')
-    .select('workspace_id')
+    .select('workspace_id, study_id')
     .eq('id', args.reelId)
     .single();
 
-  if (!reel) throw new Error('Reel not found');
+  if (reelError || !reel) throw new Error('Reel not found');
 
   // Check membership
-  const { data: membership } = await supabase
+  const { data: membership, error: memberError } = await supabase
     .from('workspace_members')
     .select('role')
     .eq('workspace_id', reel.workspace_id)
     .eq('user_id', user.id)
     .single();
 
-  if (!membership) throw new Error('Not authorized');
+  if (memberError || !membership) throw new Error('Not authorized');
 
   const { data, error } = await supabase
     .from('comments')
     .insert({
       reel_id: args.reelId,
+      study_id: reel.study_id,
       kind: args.kind,
       body: args.body.trim(),
       parent_id: args.parentId || null,
