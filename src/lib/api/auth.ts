@@ -7,13 +7,12 @@ export async function loadProfile(userId: string) {
     .eq('id', userId)
     .single();
 
-  const user = data as any;
-  if (!user) return null;
+  if (!data) return null;
 
   return {
-    id: user.id,
-    email: user.email || '',
-    name: user.name || undefined,
-    avatar: user.avatar || undefined,
+    id: data.id,
+    email: data.email || '',
+    name: data.name || undefined,
+    avatar: data.avatar || undefined,
   };
 }

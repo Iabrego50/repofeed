@@ -9,7 +9,7 @@ export async function listStudies(args: { workspaceId: string }) {
 
   if (error) throw error;
 
-  return ((data as any[]) || []).map((row) => ({
+  return (data || []).map((row) => ({
     ...row,
     _id: row.id,
     _creationTime: new Date(row.created_at).getTime(),
@@ -31,16 +31,15 @@ export async function getStudy(args: { studyId: string }) {
   if (error) throw error;
   if (!data) return null;
 
-  const row = data as any;
   return {
-    ...row,
-    _id: row.id,
-    _creationTime: new Date(row.created_at).getTime(),
-    workspaceId: row.workspace_id,
-    createdBy: row.created_by,
-    updatedAt: row.updated_at,
-    status: row.status,
-    isDemo: row.is_demo,
+    ...data,
+    _id: data.id,
+    _creationTime: new Date(data.created_at).getTime(),
+    workspaceId: data.workspace_id,
+    createdBy: data.created_by,
+    updatedAt: data.updated_at,
+    status: data.status,
+    isDemo: data.is_demo,
   };
 }
 
@@ -58,22 +57,21 @@ export async function createStudy(args: {
       workspace_id: args.workspaceId,
       created_by: user.id,
       title: args.title,
-      description: args.description,
+      audience: args.description || '',
       status: 'draft',
       is_demo: false,
-    } as any)
+    })
     .select()
     .single();
 
   if (error) throw error;
 
-  const row = data as any;
   return {
-    ...row,
-    _id: row.id,
-    _creationTime: new Date(row.created_at).getTime(),
-    workspaceId: row.workspace_id,
-    createdBy: row.created_by,
+    ...data,
+    _id: data.id,
+    _creationTime: new Date(data.created_at).getTime(),
+    workspaceId: data.workspace_id,
+    createdBy: data.created_by,
   };
 }
 
@@ -83,17 +81,23 @@ export async function updateStudy(args: {
   description?: string;
   status?: string;
 }) {
-  const updates: any = {
+  const updates: {
+    updated_at: string;
+    title?: string;
+    audience?: string;
+    status?: 'draft' | 'generating' | 'review' | 'published' | 'archived';
+  } = {
     updated_at: new Date().toISOString(),
   };
   if (args.title !== undefined) updates.title = args.title;
-  if (args.description !== undefined) updates.description = args.description;
-  if (args.status !== undefined) updates.status = args.status;
+  if (args.description !== undefined) updates.audience = args.description;
+  if (args.status !== undefined) {
+    updates.status = args.status as 'draft' | 'generating' | 'review' | 'published' | 'archived';
+  }
 
   const { error } = await supabase
     .from('studies')
-  // @ts-expect-error - Supabase insert type
-    .update(updates as any)
+    .update(updates)
     .eq('id', args.studyId);
 
   if (error) throw error;
@@ -111,11 +115,10 @@ export async function deleteStudy(args: { studyId: string }) {
 export async function publishStudy(args: { studyId: string }) {
   const { error } = await supabase
     .from('studies')
-  // @ts-expect-error - Supabase update type
     .update({
       status: 'published',
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', args.studyId);
 
   if (error) throw error;
@@ -124,11 +127,10 @@ export async function publishStudy(args: { studyId: string }) {
 export async function archiveStudy(args: { studyId: string }) {
   const { error } = await supabase
     .from('studies')
-  // @ts-expect-error - Supabase update type
     .update({
       status: 'archived',
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', args.studyId);
 
   if (error) throw error;

@@ -13,15 +13,14 @@ export const billingApi = {
       .eq('id', args.workspaceId)
       .single();
 
-    const workspace = data as any;
-    if (!workspace) return { plan: 'free' };
+    if (!data) return { plan: 'free' };
 
-    if (workspace.customer_id) {
-      const plan = await billing.getPlanFromStripe(workspace.customer_id);
+    if (data.customer_id) {
+      const plan = await billing.getPlanFromStripe(data.customer_id);
       return { plan };
     }
 
-    return { plan: workspace.paid_plan || 'free' };
+    return { plan: data.paid_plan || 'free' };
   },
 
   checkout: async (args: {
@@ -64,8 +63,6 @@ export const billingApi = {
         .eq('id', args.workspaceId)
         .single();
 
-      const workspace = workspaceData as any;
-
       const { data: { user } } = await supabase.auth.getUser();
       const { data: userData } = user ? await supabase
         .from('users')
@@ -73,16 +70,14 @@ export const billingApi = {
         .eq('id', user.id)
         .single() : { data: null };
 
-      const userInfo = userData as any;
-
       return {
         studies: studiesCount || 0,
         editors: editorsCount || 0,
-        seats: workspace?.seats || null,
+        seats: workspaceData?.seats || null,
         interval: null, // TODO: Parse from seat_variant
-        lapsedPlan: workspace?.lapsed_plan || null,
-        seatOverage: workspace?.seat_overage || false,
-        trialUsed: !!userInfo?.trial_used_at,
+        lapsedPlan: workspaceData?.lapsed_plan || null,
+        seatOverage: workspaceData?.seat_overage || false,
+        trialUsed: !!userData?.trial_used_at,
       };
     },
 
@@ -93,17 +88,16 @@ export const billingApi = {
         .eq('id', args.workspaceId)
         .single();
 
-      const workspace = data as any;
-      let plan: any = 'free';
-      if (workspace?.customer_id) {
-        plan = await billing.getPlanFromStripe(workspace.customer_id);
-      } else if (workspace?.paid_plan) {
-        plan = workspace.paid_plan;
+      let plan: string = 'free';
+      if (data?.customer_id) {
+        plan = await billing.getPlanFromStripe(data.customer_id);
+      } else if (data?.paid_plan) {
+        plan = data.paid_plan;
       }
 
       return {
         plan,
-        variant: workspace?.seat_variant,
+        variant: data?.seat_variant,
       };
     },
   },
@@ -153,30 +147,32 @@ export const usersApi = {
       .eq('id', user.id)
       .single();
 
-    const userInfo = data as any;
-    if (!userInfo) return null;
+    if (!data) return null;
 
     return {
-      ...userInfo,
-      _id: userInfo.id,
-      _creationTime: new Date(userInfo.created_at).getTime(),
-      tokenIdentifier: userInfo.token_identifier,
-      onboardedAt: userInfo.onboarded_at,
-      trialUsedAt: userInfo.trial_used_at,
+      ...data,
+      _id: data.id,
+      _creationTime: new Date(data.created_at).getTime(),
+      tokenIdentifier: data.token_identifier,
+      onboardedAt: data.onboarded_at,
+      trialUsedAt: data.trial_used_at,
     };
   },
   update: async (args: { name?: string; email?: string; onboardedAt?: string }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const updates: any = {};
+    const updates: {
+      name?: string;
+      email?: string;
+      onboarded_at?: string;
+    } = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.email !== undefined) updates.email = args.email;
     if (args.onboardedAt !== undefined) updates.onboarded_at = args.onboardedAt;
 
     const { error } = await supabase
       .from('users')
-    // @ts-expect-error - Supabase update type inference issue
       .update(updates)
       .eq('id', user.id);
 

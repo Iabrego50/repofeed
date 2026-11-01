@@ -8,7 +8,7 @@ export async function getLatestJob(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single() as any;
+    .single();
 
   if (!study) return null;
 
@@ -18,7 +18,7 @@ export async function getLatestJob(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single() as any;
+    .single();
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     return null;
@@ -30,7 +30,7 @@ export async function getLatestJob(args: { studyId: string }) {
     .eq('study_id', args.studyId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single() as any;
+    .single();
 
   if (!job) return null;
 
@@ -54,7 +54,7 @@ export async function startGeneration(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single() as any;
+    .single();
 
   if (!study) throw new Error('Study not found');
 
@@ -64,7 +64,7 @@ export async function startGeneration(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single() as any;
+    .single();
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -99,7 +99,7 @@ export async function cancelGeneration(args: { studyId: string }) {
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single() as any;
+    .single();
 
   if (!study) throw new Error('Study not found');
 
@@ -109,7 +109,7 @@ export async function cancelGeneration(args: { studyId: string }) {
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single() as any;
+    .single();
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
