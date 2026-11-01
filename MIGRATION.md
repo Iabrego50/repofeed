@@ -103,20 +103,24 @@ No additional configuration needed.
 You have a Convex database export (`db-snapshot.zip`). Import it:
 
 ```bash
+# Requires Node 22+ (supabase-js uses the WebSocket global).
 # Set environment variables
 export SUPABASE_URL=https://xxxxx.supabase.co
 export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Run import script
+# Preview mapping (no writes)
+node scripts/import-convex-data.mjs /path/to/db-snapshot.zip --dry-run
+
+# Import (creates auth users, then upserts public tables)
 node scripts/import-convex-data.mjs /path/to/db-snapshot.zip
-# (valid JavaScript; no extra toolchain required)
 ```
 
 This script:
-- Converts Convex IDs to UUIDs
-- Maintains all relationships between records
-- Preserves timestamps
-- Imports all tables in correct dependency order
+- Creates or reuses `auth.users` via `supabase.auth.admin.createUser` (find-by-email on reruns) and upserts `public.users` with that id
+- Maps Convex camelCase folders (`workspaceMembers`, `shareLinks`, …) to snake_case tables
+- Derives deterministic UUIDs (v5) from Convex `_id` for non-user rows and upserts on `id`
+- Skips transient `rateLimits` and exits non-zero if an unmapped folder has records
+- Preserves timestamps and remaps foreign keys, including JSON ids such as `reels.footage.storageId`
 
 **⚠️ Important:** File uploads stored in Convex's storage are NOT migrated. Users will need to re-upload files or you'll need to download and re-upload them manually to Supabase Storage.
 
