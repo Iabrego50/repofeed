@@ -113,7 +113,7 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
     }
     case "numbers": {
       const w = (area.w - 0.3 * 3) / 4;
-      headlineStats(deck).forEach((st, i) => {
+      headlineStats(deck).forEach((st: any, i: number) => {
         const x = area.x + i * (w + 0.3);
         card(x, area.y, w, area.h);
         slide.addText(st.label.toUpperCase(), { x: x + 0.3, y: area.y + 1.4, w: w - 0.6, h: 0.3, fontFace: MONO, fontSize: 10, bold: true, color: hex(COLORS.muted) });
@@ -147,7 +147,7 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
           x: area.x, y: area.y - 0.1, w: 4.2, h: 4.0, holeSize: 62, chartColors: data.map((d) => hex(d.color)), showLegend: false, showValue: false, showPercent: false, dataBorder: { pt: 2, color: hex(COLORS.bg) },
         });
       }
-      data.forEach((d, i) => {
+      data.forEach((d: any, i: number) => {
         const y = area.y + 0.6 + i * 1.0;
         slide.addShape("ellipse", { x: 5.8, y: y + 0.12, w: 0.26, h: 0.26, fill: { color: hex(d.color) }, line: { type: "none" } });
         slide.addText(d.name, { x: 6.3, y, w: 3.5, h: 0.5, fontFace: SANS, fontSize: 20, color: hex(COLORS.fg) });
@@ -173,7 +173,7 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
       const gx = area.x + 3.7;
       const cw = (area.w - 3.7 - 0.25 * 2) / 3;
       const ch = (area.h - 0.25) / 2;
-      stats.forEach(([label, value, color], i) => {
+      stats.forEach(([label, value, color]: readonly [string, string, string], i: number) => {
         const x = gx + (i % 3) * (cw + 0.25);
         const y = area.y + Math.floor(i / 3) * (ch + 0.25);
         card(x, y, cw, ch);
@@ -185,7 +185,7 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
     case "voices": {
       const quotes = s.quotes ?? [];
       const w = (area.w - 0.3 * (quotes.length - 1)) / Math.max(quotes.length, 1);
-      quotes.forEach((q, i) => {
+      quotes.forEach((q: any, i: number) => {
         const x = area.x + i * (w + 0.3);
         card(x, area.y, w, area.h);
         slide.addText("\u201C", { x: x + 0.3, y: area.y + 0.15, w: 1, h: 0.7, fontFace: DISPLAY, fontSize: 48, bold: true, color: hex(COLORS.coral) });
