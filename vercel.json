@@ -4,7 +4,7 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
   ],
@@ -18,17 +18,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "@supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key"
-  },
-  "build": {
-    "env": {
-      "SUPABASE_URL": "@supabase_url",
-      "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-      "ANTHROPIC_API_KEY": "@anthropic_api_key",
-      "OPENAI_API_KEY": "@openai_api_key"
-    }
-  }
+  ]
 }

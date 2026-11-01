@@ -175,6 +175,8 @@ vercel link
 
 ### 4.3 Set Environment Variables
 
+Set these in Vercel project settings (Dashboard → Settings → Environment Variables, or `vercel env add`). Do not put them in `vercel.json`: Vercel Secrets (`@name` references) are deprecated, and `env` / `build.env` blocks there fail the deploy and override project env vars.
+
 In Vercel Dashboard → Settings → Environment Variables, add:
 
 **Production & Preview:**
