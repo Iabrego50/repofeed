@@ -36,9 +36,7 @@ describe("study lifecycle", () => {
     const result = await createStudy({
       workspaceId: "ws1",
       title: "New Study",
-      audience: "Users",
-      goal: "Learn about onboarding",
-      createdBy: "user1",
+      description: "Learn about users and onboarding",
     });
 
     expect(supabase.from).toHaveBeenCalledWith("studies");
@@ -87,7 +85,7 @@ describe("study lifecycle", () => {
     await updateStudy({
       studyId: "study-1",
       title: "Updated Title",
-      goal: "New goal",
+      description: "New description",
     });
 
     expect(supabase.from).toHaveBeenCalledWith("studies");
