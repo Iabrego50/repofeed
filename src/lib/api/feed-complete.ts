@@ -270,6 +270,29 @@ export async function getEvidence(args: { reelId: string }): Promise<Finding[]> 
   return (findings || []).map(mapFinding);
 }
 
+export async function recordView(args: { reelId: string; completed: boolean }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  
+  const { data: reel } = await supabase
+    .from('reels')
+    .select('study_id')
+    .eq('id', args.reelId)
+    .single();
+  
+  if (!reel) return;
+  
+  await supabase
+    .from('reel_views')
+    .upsert({
+      reel_id: args.reelId,
+      user_id: user.id,
+      study_id: reel.study_id,
+      completed: args.completed,
+      last_viewed_at: new Date().toISOString(),
+    });
+}
+
 export async function guestReact(args: { reelId: string; kind: string; token: string; secret: string }) {
   const { data: guest } = await supabase
     .from('guests')
