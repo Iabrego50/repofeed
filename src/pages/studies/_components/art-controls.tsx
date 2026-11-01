@@ -91,7 +91,7 @@ export function PaintStudyButton({ studyId }: { studyId: string }) {
     >
       {paintMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
       {paintMutation.isPending ? "Painting..." : "AI backdrop all"}
-      <HelpHint>Generate AI backdrops for every scene at once.</HelpHint>
+      <HelpHint title="AI backdrop">Generate AI backdrops for every scene at once.</HelpHint>
     </Button>
   );
 }
