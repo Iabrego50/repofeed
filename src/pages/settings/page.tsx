@@ -34,7 +34,7 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   });
 
   const createMutation = useMutation({
-    mutationFn: (args: { workspaceId: string; role: Role; expiresInDays: number; maxUses: number }) =>
+    mutationFn: (args: { workspaceId: string; role: "editor" | "member"; expiresInDays: number; maxUses: number }) =>
       api.billing.actions.createInvite(args),
   });
 
@@ -83,8 +83,8 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
           onClick={async () => {
             setBusy(true);
             try {
-              const token = await createMutation.mutateAsync({ workspaceId, role, expiresInDays: Number(days), maxUses: Number(uses) });
-              await copy(inviteUrl(token));
+              const result = await createMutation.mutateAsync({ workspaceId, role, expiresInDays: Number(days), maxUses: Number(uses) });
+              await copy(inviteUrl(result.token));
             } catch (err: any) {
               toast.error(err.message || "Couldn't create the invite");
             } finally {

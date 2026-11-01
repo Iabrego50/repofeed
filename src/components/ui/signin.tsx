@@ -1,15 +1,18 @@
 // Auth UI components
 import { useAuth } from '@/lib/auth';
-import { Button } from './button';
+import { Button, type ButtonProps } from './button';
+import { cn } from '@/lib/utils';
 
-export function SignInButton() {
+interface SignInButtonProps extends Omit<ButtonProps, 'onClick'> {
+  signInText?: string;
+}
+
+export function SignInButton({ signInText = 'Sign in', className, ...props }: SignInButtonProps) {
   const { signIn } = useAuth();
   
   return (
-    <div className="flex flex-col gap-2">
-      <Button onClick={() => signIn('google')}>Sign in with Google</Button>
-      <Button onClick={() => signIn('azure')} variant="outline">Sign in with Microsoft</Button>
-      <Button onClick={() => signIn('apple')} variant="outline">Sign in with Apple</Button>
-    </div>
+    <Button onClick={() => signIn('google')} className={className} {...props}>
+      {signInText}
+    </Button>
   );
 }

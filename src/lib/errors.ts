@@ -1,7 +1,7 @@
-export function getErrorMessage(error: unknown): string {
+export function getErrorMessage(error: unknown, fallback?: string): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
-  return 'An unexpected error occurred';
+  return fallback || 'An unexpected error occurred';
 }
 
 export function toastError(error: unknown): void {
