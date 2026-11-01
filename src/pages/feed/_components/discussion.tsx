@@ -112,9 +112,9 @@ function CommentCard({ comment, reelId, level }: { comment: Comment; reelId: str
   const meta = kindMeta(comment.kind);
 
   return (
-    <div className={cn("space-y-2", level > 0 && "ml-6 border-l-2 border-border pl-3")}>
+    <div className={cn("space-y-2", safeLevel > 0 && "ml-6 border-l-2 border-border pl-3")}>
       <div className="flex items-start gap-2">
-        <UserAvatar name={comment.author.name} src={comment.author.avatar} className="size-8 shrink-0" />
+        <UserAvatar name={comment.author?.name || 'User'} src={comment.author?.avatar} className="size-8 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-medium">{comment.author.name}</p>
