@@ -143,7 +143,7 @@ export async function getComments(args: { reelId: string }) {
 
 export async function addComment(args: {
   reelId: string;
-  kind: 'note' | 'question' | 'action' | 'pushback' | 'reply';
+  kind: 'comment' | 'reply';
   body: string;
   parentId?: string;
 }) {

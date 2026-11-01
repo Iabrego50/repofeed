@@ -121,12 +121,12 @@ export async function cancelGeneration(args: { studyId: string }) {
     .from('generation_jobs')
     .select('id')
     .eq('study_id', args.studyId)
-    .in('status', ['queued', 'running']);
+    .in('status', ['pending', 'running']);
 
   if (jobs && jobs.length > 0) {
     await supabase
       .from('generation_jobs')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .update({ status: 'failed', updated_at: new Date().toISOString() })
       .in('id', jobs.map(j => j.id));
   }
 
