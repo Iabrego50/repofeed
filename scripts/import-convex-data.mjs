@@ -2,7 +2,7 @@
 /**
  * Import Convex database snapshot into Supabase
  * 
- * Usage: node scripts/import-convex-data.js <path-to-db-snapshot-zip>
+ * Usage: node scripts/import-convex-data.mjs <path-to-db-snapshot-zip>
  * 
  * This script:
  * 1. Extracts the Convex snapshot
@@ -40,22 +40,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 // ID mapping from Convex IDs to UUIDs
-const idMap = new Map<string, string>();
+const idMap = new Map();
 
-function getUUID(convexId: string): string {
+function getUUID(convexId) {
   if (!idMap.has(convexId)) {
     idMap.set(convexId, randomUUID());
   }
-  return idMap.get(convexId)!;
+  return idMap.get(convexId);
 }
 
-function convertTimestamp(convexTimestamp: number): string {
+function convertTimestamp(convexTimestamp) {
   // Convex timestamps are in milliseconds since epoch
   return new Date(convexTimestamp).toISOString();
 }
 
-async function readJsonl(filePath: string): Promise<any[]> {
-  const records: any[] = [];
+async function readJsonl(filePath) {
+  const records = [];
   const fileStream = createReadStream(filePath);
   const rl = createInterface({
     input: fileStream,
@@ -71,11 +71,7 @@ async function readJsonl(filePath: string): Promise<any[]> {
   return records;
 }
 
-async function importTable(
-  tableName: string,
-  dataDir: string,
-  transformer: (record: any) => any
-): Promise<number> {
+async function importTable(tableName, dataDir, transformer) {
   const filePath = join(dataDir, tableName, 'documents.jsonl');
   
   try {
@@ -108,7 +104,7 @@ async function importTable(
     
     console.log(`  ✓ ${tableName}: Imported ${imported} records`);
     return imported;
-  } catch (error: any) {
+  } catch (error) {
     if (error.code === 'ENOENT') {
       console.log(`  ℹ ${tableName}: File not found, skipping`);
       return 0;
@@ -121,7 +117,7 @@ async function main() {
   const zipPath = process.argv[2];
   
   if (!zipPath) {
-    console.error('Usage: node scripts/import-convex-data.js <path-to-db-snapshot.zip>');
+    console.error('Usage: node scripts/import-convex-data.mjs <path-to-db-snapshot.zip>');
     process.exit(1);
   }
 
@@ -275,7 +271,7 @@ async function main() {
     // 12. Reels
     await importTable('reels', tmpDir, (record) => {
       // Convert finding IDs in the array
-      const findingIds = (record.findingIds || []).map((id: string) => getUUID(id));
+      const findingIds = (record.findingIds || []).map((id) => getUUID(id));
       
       // Convert footage if present
       let footage = record.footage;
@@ -455,7 +451,7 @@ async function main() {
     // 24. Decks
     await importTable('decks', tmpDir, (record) => {
       // Convert reel references
-      const reels = (record.reels || []).map((reel: any) => ({
+      const reels = (record.reels || []).map((reel) => ({
         ...reel,
         id: reel.id ? getUUID(reel.id) : undefined,
       }));

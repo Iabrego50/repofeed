@@ -109,6 +109,7 @@ export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Run import script
 node scripts/import-convex-data.mjs /path/to/db-snapshot.zip
+# (valid JavaScript; no extra toolchain required)
 ```
 
 This script:

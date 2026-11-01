@@ -12,6 +12,10 @@ const OTHER_STUDY = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 const REEL = "dddddddd-dddd-dddd-dddd-dddddddddddd";
 const OTHER_REEL = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
 const TOKEN = "sharetoken0000000000000000000001";
+const FOOTAGE_OBJECT = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+const FOOTAGE_PATH = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+const GENERATED_OBJECT = "99999999-9999-9999-9999-999999999999";
+const GENERATED_PATH = "art/generated-secret.png";
 
 let db: PGlite;
 
@@ -23,6 +27,7 @@ function bootstrapSql() {
   return `
     do $$ begin create role anon; exception when duplicate_object then null; end $$;
     do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
+    do $$ begin create role service_role; exception when duplicate_object then null; end $$;
     create schema if not exists auth;
     create table if not exists auth.users (id uuid primary key);
     create table if not exists auth.session (
@@ -46,14 +51,39 @@ function bootstrapSql() {
     create schema if not exists storage;
     create table if not exists storage.buckets (
       id text primary key,
-      name text,
-      public boolean
+      name text not null,
+      owner uuid,
+      created_at timestamptz default now(),
+      updated_at timestamptz default now(),
+      public boolean default false,
+      file_size_limit bigint,
+      allowed_mime_types text[],
+      owner_id text
     );
     create table if not exists storage.objects (
-      id text primary key,
-      bucket_id text
+      id uuid primary key default gen_random_uuid(),
+      bucket_id text references storage.buckets(id),
+      name text,
+      owner uuid,
+      created_at timestamptz default now(),
+      updated_at timestamptz default now(),
+      last_accessed_at timestamptz default now(),
+      metadata jsonb,
+      owner_id text
     );
+    create unique index if not exists bucketid_objname on storage.objects (bucket_id, name);
     alter table storage.objects enable row level security;
+    create or replace function storage.foldername(name text)
+    returns text[]
+    language plpgsql
+    as $$
+    declare
+      _parts text[];
+    begin
+      select string_to_array(name, '/') into _parts;
+      return _parts[1:array_length(_parts, 1) - 1];
+    end
+    $$;
   `;
 }
 
@@ -86,7 +116,7 @@ async function applyMigrations() {
   await execSql(bootstrapSql(), "bootstrap");
   const dir = migrationsDir();
   const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
-  expect(files.length).toBeGreaterThanOrEqual(5);
+  expect(files.length).toBeGreaterThanOrEqual(7);
   for (const file of files) {
     const raw = readFileSync(path.join(dir, file), "utf8");
     await execSql(adaptMigration(raw), file);
@@ -105,12 +135,15 @@ async function applyMigrations() {
       create role rls_tester nosuperuser nologin;
     exception when duplicate_object then null;
     end $$;
-    grant usage on schema public, auth to rls_tester;
+    grant usage on schema public, auth, storage to rls_tester, anon, authenticated, service_role;
     grant all on all tables in schema public to rls_tester;
     grant all on all sequences in schema public to rls_tester;
     grant select, insert, update, delete on auth.session to rls_tester;
+    grant select, insert, update, delete on storage.objects to rls_tester, anon, authenticated, service_role;
+    grant select, insert, update, delete on storage.buckets to rls_tester, anon, authenticated, service_role;
     grant execute on all functions in schema public to rls_tester;
     grant execute on all functions in schema auth to rls_tester;
+    grant execute on all functions in schema storage to rls_tester, anon, authenticated, service_role;
     alter default privileges in schema public grant all on tables to rls_tester;
   `);
 }
@@ -147,6 +180,12 @@ async function seed() {
       ('${OTHER_REEL}', '${OTHER_STUDY}', '${WS}', 0, 't', 0, 'Draft reel', '[]'::jsonb, true);
     insert into public.share_links (study_id, workspace_id, token, created_by, revoked)
     values ('${STUDY}', '${WS}', '${TOKEN}', '${OWNER}', false);
+    insert into storage.objects (id, bucket_id, name, owner)
+    values
+      ('${FOOTAGE_OBJECT}', 'footage', '${FOOTAGE_PATH}', '${OWNER}'),
+      ('${GENERATED_OBJECT}', 'generated', '${GENERATED_PATH}', '${OWNER}');
+    insert into public.footage_clips (workspace_id, storage_id, url, name, size, uploaded_by)
+    values ('${WS}', '${FOOTAGE_PATH}', '${FOOTAGE_PATH}', 'interview.mp4', 1024, '${OWNER}');
   `);
 }
 
@@ -207,5 +246,44 @@ describe("RLS policies from supabase/migrations", () => {
     await asTester();
     const { rows } = await db.query<{ title: string }>("select title from public.studies where id = $1", [STUDY]);
     expect(rows[0].title).toBe("Published");
+  });
+
+  it("a member can read their workspace footage object", async () => {
+    await asSuper();
+    await setAuth(MEMBER);
+    await asTester();
+    const { rows } = await db.query<{ name: string }>(
+      "select name from storage.objects where bucket_id = 'footage'",
+    );
+    expect(rows.map((r) => r.name)).toEqual([FOOTAGE_PATH]);
+  });
+
+  it("a non-member cannot read workspace footage objects", async () => {
+    await asSuper();
+    await setAuth(STRANGER);
+    await asTester();
+    const { rows } = await db.query("select name from storage.objects where bucket_id = 'footage'");
+    expect(rows).toHaveLength(0);
+  });
+
+  it("anon cannot write or delete objects in the generated bucket", async () => {
+    await asSuper();
+    await setAuth(null);
+    await asTester();
+
+    await expect(
+      db.query("insert into storage.objects (bucket_id, name) values ('generated', 'pwned.png')"),
+    ).rejects.toThrow(/row-level security|violates/i);
+
+    const deleted = await db.query(
+      "delete from storage.objects where bucket_id = 'generated' returning id",
+    );
+    expect(deleted.rows).toHaveLength(0);
+
+    await asSuper();
+    const { rows } = await db.query<{ name: string }>(
+      "select name from storage.objects where bucket_id = 'generated'",
+    );
+    expect(rows.map((r) => r.name)).toEqual([GENERATED_PATH]);
   });
 });
