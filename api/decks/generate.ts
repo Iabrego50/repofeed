@@ -165,7 +165,7 @@ Create a compelling executive summary deck.`;
       .from('decks')
       .insert({
         workspace_id: workspaceId,
-        study_id: studyId || null,
+        scope: studyId || 'all',
         created_by: user.id,
         scope_label: studyId ? studies?.[0]?.title || 'Study' : 'All studies',
         slides: deck.slides,
@@ -174,6 +174,7 @@ Create a compelling executive summary deck.`;
           totalViews: insightsSummary.totalViews,
           completionRate: insightsSummary.completionRate,
         },
+        reels: [],
       })
       .select('id')
       .single();

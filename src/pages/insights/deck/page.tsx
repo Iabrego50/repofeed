@@ -37,7 +37,7 @@ export default function DeckPage() {
         .limit(1);
       
       if (studyId) {
-        query.eq('study_id', studyId);
+        query.eq('scope', studyId);
       }
       
       const { data } = await query.maybeSingle();
