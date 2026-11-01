@@ -17,7 +17,7 @@ export type Database = {
           user_id: string | null
           guest_id: string | null
           parent_id: string | null
-          kind: 'comment' | 'reply'
+          kind: 'note' | 'question' | 'action'
           body: string
           resolved: boolean
           created_at: string
@@ -30,7 +30,7 @@ export type Database = {
           user_id?: string | null
           guest_id?: string | null
           parent_id?: string | null
-          kind: 'comment' | 'reply'
+          kind: 'note' | 'question' | 'action'
           body: string
           resolved?: boolean
           created_at?: string
@@ -43,7 +43,7 @@ export type Database = {
           user_id?: string | null
           guest_id?: string | null
           parent_id?: string | null
-          kind?: 'comment' | 'reply'
+          kind?: 'note' | 'question' | 'action'
           body?: string
           resolved?: boolean
           created_at?: string
@@ -293,8 +293,8 @@ export type Database = {
           id: string
           study_id: string
           workspace_id: string
-          status: 'pending' | 'running' | 'done' | 'failed'
-          phase: 'extracting' | 'composing' | 'done'
+          status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
+          phase: 'extract' | 'compose' | 'done'
           cursor: number
           chunks: Json
           attempts: number
@@ -310,8 +310,8 @@ export type Database = {
           id?: string
           study_id: string
           workspace_id: string
-          status: 'pending' | 'running' | 'done' | 'failed'
-          phase: 'extracting' | 'composing' | 'done'
+          status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
+          phase: 'extract' | 'compose' | 'done'
           cursor?: number
           chunks?: Json
           attempts?: number
@@ -327,8 +327,8 @@ export type Database = {
           id?: string
           study_id?: string
           workspace_id?: string
-          status?: 'pending' | 'running' | 'done' | 'failed'
-          phase?: 'extracting' | 'composing' | 'done'
+          status?: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
+          phase?: 'extract' | 'compose' | 'done'
           cursor?: number
           chunks?: Json
           attempts?: number
