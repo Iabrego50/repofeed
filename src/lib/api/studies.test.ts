@@ -1,93 +1,89 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
-import { supabase } from "../supabase";
-import { createStudy, archiveStudy, publishStudy, updateStudy } from "./studies";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { FakeSupabase } from "../test/fake-supabase";
 
-vi.mock("../supabase", () => ({
-  supabase: {
-    from: vi.fn(),
-    auth: {
-      getUser: vi.fn(),
-    },
-  },
-}));
+const bag = vi.hoisted(() => ({ fake: null as FakeSupabase | null }));
+
+vi.mock("../supabase", async () => {
+  const { createFakeSupabase } = await import("../test/fake-supabase");
+  bag.fake = createFakeSupabase();
+  return { supabase: bag.fake.client };
+});
+
+function fake(): FakeSupabase {
+  if (!bag.fake) throw new Error("fake supabase not initialized");
+  return bag.fake;
+}
+
+import { archiveStudy, createStudy, deleteStudy, publishStudy, updateStudy } from "./studies-complete";
+import { assertStudySlot } from "../billing/limits";
 
 describe("study lifecycle", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    fake().reset();
+    fake().setUser({ id: "user1" });
   });
 
   it("createStudy inserts with required fields", async () => {
-    vi.mocked(supabase.auth.getUser).mockResolvedValue({
-      data: { user: { id: "user1" } },
-      error: null,
-    } as never);
-
-    vi.mocked(supabase.from).mockReturnValue({
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: { id: "study-1", title: "New Study" },
-            error: null,
-          }),
-        }),
-      }),
-    } as never);
-
-    const result = await createStudy({
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { paid_plan: "pro" } });
+    fake().queue("studies", { data: { id: "study-1", title: "New Study" } });
+    const id = await createStudy({
       workspaceId: "ws1",
       title: "New Study",
-      description: "Learn about users and onboarding",
+      audience: "Learn about users and onboarding",
     });
-
-    expect(supabase.from).toHaveBeenCalledWith("studies");
-    expect(result.id).toBe("study-1");
+    expect(id).toBe("study-1");
+    expect(fake().lastCall("studies", "insert")?.payload).toEqual(expect.objectContaining({
+      workspace_id: "ws1",
+      title: "New Study",
+      audience: "Learn about users and onboarding",
+      status: "draft",
+      created_by: "user1",
+    }));
   });
 
   it("archiveStudy updates status", async () => {
-    vi.mocked(supabase.from).mockReturnValue({
-      update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }),
-    } as never);
-
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
     await archiveStudy({ studyId: "study-1" });
-
-    expect(supabase.from).toHaveBeenCalledWith("studies");
-    const updateCall = vi.mocked(supabase.from).mock.results[0].value;
-    expect(updateCall.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "archived" })
-    );
+    expect(fake().lastCall("studies", "update")?.payload).toEqual(expect.objectContaining({ status: "archived" }));
+    expect(fake().filterEq(fake().lastCall("studies", "update")!, "id")).toBe("study-1");
   });
 
-  it("publishStudy sets published status and timestamp", async () => {
-    vi.mocked(supabase.from).mockReturnValue({
-      update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }),
-    } as never);
-
-    await publishStudy({ studyId: "study-1" });
-
-    expect(supabase.from).toHaveBeenCalledWith("studies");
-    const updateCall = vi.mocked(supabase.from).mock.results[0].value;
-    expect(updateCall.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "published" })
-    );
+  it("publishStudy sets published status and reports first publish", async () => {
+    fake().queue("studies", { data: { workspace_id: "ws1", status: "review", published_at: null, title: "S", created_by: "user1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    const result = await publishStudy({ studyId: "study-1" });
+    expect(result.firstPublish).toBe(true);
+    expect(fake().lastCall("studies", "update")?.payload).toEqual(expect.objectContaining({ status: "published" }));
   });
 
   it("updateStudy modifies title and goal", async () => {
-    vi.mocked(supabase.from).mockReturnValue({
-      update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }),
-    } as never);
-
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
     await updateStudy({
       studyId: "study-1",
       title: "Updated Title",
-      description: "New description",
+      audience: "New audience",
     });
+    expect(fake().lastCall("studies", "update")?.payload).toEqual(expect.objectContaining({
+      title: "Updated Title",
+      audience: "New audience",
+    }));
+  });
 
-    expect(supabase.from).toHaveBeenCalledWith("studies");
+  it("deleteStudy marks the study and removes source storage objects", async () => {
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("sources", { data: [{ storage_id: "file1" }, { storage_id: "file2" }] });
+    await deleteStudy({ studyId: "study1" });
+    expect(fake().lastCall("studies", "update")?.payload).toEqual(expect.objectContaining({ deleting: true }));
+    expect(fake().storageRemoves).toEqual([{ bucket: "uploads", paths: ["file1", "file2"] }]);
+  });
+
+  it("assertStudySlot blocks a fourth free study and allows pro", async () => {
+    fake().queue("studies", { count: 3 });
+    await expect(assertStudySlot("ws1", "free")).rejects.toThrow(/Free plan/);
+    await expect(assertStudySlot("ws1", "pro")).resolves.toBeUndefined();
   });
 });

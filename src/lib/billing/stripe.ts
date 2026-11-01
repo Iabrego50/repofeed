@@ -2,14 +2,16 @@ import Stripe from 'stripe';
 import { supabase } from '../supabase';
 import type { Plan } from '@/schema';
 import { TRIAL_DAYS, teamSeats } from './limits';
+export { syncPlanToDatabase } from './sync-plan';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is required');
+function getStripe(): Stripe {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is required');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2026-09-30.endive',
+  });
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2026-09-30.endive',
-});
 
 export async function getOrCreateCustomer(workspaceId: string): Promise<string> {
   const { data, error } = await supabase
@@ -29,6 +31,7 @@ export async function getOrCreateCustomer(workspaceId: string): Promise<string> 
     .single();
 
   // Create Stripe customer
+  const stripe = getStripe();
   const customer = await stripe.customers.create({
     name: data.name,
     email: userData?.email || undefined,
@@ -81,6 +84,7 @@ export async function createCheckoutSession(args: {
     .eq('id', args.userId)
     .single();
 
+  const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
@@ -123,6 +127,7 @@ export async function createPortalSession(args: {
   returnUrl: string;
 }): Promise<{ url: string }> {
   const customerId = await getOrCreateCustomer(args.workspaceId);
+  const stripe = getStripe();
 
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
@@ -136,6 +141,7 @@ export async function getPlanFromStripe(customerId: string): Promise<Plan> {
   if (!customerId) return 'free';
 
   try {
+    const stripe = getStripe();
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: 'active',
@@ -154,44 +160,4 @@ export async function getPlanFromStripe(customerId: string): Promise<Plan> {
   }
 }
 
-export async function syncPlanToDatabase(workspaceId: string, plan: Plan): Promise<void> {
-  const { data } = await supabase
-    .from('workspaces')
-    .select('paid_plan, lapsed_plan, checkout_by')
-    .eq('id', workspaceId)
-    .single();
-
-  if (!data) return;
-
-  const paid = plan === 'free' ? null : plan;
-  const updates: {
-    paid_plan: string | null;
-    lapsed_plan: string | null;
-  } = {
-    paid_plan: paid,
-    lapsed_plan: paid ? null : (data.paid_plan || data.lapsed_plan),
-  };
-
-  await supabase
-    .from('workspaces')
-    .update(updates)
-    .eq('id', workspaceId);
-
-  // Mark trial as used
-  if (paid && data.checkout_by) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('trial_used_at')
-      .eq('id', data.checkout_by)
-      .single();
-
-    if (userData && !userData.trial_used_at) {
-      await supabase
-        .from('users')
-        .update({ trial_used_at: new Date().toISOString() })
-        .eq('id', data.checkout_by);
-    }
-  }
-}
-
-export { stripe };
+export { getStripe as stripe };

@@ -1,6 +1,10 @@
 import { supabase } from '../supabase';
-import { FREE_STUDY_LIMIT } from '../billing/limits';
-import type { StudyStatus } from '@/schema/validators';
+import { assertStudySlot } from '../billing/limits';
+import { canSeeStudy, effectiveRole } from './access';
+import { verifyScenes, buildSourceIndex } from '../reel/verify';
+import { isFirstPublish } from './email-notify';
+import type { Plan, Role, StudyStatus } from '@/schema';
+import type { Scene } from '@/schema/validators';
 
 const UNTITLED_STUDY = 'Untitled Study';
 const MAX_SOURCE_CHARS = 1_000_000;
@@ -20,8 +24,6 @@ export async function listStudies(args: { workspaceId: string }) {
 
   if (!membership) throw new Error('Not a workspace member');
 
-  const isEditor = membership.role === 'owner' || membership.role === 'editor';
-
   // Editors see all, members only see published
   const query = supabase
     .from('studies')
@@ -31,14 +33,15 @@ export async function listStudies(args: { workspaceId: string }) {
     .order('created_at', { ascending: false })
     .limit(100);
 
-  if (!isEditor) {
+  const role = effectiveRole(membership.role as Role, null);
+  if (!canSeeStudy('draft', role)) {
     query.eq('status', 'published');
   }
 
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data || []).map((s: any) => ({
+  return (data || []).map((s) => ({
     _id: s.id,
     _creationTime: new Date(s.created_at).getTime(),
     title: s.title,
@@ -110,19 +113,8 @@ export async function createStudy(args: {
     .eq('id', args.workspaceId)
     .single();
 
-  if (!workspace?.paid_plan) {
-    const { count } = await supabase
-      .from('studies')
-      .select('*', { count: 'exact', head: true })
-      .eq('workspace_id', args.workspaceId)
-      .in('status', ['draft', 'generating', 'review', 'published']);
-
-    if ((count || 0) >= FREE_STUDY_LIMIT) {
-      throw new Error(
-        `Free workspaces can have ${FREE_STUDY_LIMIT} studies. Upgrade to Pro for unlimited studies.`
-      );
-    }
-  }
+  const plan = (workspace?.paid_plan as Plan | undefined) ?? 'free';
+  await assertStudySlot(args.workspaceId, plan);
 
   const title = args.title.trim() || UNTITLED_STUDY;
 
@@ -174,7 +166,12 @@ export async function updateStudy(args: {
     throw new Error('Must be an editor');
   }
 
-  const updates: any = { updated_at: new Date().toISOString() };
+  const updates: {
+    updated_at: string;
+    title?: string;
+    audience?: string;
+    goal?: string | null;
+  } = { updated_at: new Date().toISOString() };
   if (args.title !== undefined) updates.title = args.title.trim().slice(0, 120);
   if (args.audience !== undefined) updates.audience = args.audience.trim().slice(0, 200);
   if (args.goal !== undefined) updates.goal = args.goal?.trim().slice(0, 300) || null;
@@ -356,7 +353,7 @@ export async function publishStudy(args: { studyId: string }) {
 
   const { data: study } = await supabase
     .from('studies')
-    .select('workspace_id, status')
+    .select('workspace_id, status, published_at, title, created_by')
     .eq('id', args.studyId)
     .single();
 
@@ -374,16 +371,19 @@ export async function publishStudy(args: { studyId: string }) {
     throw new Error('Must be an editor');
   }
 
+  const firstPublish = isFirstPublish(study.published_at);
+
   const { error } = await supabase
     .from('studies')
     .update({
       status: 'published' as StudyStatus,
-      published_at: new Date().toISOString(),
+      published_at: study.published_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', args.studyId);
 
   if (error) throw error;
+  return { firstPublish, workspaceId: study.workspace_id, title: study.title, createdBy: study.created_by };
 }
 
 // Archive study
@@ -447,7 +447,12 @@ export async function deleteStudy(args: { studyId: string }) {
     throw new Error('Must be an editor');
   }
 
-  // Soft delete
+  const { data: sources } = await supabase
+    .from('sources')
+    .select('storage_id')
+    .eq('study_id', args.studyId)
+    .not('storage_id', 'is', null);
+
   const { error } = await supabase
     .from('studies')
     .update({ deleting: true, updated_at: new Date().toISOString() })
@@ -455,7 +460,15 @@ export async function deleteStudy(args: { studyId: string }) {
 
   if (error) throw error;
 
-  // Child rows (sources, findings, reels, etc.) are automatically deleted via ON DELETE CASCADE
+  const storageIds = (sources || [])
+    .map((s) => s.storage_id)
+    .filter((id): id is string => Boolean(id));
+  if (storageIds.length > 0) {
+    const { error: storageError } = await supabase.storage.from('uploads').remove(storageIds);
+    if (storageError) {
+      console.error('Failed to clean up storage objects:', storageError);
+    }
+  }
 }
 
 // List sources for a study
@@ -489,7 +502,7 @@ export async function listSources(args: { studyId: string }) {
 
   if (error) throw error;
   
-  return (data || []).map((s: any) => ({
+  return (data || []).map((s) => ({
     _id: s.id,
     _creationTime: new Date(s.created_at).getTime(),
     name: s.name,
@@ -618,19 +631,18 @@ export async function regenerateShareLink(args: { studyId: string }) {
 }
 
 // Update reel scenes
-export async function updateReelScenes(args: { reelId: string; scenes: any[] }) {
+export async function updateReelScenes(args: { reelId: string; title?: string; scenes: Scene[] }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data: reel } = await supabase
     .from('reels')
-    .select('workspace_id')
+    .select('workspace_id, study_id, title')
     .eq('id', args.reelId)
     .single();
 
   if (!reel) throw new Error('Reel not found');
 
-  // Check editor permission
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('role')
@@ -642,13 +654,32 @@ export async function updateReelScenes(args: { reelId: string; scenes: any[] }) 
     throw new Error('Must be an editor');
   }
 
+  const { data: sources } = await supabase
+    .from('sources')
+    .select('text')
+    .eq('study_id', reel.study_id);
+
+  const sourceIndex = buildSourceIndex((sources || []).map((s) => s.text).join('\n'));
+  const warning = verifyScenes(args.scenes, sourceIndex);
+  const updates: {
+    scenes: ReturnType<typeof JSON.parse>;
+    updated_at: string;
+    title?: string;
+    warning: string | null;
+    enabled?: boolean;
+  } = {
+    scenes: JSON.parse(JSON.stringify(args.scenes)),
+    updated_at: new Date().toISOString(),
+    warning,
+  };
+  if (args.title !== undefined) updates.title = args.title;
+  if (warning) updates.enabled = false;
+
   const { error } = await supabase
     .from('reels')
-    .update({
-      scenes: args.scenes,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updates)
     .eq('id', args.reelId);
 
   if (error) throw error;
+  return { warning };
 }

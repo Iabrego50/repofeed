@@ -79,8 +79,23 @@ export default function InvitePage() {
     );
   }
 
-  if (!invite) {
-    return null;
+  if (!invite || invite.status !== "ok") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <Logo className="mx-auto mb-4 size-12" />
+            <h1 className="text-3xl font-bold">Invalid Invite</h1>
+            <p className="mt-2 text-muted-foreground">
+              This invite link is invalid or has expired.
+            </p>
+          </div>
+          <Button onClick={() => navigate("/")} className="w-full">
+            Go Home
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

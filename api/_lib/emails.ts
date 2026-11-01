@@ -1,5 +1,24 @@
 import { Resend } from 'resend';
 import { supabase } from '@/lib/supabase';
+import {
+  feedbackKindLabel,
+  isFirstPublish,
+  resolveEmailPrefs,
+  settingsUrl,
+  shouldSendFeedback,
+  shouldSendStudyPublished,
+  studyWatchUrl,
+} from '@/lib/api/email-notify';
+
+export {
+  feedbackKindLabel,
+  isFirstPublish,
+  resolveEmailPrefs,
+  settingsUrl,
+  shouldSendFeedback,
+  shouldSendStudyPublished,
+  studyWatchUrl,
+};
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -25,7 +44,7 @@ function layout(opts: {
   footer: string;
   workspaceId: string;
 }): string {
-  const settingsUrl = `${SITE_URL}/settings?ws=${encodeURIComponent(opts.workspaceId)}`;
+  const settingsHref = settingsUrl(SITE_URL, opts.workspaceId);
   const quote = opts.quote
     ? `<blockquote style="margin:20px 0;padding:12px 16px;border-left:3px solid #2f9bff;background:#f2f6fc;color:#1b2333;font-size:15px;line-height:1.5;white-space:pre-wrap">${escapeHtml(opts.quote)}</blockquote>`
     : '';
@@ -39,7 +58,7 @@ function layout(opts: {
 ${quote}
 <p style="margin:24px 0 8px"><a href="${escapeHtml(opts.cta.url)}" style="display:inline-block;background:#2f9bff;color:#04101f;text-decoration:none;font-weight:700;font-size:15px;padding:12px 20px;border-radius:10px">${escapeHtml(opts.cta.label)}</a></p>
 </td></tr>
-<tr><td style="padding:20px 24px 24px;font-size:12px;line-height:1.5;color:#7a8599">${escapeHtml(opts.footer)} <a href="${escapeHtml(settingsUrl)}" style="color:#2f7fd6">Turn these emails off in Settings</a>.</td></tr>
+<tr><td style="padding:20px 24px 24px;font-size:12px;line-height:1.5;color:#7a8599">${escapeHtml(opts.footer)} <a href="${escapeHtml(settingsHref)}" style="color:#2f7fd6">Turn these emails off in Settings</a>.</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -51,10 +70,7 @@ async function getEmailPrefs(workspaceId: string, userId: string) {
     .eq('user_id', userId)
     .single();
   
-  return {
-    newStudies: data?.new_studies ?? true,
-    feedback: data?.feedback ?? true,
-  };
+  return resolveEmailPrefs(data);
 }
 
 export async function sendStudyPublishedEmail(args: {
@@ -62,26 +78,34 @@ export async function sendStudyPublishedEmail(args: {
   studyId: string;
   studyTitle: string;
   authorName: string;
+  publisherUserId?: string;
+  publishedAt?: string | null;
 }) {
-  // Get workspace members with editor or owner role
+  if (args.publishedAt !== undefined && !isFirstPublish(args.publishedAt)) return;
+
   const { data: members } = await supabase
     .from('workspace_members')
     .select('user_id, users(email)')
-    .eq('workspace_id', args.workspaceId)
-    .in('role', ['owner', 'editor']);
+    .eq('workspace_id', args.workspaceId);
 
   if (!members) return;
 
   for (const member of members) {
+    const email = Array.isArray(member.users) ? member.users[0]?.email : member.users?.email;
     const prefs = await getEmailPrefs(args.workspaceId, member.user_id);
-    if (!prefs.newStudies || !member.users?.email) continue;
+    if (!shouldSendStudyPublished({
+      prefs,
+      recipientUserId: member.user_id,
+      publisherUserId: args.publisherUserId ?? '',
+      recipientEmail: email,
+    })) continue;
 
     const html = layout({
       heading: `${args.authorName} published ${args.studyTitle}`,
       intro: 'New research insights are ready to watch.',
       cta: {
         label: 'Watch now',
-        url: `${SITE_URL}/feed?study=${args.studyId}`,
+        url: studyWatchUrl(SITE_URL, args.studyId),
       },
       footer: 'This study was just published in your workspace.',
       workspaceId: args.workspaceId,
@@ -89,7 +113,7 @@ export async function sendStudyPublishedEmail(args: {
 
     await resend.emails.send({
       from: EMAIL_FROM,
-      to: member.users.email,
+      to: email!,
       subject: `${args.authorName} published ${args.studyTitle}`,
       html,
     });
@@ -111,14 +135,10 @@ export async function sendFeedbackEmail(args: {
     .eq('id', args.recipientUserId)
     .single();
 
-  if (!user?.email) return;
-
   const prefs = await getEmailPrefs(args.workspaceId, args.recipientUserId);
-  if (!prefs.feedback) return;
+  if (!shouldSendFeedback({ prefs, recipientEmail: user?.email })) return;
 
-  const kindLabel = args.commentKind === 'pushback' ? 'pushed back' : 
-                    args.commentKind === 'question' ? 'asked a question' : 
-                    'left a note';
+  const kindLabel = feedbackKindLabel(args.commentKind);
 
   const html = layout({
     heading: `${args.commenterName} ${kindLabel} on ${args.reelTitle}`,
@@ -132,9 +152,12 @@ export async function sendFeedbackEmail(args: {
     workspaceId: args.workspaceId,
   });
 
+  const to = user?.email;
+  if (!to) return;
+
   await resend.emails.send({
     from: EMAIL_FROM,
-    to: user.email,
+    to,
     subject: `${args.commenterName} ${kindLabel}`,
     html,
   });

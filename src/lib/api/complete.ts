@@ -3,7 +3,8 @@ import * as studiesModule from './studies-complete';
 import * as workspacesModule from './workspaces-complete';
 import * as feedModule from './feed-complete';
 import * as generationModule from './generation-jobs';
-import { mapReel } from './mappers';
+import * as shareModule from './share';
+import * as footageModule from './footage';
 import { supabase } from '../supabase';
 import * as billing from '../billing/stripe';
 
@@ -28,6 +29,7 @@ export const api = {
     updateReelScenes: studiesModule.updateReelScenes,
   },
   workspaces: {
+    get: workspacesModule.getWorkspace,
     list: workspacesModule.listWorkspaces,
     mine: workspacesModule.listWorkspaces,
     create: workspacesModule.createWorkspace,
@@ -35,6 +37,9 @@ export const api = {
     members: workspacesModule.getMembers,
     listMembers: workspacesModule.listWorkspaceMembers,
     removeMember: workspacesModule.removeMember,
+    setMemberRole: workspacesModule.setMemberRole,
+    createInvite: workspacesModule.createInvite,
+    acceptInvite: workspacesModule.acceptInvite,
     listInvites: workspacesModule.listInvites,
     peekInvite: workspacesModule.peekInvite,
     revokeInvite: workspacesModule.revokeInvite,
@@ -73,6 +78,7 @@ export const api = {
     guestAddComment: feedModule.guestAddComment,
     deleteComment: feedModule.deleteComment,
     react: feedModule.react,
+    toggleSave: feedModule.toggleSave,
     getEvidence: feedModule.getEvidence,
   },
   generation: {
@@ -141,106 +147,14 @@ export const api = {
     },
   },
   share: {
-    publicTokenForReel: async (args: { reelId: string }): Promise<string | null> => {
-      // Get the reel
-      const { data: reel } = await supabase
-        .from('reels')
-        .select('study_id, enabled')
-        .eq('id', args.reelId)
-        .maybeSingle();
-
-      if (!reel || !reel.enabled) return null;
-
-      // Check if study is published
-      const { data: study } = await supabase
-        .from('studies')
-        .select('id, status')
-        .eq('id', reel.study_id)
-        .single();
-
-      if (!study || study.status !== 'published') return null;
-
-      // Get or create the share link for this study
-      const { data: shareLink } = await supabase
-        .from('share_links')
-        .select('token')
-        .eq('study_id', study.id)
-        .eq('revoked', false)
-        .maybeSingle();
-
-      if (shareLink) return shareLink.token;
-
-      // No share link exists, return null (study owner needs to enable sharing first)
-      return null;
-    },
-    feed: async (args: { token: string; secret?: string }) => {
-      const { data, error } = await supabase
-        .from('share_links')
-        .select('*')
-        .eq('token', args.token)
-        .eq('revoked', false)
-        .maybeSingle();
-
-      if (error || !data) return null;
-
-      // Get study info
-      const { data: study } = await supabase
-        .from('studies')
-        .select('id, title')
-        .eq('id', data.study_id)
-        .single();
-
-      // Get reels for this study
-      const { data: reels } = await supabase
-        .from('reels')
-        .select('*, studies!inner(title)')
-        .eq('study_id', data.study_id)
-        .eq('enabled', true);
-
-      // Get guest info if secret provided
-      let guest = null;
-      if (args.secret) {
-        const { data: guestData } = await supabase
-          .from('guests')
-          .select('*')
-          .eq('link_id', data.id)
-          .eq('secret', args.secret)
-          .maybeSingle();
-        guest = guestData;
-      }
-
-      return {
-        studyTitle: study?.title || 'Untitled Study',
-        reels: (reels || []).map(mapReel),
-        guest,
-      };
-    },
-    join: async (args: { token: string; name: string }) => {
-      const { data: link, error: linkError } = await supabase
-        .from('share_links')
-        .select('id, study_id')
-        .eq('token', args.token)
-        .eq('revoked', false)
-        .maybeSingle();
-
-      if (linkError || !link) throw new Error('Invalid share link');
-
-      const secret = Math.random().toString(36).substring(2, 15);
-      const { data: guest, error } = await supabase
-        .from('guests')
-        .insert({
-          study_id: link.study_id,
-          link_id: link.id,
-          name: args.name,
-          secret,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return { secret };
-    },
+    createLink: shareModule.createShareLink,
+    revokeLink: shareModule.revokeShareLink,
+    feed: shareModule.shareFeed,
+    join: shareModule.joinShare,
+    publicTokenForReel: shareModule.publicTokenForReel,
+    reelShareLink: shareModule.reelShareLink,
+    comments: shareModule.shareComments,
+    evidence: shareModule.shareEvidence,
   },
   art: {
     paintReel: async (args: { reelId: string }) => {
@@ -282,41 +196,25 @@ export const api = {
     },
   },
   footage: {
+    library: footageModule.listLibrary,
+    saveUpload: footageModule.saveUpload,
+    setReelFootage: footageModule.setReelFootage,
+    removeUpload: footageModule.removeUpload,
     listClips: async (args: { reelId: string }) => {
       const { data: reel } = await supabase
-        .from('reels')
-        .select('workspace_id')
-        .eq('id', args.reelId)
+        .from("reels")
+        .select("workspace_id")
+        .eq("id", args.reelId)
         .single();
-      
-      if (!reel) return [];
-      
-      const stockClips = [
-        { url: "/footage/receipts.mp4", label: "Budget review" },
-        { url: "/footage/mother-cooking.mp4", label: "Home visit" },
-        { url: "/footage/box-at-door.mp4", label: "Doorstep cam" },
-        { url: "/footage/calendar.mp4", label: "Planning session" },
-        { url: "/footage/family-dinner.mp4", label: "Dinner obs" },
-        { url: "/footage/wall-clock.mp4", label: "Cook-along" },
-        { url: "/footage/half-onion.mp4", label: "Prep cam" },
-        { url: "/footage/frustrated-phone.mp4", label: "Cancel flow" },
-        { url: "/footage/takeout-tv.mp4", label: "Evening obs" },
-        { url: "/footage/mushrooms.mp4", label: "Cook-along" },
-      ];
-      
-      return stockClips;
+      if (!reel) return [...footageModule.STOCK_CLIPS];
+      const library = await footageModule.listLibrary({ workspaceId: reel.workspace_id });
+      return [...library.stock];
     },
     selectClip: async (args: { reelId: string; clipId: string }) => {
-      const { error } = await supabase
-        .from('reels')
-        .update({
-          footage: { url: args.clipId, caption: '', media: 'video' },
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', args.reelId);
-      
-      if (error) throw error;
-      return { success: true };
+      return footageModule.setReelFootage({
+        reelId: args.reelId,
+        footage: { caption: "", source: { kind: "stock", url: args.clipId } },
+      });
     },
   },
 };

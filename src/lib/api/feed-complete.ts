@@ -43,6 +43,14 @@ export async function listSavedReels(args: { workspaceId: string; userId: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || user.id !== args.userId) throw new Error('Not authorized');
 
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', args.workspaceId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!membership) throw new Error('Not authorized');
+
   const { data } = await supabase
     .from('saved_reels')
     .select('reel_id')
@@ -58,9 +66,45 @@ export async function listSavedReels(args: { workspaceId: string; userId: string
   const { data: reels } = await supabase
     .from('reels')
     .select('*, studies!inner(title)')
-    .in('id', reelIds);
+    .in('id', reelIds)
+    .eq('enabled', true);
 
-  return (reels || []).map(mapReel);
+  return (reels || []).map((row) => ({ ...mapReel(row), saved: true }));
+}
+
+export async function toggleSave(args: { reelId: string }): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: reel } = await supabase
+    .from('reels')
+    .select('workspace_id, study_id, enabled')
+    .eq('id', args.reelId)
+    .maybeSingle();
+  if (!reel) throw new Error('Reel not found');
+  if (!reel.enabled) throw new Error('Scene not found');
+
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', reel.workspace_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!membership) throw new Error('Not authorized');
+
+  const { data: existing } = await supabase
+    .from('saved_reels')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('reel_id', args.reelId)
+    .maybeSingle();
+
+  if (existing) {
+    await unsaveReel({ reelId: args.reelId, userId: user.id });
+    return false;
+  }
+  await saveReel({ reelId: args.reelId, userId: user.id });
+  return true;
 }
 
 export async function saveReel(args: { reelId: string; userId: string }) {
@@ -75,6 +119,14 @@ export async function saveReel(args: { reelId: string; userId: string }) {
     .single();
 
   if (!reel) throw new Error('Reel not found');
+
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('id')
+    .eq('workspace_id', reel.workspace_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!membership) throw new Error('Not authorized');
 
   const { error } = await supabase
     .from('saved_reels')
@@ -199,7 +251,24 @@ export async function deleteComment(args: { commentId: string }) {
     .single();
 
   if (commentError || !comment) throw new Error('Comment not found');
-  if (comment.user_id !== user.id) throw new Error('Not authorized');
+
+  const { data: reel } = await supabase
+    .from('reels')
+    .select('workspace_id')
+    .eq('id', comment.reel_id)
+    .maybeSingle();
+  const { data: membership } = reel
+    ? await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', reel.workspace_id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+    : { data: null };
+
+  const isOwn = comment.user_id === user.id;
+  const isEditor = membership?.role === 'owner' || membership?.role === 'editor';
+  if (!isOwn && !isEditor) throw new Error('Not authorized');
 
   const { error } = await supabase
     .from('comments')
@@ -220,6 +289,13 @@ export async function react(args: { reelId: string; kind: 'true' | 'surprised' |
     .single();
 
   if (reelError || !reel) throw new Error('Reel not found');
+
+  const { data: enabledReel } = await supabase
+    .from('reels')
+    .select('enabled')
+    .eq('id', args.reelId)
+    .maybeSingle();
+  if (enabledReel && enabledReel.enabled === false) throw new Error('Scene not found');
 
   const { data: existing } = await supabase
     .from('reactions')
@@ -250,11 +326,13 @@ export async function react(args: { reelId: string; kind: 'true' | 'surprised' |
 export async function getEvidence(args: { reelId: string }): Promise<Finding[]> {
   const { data: reel, error } = await supabase
     .from('reels')
-    .select('finding_ids')
+    .select('finding_ids, enabled, workspace_id')
     .eq('id', args.reelId)
     .single();
 
-  if (error || !reel || !reel.finding_ids) return [];
+  if (error || !reel) throw new Error('Scene not found');
+  if (!reel.enabled) throw new Error('Scene not found');
+  if (!reel.finding_ids) return [];
 
   const findingIds = (Array.isArray(reel.finding_ids) 
     ? reel.finding_ids 
