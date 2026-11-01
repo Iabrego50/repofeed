@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { requiredEnv } from './respond.js';
 import { supabase } from './supabase.js';
 import {
   feedbackKindLabel,
@@ -20,7 +21,12 @@ export {
   studyWatchUrl,
 };
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | undefined;
+
+function getResend(): Resend {
+  if (!resend) resend = new Resend(requiredEnv('RESEND_API_KEY'));
+  return resend;
+}
 
 export const SITE_URL = process.env.SITE_URL || 'https://repofeed.ai';
 export const EMAIL_FROM = 'repofeed.ai <no-reply@repofeed.ai>';
@@ -111,7 +117,7 @@ export async function sendStudyPublishedEmail(args: {
       workspaceId: args.workspaceId,
     });
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_FROM,
       to: email!,
       subject: `${args.authorName} published ${args.studyTitle}`,
@@ -155,7 +161,7 @@ export async function sendFeedbackEmail(args: {
   const to = user?.email;
   if (!to) return;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: EMAIL_FROM,
     to,
     subject: `${args.commenterName} ${kindLabel}`,

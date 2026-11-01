@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
 import { CHUNK_CHARS } from '../../src/lib/ai/client.js';
 
@@ -7,6 +8,12 @@ const MAX_SOURCES_CHARS = 2_000_000;
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    requireSupabaseEnv();
+  } catch (error) {
+    return sendRouteError(res, error);
   }
 
   const { studyId } = req.body;
@@ -108,6 +115,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ jobId: job.id, status: 'queued' });
   } catch (error) {
     console.error('Start generation error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return sendRouteError(res, error);
   }
 }

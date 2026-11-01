@@ -99,27 +99,65 @@ async function transpileGraph(files) {
   }
 }
 
-function stubRuntimeEnv() {
-  process.env.OPENAI_API_KEY ||= "test-openai-key";
-  process.env.ANTHROPIC_API_KEY ||= "test-anthropic-key";
-  process.env.STRIPE_SECRET_KEY ||= "sk_test_dummy";
-  process.env.STRIPE_WEBHOOK_SECRET ||= "whsec_test";
-  process.env.SUPABASE_URL ||= "https://example.supabase.co";
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-service-role";
+const SECRET_ENV = [
+  "OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "SUPABASE_URL",
+  "VITE_SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "RESEND_API_KEY",
+];
+
+function unsetRuntimeEnv() {
+  for (const key of SECRET_ENV) delete process.env[key];
+}
+
+function mockResponse() {
+  const out = { statusCode: 0, body: null };
+  const res = {
+    status(code) {
+      out.statusCode = code;
+      return res;
+    },
+    json(body) {
+      out.body = body;
+      return res;
+    },
+    send(body) {
+      out.body = typeof body === "string" ? JSON.parse(body) : body;
+      return res;
+    },
+    setHeader() {
+      return res;
+    },
+  };
+  return { res, out };
 }
 
 async function importEntries(entries) {
-  stubRuntimeEnv();
+  unsetRuntimeEnv();
   const loaded = [];
+  const probed = [];
   for (const rel of entries) {
     const compiled = join(OUT, rel.replace(/\.ts$/, ".js"));
     const mod = await import(pathToFileURL(compiled).href);
     if (typeof mod.default !== "function") {
       throw new Error(`${rel} did not export a default function after transpile`);
     }
+    const { res, out } = mockResponse();
+    await mod.default({ method: "POST", body: { jobId: "x", studyId: "x" }, headers: {} }, res);
+    if (out.statusCode !== 503) {
+      throw new Error(`${rel} expected 503 with env unset, got ${out.statusCode} ${JSON.stringify(out.body)}`);
+    }
+    if (!String(out.body?.error ?? "").startsWith("Server not configured:") || !String(out.body?.error ?? "").endsWith(" missing")) {
+      throw new Error(`${rel} expected config 503 JSON, got ${JSON.stringify(out.body)}`);
+    }
     loaded.push(rel);
+    probed.push(`${rel} → ${out.body.error}`);
   }
-  return loaded;
+  return { loaded, probed };
 }
 
 export async function checkApiEsm() {
@@ -138,15 +176,18 @@ export async function checkApiEsm() {
 
   const files = await collectGraph(API_ENTRIES);
   await transpileGraph(files);
-  const loaded = await importEntries(API_ENTRIES);
-  return { files: files.length, loaded };
+  const { loaded, probed } = await importEntries(API_ENTRIES);
+  return { files: files.length, loaded, probed };
 }
 
 const launched = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (launched) {
   checkApiEsm()
     .then((result) => {
-      console.log(`ok: imported ${result.loaded.join(", ")} (${result.files} transpiled modules)`);
+      console.log(
+        `ok: imported with env unset ${result.loaded.join(", ")} (${result.files} transpiled modules)`,
+      );
+      for (const line of result.probed) console.log(`  503 ${line}`);
     })
     .catch((error) => {
       console.error(error instanceof Error ? error.message : error);

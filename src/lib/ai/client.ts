@@ -1,16 +1,21 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { requiredEnv } from '../server-env.js';
 import { StepError, aiHttpError } from '../errors/step-error.js';
 
-// Use direct Anthropic and OpenAI SDKs
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+let anthropic: Anthropic | undefined;
+let openai: OpenAI | undefined;
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export function getAnthropic(): Anthropic {
+  if (!anthropic) anthropic = new Anthropic({ apiKey: requiredEnv('ANTHROPIC_API_KEY') });
+  return anthropic;
+}
+
+export function getOpenAI(): OpenAI {
+  if (!openai) openai = new OpenAI({ apiKey: requiredEnv('OPENAI_API_KEY') });
+  return openai;
+}
 
 // Model configuration - use the correct current model IDs
 export const CHAT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
@@ -41,15 +46,8 @@ export async function callTool<T>(args: {
   schema: z.ZodType<T>;
   maxTokens: number;
 }): Promise<T> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new StepError("AI isn't set up for this app yet.", {
-      detail: 'ANTHROPIC_API_KEY is missing',
-      retryable: false,
-    });
-  }
-
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: CHAT_MODEL,
       max_tokens: args.maxTokens,
       system: `${args.system}\n\nAlways respond by calling the \`${args.tool.name}\` tool exactly once. Do not reply with plain text.`,
@@ -112,15 +110,8 @@ export async function callTool<T>(args: {
 
 /** Paints a portrait image (1024×1536) and returns it as a PNG blob. */
 export async function generateImage(prompt: string): Promise<Blob> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new StepError("Image AI isn't set up for this app yet.", {
-      detail: 'OPENAI_API_KEY is missing',
-      retryable: false,
-    });
-  }
-
   try {
-    const response = await openai.images.generate({
+    const response = await getOpenAI().images.generate({
       model: IMAGE_MODEL,
       prompt,
       size: '1024x1536',

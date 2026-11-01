@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { isServerNotConfigured, requiredEnv, requireSupabaseEnv, sendNotConfigured, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
 import { callTool, CHUNK_CHARS, MAX_COMPOSE_FINDINGS } from '../../src/lib/ai/client.js';
 import {
@@ -28,9 +29,20 @@ function logEntry(level: LogEntry['level'], message: string): LogEntry {
   return { at: new Date().toISOString(), level, message };
 }
 
+function requireProcessEnv() {
+  requireSupabaseEnv();
+  requiredEnv('ANTHROPIC_API_KEY');
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    requireProcessEnv();
+  } catch (error) {
+    return sendRouteError(res, error);
   }
 
   const { jobId } = req.body;
@@ -84,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(400).json({ error: 'Invalid phase' });
   } catch (error) {
+    if (isServerNotConfigured(error)) return sendNotConfigured(res, error);
     console.error('Generation error:', error);
     const e = toStepError(error);
     

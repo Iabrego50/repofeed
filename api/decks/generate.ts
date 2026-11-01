@@ -1,12 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { configJsonResponse, requiredEnv, requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
+import { getAnthropic } from '../../src/lib/ai/client.js';
 import { summary } from '../../src/lib/api/insights.js';
 import { z } from 'zod';
-import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function requireDeckEnv() {
+  requireSupabaseEnv();
+  requiredEnv('ANTHROPIC_API_KEY');
+}
 
 const DECK_SYSTEM = `You write executive research summary decks. Given study insights, engagement data, and team comments, create 8-15 slides that tell the story of what was learned.
 
@@ -56,7 +58,7 @@ async function callTool<T>(args: {
   schema: z.ZodType<T>;
   maxTokens: number;
 }): Promise<T> {
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: 'claude-sonnet-5-5',
     max_tokens: args.maxTokens,
     system: args.system,
@@ -80,6 +82,12 @@ async function callTool<T>(args: {
 }
 
 export async function POST(req: Request) {
+  try {
+    requireDeckEnv();
+  } catch (error) {
+    return configJsonResponse(error) ?? new Response(JSON.stringify({ error: 'Server not configured' }), { status: 503 });
+  }
+
   const { workspaceId, studyId } = await req.json();
 
   try {
@@ -183,6 +191,8 @@ Create a compelling executive summary deck.`;
     });
 
   } catch (error) {
+    const configured = configJsonResponse(error);
+    if (configured) return configured;
     console.error('Deck generation failed:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Deck generation failed' 
@@ -193,6 +203,11 @@ Create a compelling executive summary deck.`;
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+  try {
+    requireDeckEnv();
+  } catch (error) {
+    return sendRouteError(res, error);
   }
   const headers = new Headers({ 'content-type': 'application/json' });
   const authorization = req.headers.authorization;

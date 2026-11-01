@@ -28,14 +28,18 @@ export function initializeAI(config: AIConfig) {
 
 export function getAnthropicClient(): Anthropic {
   if (!anthropicClient) {
-    throw new Error('Anthropic client not initialized');
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error('Server not configured: ANTHROPIC_API_KEY missing');
+    anthropicClient = new Anthropic({ apiKey });
   }
   return anthropicClient;
 }
 
 export function getOpenAIClient(): OpenAI {
   if (!openaiClient) {
-    throw new Error('OpenAI client not initialized');
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error('Server not configured: OPENAI_API_KEY missing');
+    openaiClient = new OpenAI({ apiKey });
   }
   return openaiClient;
 }

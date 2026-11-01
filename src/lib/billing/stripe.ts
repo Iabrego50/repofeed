@@ -1,16 +1,19 @@
 import Stripe from 'stripe';
 import { supabase } from '../supabase';
 import type { Plan } from '@/schema';
+import { requiredEnv } from '../server-env.js';
 import { TRIAL_DAYS, teamSeats } from './limits';
 export { syncPlanToDatabase } from './sync-plan';
 
+let stripe: Stripe | undefined;
+
 function getStripe(): Stripe {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is required');
+  if (!stripe) {
+    stripe = new Stripe(requiredEnv('STRIPE_SECRET_KEY'), {
+      apiVersion: '2026-09-30.endive',
+    });
   }
-  return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2026-09-30.endive',
-  });
+  return stripe;
 }
 
 export async function getOrCreateCustomer(workspaceId: string): Promise<string> {

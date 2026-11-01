@@ -44,7 +44,8 @@ describe("Vercel /api ESM load", () => {
       cwd: resolve("."),
     });
     expect(result.status, `${result.stderr}\n${result.stdout}`).toBe(0);
-    expect(result.stdout).toMatch(/ok: imported/);
+    expect(result.stdout).toMatch(/ok: imported with env unset/);
+    expect(result.stdout).toMatch(/Server not configured:.*missing/);
     for (const entry of API_ENTRIES) {
       expect(result.stdout).toContain(entry);
     }

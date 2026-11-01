@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { configJsonResponse, requiredEnv, requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
+import { getAnthropic, getOpenAI } from '../../src/lib/ai/client.js';
 import { z } from 'zod';
 
 const ART_SYSTEM = `You art-direct the background image for a short vertical research video ("insight reel"). Animated text sits on top of the image, so the image sets the mood; it never carries the message.
@@ -34,16 +36,11 @@ const artSchema = z.object({
   caption: z.string().default(""),
 });
 
-import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function requirePaintEnv() {
+  requireSupabaseEnv();
+  requiredEnv('ANTHROPIC_API_KEY');
+  requiredEnv('OPENAI_API_KEY');
+}
 
 interface Scene {
   type: string;
@@ -81,7 +78,7 @@ async function callTool<T>(args: {
   schema: z.ZodType<T>;
   maxTokens: number;
 }): Promise<T> {
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: 'claude-sonnet-5-5',
     max_tokens: args.maxTokens,
     system: args.system,
@@ -105,7 +102,7 @@ async function callTool<T>(args: {
 }
 
 async function generateImage(prompt: string): Promise<Buffer> {
-  const response = await openai.images.generate({
+  const response = await getOpenAI().images.generate({
     model: 'gpt-image-2.5-flare',
     prompt,
     size: '1024x1536',
@@ -127,6 +124,12 @@ async function generateImage(prompt: string): Promise<Buffer> {
 }
 
 export async function POST(req: Request) {
+  try {
+    requirePaintEnv();
+  } catch (error) {
+    return configJsonResponse(error) ?? new Response(JSON.stringify({ error: 'Server not configured' }), { status: 503 });
+  }
+
   const { reelId } = await req.json();
   
   if (!reelId) {
@@ -213,6 +216,8 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
+    const configured = configJsonResponse(error);
+    if (configured) return configured;
     console.error('Art painting failed:', error);
     
     // Mark as failed
@@ -234,6 +239,11 @@ export async function POST(req: Request) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+  try {
+    requirePaintEnv();
+  } catch (error) {
+    return sendRouteError(res, error);
   }
   const request = new Request('http://localhost/api/art/paint', {
     method: 'POST',
