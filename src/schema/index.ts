@@ -58,6 +58,8 @@ export interface User {
   created_at: string;
 }
 
+import type { Scene } from './validators';
+
 export interface Reel {
   id: string;
   workspace_id: string;
