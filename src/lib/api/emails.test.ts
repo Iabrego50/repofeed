@@ -10,7 +10,10 @@ async function supabaseMock() {
   return { supabase: bag.fake.client };
 }
 vi.mock("../supabase", supabaseMock);
+vi.mock("../supabase.js", supabaseMock);
 vi.mock("@/lib/supabase", supabaseMock);
+vi.mock("../../../api/_lib/supabase", supabaseMock);
+vi.mock("../../../api/_lib/supabase.js", supabaseMock);
 vi.mock("resend", () => ({
   Resend: class MockResend {
     emails = { send: resendSend };

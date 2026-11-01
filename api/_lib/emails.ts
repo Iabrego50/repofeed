@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { supabase } from '@/lib/supabase';
+import { supabase } from './supabase.js';
 import {
   feedbackKindLabel,
   isFirstPublish,
@@ -8,7 +8,7 @@ import {
   shouldSendFeedback,
   shouldSendStudyPublished,
   studyWatchUrl,
-} from '@/lib/api/email-notify';
+} from '../../src/lib/api/email-notify.js';
 
 export {
   feedbackKindLabel,

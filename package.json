@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "check:api": "node scripts/check-api-esm.mjs",
     "lint": "eslint . --max-warnings=0",
     "prettier-fix": "prettier --write .",
     "prettier-check": "prettier --check ."

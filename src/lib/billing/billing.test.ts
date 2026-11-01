@@ -5,7 +5,12 @@ const bag = vi.hoisted(() => ({ fake: null as FakeSupabase | null }));
 
 vi.mock("../supabase", async () => {
   const { createFakeSupabase } = await import("../test/fake-supabase");
-  bag.fake = createFakeSupabase();
+  if (!bag.fake) bag.fake = createFakeSupabase();
+  return { supabase: bag.fake.client };
+});
+vi.mock("../supabase.js", async () => {
+  const { createFakeSupabase } = await import("../test/fake-supabase");
+  if (!bag.fake) bag.fake = createFakeSupabase();
   return { supabase: bag.fake.client };
 });
 

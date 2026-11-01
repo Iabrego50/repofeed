@@ -1,4 +1,12 @@
-import { supabase } from '../supabase';
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+type DbClient = Pick<SupabaseClient, "from">;
+
+async function resolveClient(client?: DbClient): Promise<DbClient> {
+  if (client) return client;
+  const { supabase } = await import("../supabase.js");
+  return supabase;
+}
 
 export interface ReelRow {
   reelId: string;
@@ -77,7 +85,11 @@ function tallyByReel(views: Array<{ reelId: string; completed: boolean }>): Map<
   return out;
 }
 
-export async function summary({ workspaceId, studyId }: { workspaceId: string; studyId?: string }): Promise<InsightSummary> {
+export async function summary(
+  { workspaceId, studyId }: { workspaceId: string; studyId?: string },
+  client?: DbClient,
+): Promise<InsightSummary> {
+  const supabase = await resolveClient(client);
   // Get published studies in scope
   let studiesQuery = supabase
     .from('studies')
@@ -222,7 +234,8 @@ export async function summary({ workspaceId, studyId }: { workspaceId: string; s
   };
 }
 
-export async function watchers({ reelId }: { reelId: string }): Promise<Watcher[]> {
+export async function watchers({ reelId }: { reelId: string }, client?: DbClient): Promise<Watcher[]> {
+  const supabase = await resolveClient(client);
   // Get the reel to check workspace
   const { data: reel, error: reelError } = await supabase
     .from('reels')
@@ -301,7 +314,11 @@ export async function watchers({ reelId }: { reelId: string }): Promise<Watcher[
   return [...team, ...guests].sort((a, b) => b.lastViewedAt.localeCompare(a.lastViewedAt));
 }
 
-export async function exportComments({ workspaceId, studyId }: { workspaceId: string; studyId?: string }): Promise<ExportedComment[]> {
+export async function exportComments(
+  { workspaceId, studyId }: { workspaceId: string; studyId?: string },
+  client?: DbClient,
+): Promise<ExportedComment[]> {
+  const supabase = await resolveClient(client);
   // Get published studies in scope
   let studiesQuery = supabase
     .from('studies')

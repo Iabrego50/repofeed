@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
-import { CHUNK_CHARS } from '../../src/lib/ai/client';
-
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../_lib/supabase.js';
+import { CHUNK_CHARS } from '../../src/lib/ai/client.js';
 
 const MAX_SOURCES_CHARS = 2_000_000;
 

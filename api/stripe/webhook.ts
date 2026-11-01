@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
-import { handleStripeEvent } from '../../src/lib/billing/stripe-events';
+import { supabase } from '../_lib/supabase.js';
+import { handleStripeEvent } from '../../src/lib/billing/stripe-events.js';
 
 function getStripe(): Stripe {
   return new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
@@ -36,6 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await handleStripeEvent(
       { type: event.type, data: { object: event.data.object as Record<string, unknown> } },
       { retrieve: (id: string) => getStripe().subscriptions.retrieve(id) },
+      supabase,
     );
     return res.json({ received: true });
   } catch (error) {

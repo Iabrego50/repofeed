@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { z } from 'zod';
-import { StepError, aiHttpError } from '../errors/step-error';
+import { StepError, aiHttpError } from '../errors/step-error.js';
 
 // Use direct Anthropic and OpenAI SDKs
 const anthropic = new Anthropic({

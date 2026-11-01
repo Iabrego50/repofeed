@@ -1,4 +1,6 @@
-import { supabase } from '@/lib/supabase';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { supabase } from '../_lib/supabase.js';
+import { summary } from '../../src/lib/api/insights.js';
 import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -81,7 +83,11 @@ export async function POST(req: Request) {
   const { workspaceId, studyId } = await req.json();
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const auth = req.headers.get('authorization');
+    const token = auth?.startsWith('Bearer ') ? auth.slice(7) : undefined;
+    const { data: { user } } = token
+      ? await supabase.auth.getUser(token)
+      : { data: { user: null } };
     if (!user) {
       return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 });
     }
@@ -98,9 +104,7 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Only editors can generate decks' }), { status: 403 });
     }
 
-    // Get insights summary
-    const { summary } = await import('@/lib/api/insights');
-    const insightsSummary = await summary({ workspaceId, studyId });
+    const insightsSummary = await summary({ workspaceId, studyId }, supabase);
 
     // Get studies in scope
     let studiesQuery = supabase
@@ -184,4 +188,23 @@ Create a compelling executive summary deck.`;
       error: error instanceof Error ? error.message : 'Deck generation failed' 
     }), { status: 500 });
   }
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  const headers = new Headers({ 'content-type': 'application/json' });
+  const authorization = req.headers.authorization;
+  if (authorization) headers.set('authorization', Array.isArray(authorization) ? authorization[0] : authorization);
+  const request = new Request('http://localhost/api/decks/generate', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(req.body ?? {}),
+  });
+  const response = await POST(request);
+  const text = await response.text();
+  const contentType = response.headers.get('content-type');
+  if (contentType) res.setHeader('Content-Type', contentType);
+  return res.status(response.status).send(text);
 }

@@ -1,5 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Plan } from "@/schema";
-import { markPlanLapsed, syncPlanToDatabase } from "./sync-plan";
+import { markPlanLapsed, syncPlanToDatabase } from "./sync-plan.js";
 
 export type StripeLikeEvent = {
   type: string;
@@ -18,6 +19,7 @@ function asPlan(value: unknown): Plan | undefined {
 export async function handleStripeEvent(
   event: StripeLikeEvent,
   stripe?: StripeSubscriptionLike,
+  client?: SupabaseClient,
 ): Promise<"ok" | "ignored"> {
   switch (event.type) {
     case "checkout.session.completed": {
@@ -25,7 +27,7 @@ export async function handleStripeEvent(
       const metadata = (session.metadata ?? {}) as { workspace_id?: string; plan?: string };
       const plan = asPlan(metadata.plan);
       if (metadata.workspace_id && plan && plan !== "free") {
-        await syncPlanToDatabase(metadata.workspace_id, plan);
+        await syncPlanToDatabase(metadata.workspace_id, plan, client);
         return "ok";
       }
       return "ignored";
@@ -36,7 +38,7 @@ export async function handleStripeEvent(
       const metadata = (subscription.metadata ?? {}) as { workspace_id?: string; plan?: string };
       const plan = asPlan(metadata.plan);
       if (metadata.workspace_id && plan && plan !== "free" && subscription.status === "active") {
-        await syncPlanToDatabase(metadata.workspace_id, plan);
+        await syncPlanToDatabase(metadata.workspace_id, plan, client);
         return "ok";
       }
       return "ignored";
@@ -45,7 +47,7 @@ export async function handleStripeEvent(
       const subscription = event.data.object;
       const metadata = (subscription.metadata ?? {}) as { workspace_id?: string };
       if (metadata.workspace_id) {
-        await syncPlanToDatabase(metadata.workspace_id, "free");
+        await syncPlanToDatabase(metadata.workspace_id, "free", client);
         return "ok";
       }
       return "ignored";
@@ -56,7 +58,7 @@ export async function handleStripeEvent(
       if (subscriptionId && stripe) {
         const sub = await stripe.retrieve(subscriptionId);
         if (sub.metadata?.workspace_id) {
-          await markPlanLapsed(sub.metadata.workspace_id, sub.metadata.plan);
+          await markPlanLapsed(sub.metadata.workspace_id, sub.metadata.plan, client);
           return "ok";
         }
       }

@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { supabase } from '../_lib/supabase.js';
 import { z } from 'zod';
 
 const ART_SYSTEM = `You art-direct the background image for a short vertical research video ("insight reel"). Animated text sits on top of the image, so the image sets the mood; it never carries the message.
@@ -228,4 +229,20 @@ export async function POST(req: Request) {
       error: error instanceof Error ? error.message : 'Art painting failed' 
     }), { status: 500 });
   }
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  const request = new Request('http://localhost/api/art/paint', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(req.body ?? {}),
+  });
+  const response = await POST(request);
+  const text = await response.text();
+  const contentType = response.headers.get('content-type');
+  if (contentType) res.setHeader('Content-Type', contentType);
+  return res.status(response.status).send(text);
 }

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
-import { callTool, CHUNK_CHARS, MAX_COMPOSE_FINDINGS } from '../../src/lib/ai/client';
+import { supabase } from '../_lib/supabase.js';
+import { callTool, CHUNK_CHARS, MAX_COMPOSE_FINDINGS } from '../../src/lib/ai/client.js';
 import {
   EXTRACT_SYSTEM,
   EXTRACT_TOOL,
@@ -10,15 +10,10 @@ import {
   COMPOSE_TOOL,
   composeSchema,
   composeUserPrompt,
-} from '../../src/lib/ai/prompts';
-import { toScene, finalizeScenes } from '../../src/lib/ai/scenes';
+} from '../../src/lib/ai/prompts.js';
+import { toScene, finalizeScenes } from '../../src/lib/ai/scenes.js';
 import type { Scene } from '../../src/schema/validators';
-import { toStepError } from '../../src/lib/errors/step-error';
-
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { toStepError } from '../../src/lib/errors/step-error.js';
 
 const MAX_SOURCES_CHARS = 2_000_000;
 const MAX_LOG = 200;
