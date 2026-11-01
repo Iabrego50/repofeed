@@ -9,7 +9,7 @@ export type JobPhase = 'extracting' | 'composing' | 'done';
 export type FindingType = 'insight' | 'quote' | 'stat' | 'recommendation' | 'context';
 export type ReactionKind = 'true' | 'surprised' | 'pushback';
 export type ReactionType = 'true' | 'surprised' | 'pushback';
-export type CommentKind = 'note' | 'question' | 'action' | 'pushback' | 'reply';
+export type CommentKind = 'comment' | 'reply';
 
 export interface SceneStep {
   text: string;
