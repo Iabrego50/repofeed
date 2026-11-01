@@ -14,19 +14,22 @@ export class StepError extends Error {
 
 export function aiHttpError(status: number, message: string): StepError {
   const isRetryable = status === 429 || status === 500 || status === 503 || status === 504;
-  return new StepError(
-    status === 429
-      ? 'Too many AI requests right now. Retrying in a moment.'
-      : status === 401
-        ? 'AI service authentication failed.'
-        : status === 500 || status === 503
-          ? 'The AI service is temporarily unavailable.'
-          : 'The AI service returned an error.',
-    {
-      detail: `HTTP ${status}: ${message}`,
-      retryable: isRetryable,
-    }
-  );
+  
+  let friendlyMessage = 'The AI service returned an error.';
+  if (status === 429) {
+    friendlyMessage = 'Too many AI requests right now. Retrying in a moment.';
+  } else if (status === 401) {
+    friendlyMessage = 'AI service authentication failed.';
+  } else if (status === 500 || status === 503) {
+    friendlyMessage = 'The AI service is temporarily unavailable.';
+  } else if (status === 400 && message.includes('too long')) {
+    friendlyMessage = 'Your prompt is too long for the AI service.';
+  }
+  
+  return new StepError(friendlyMessage, {
+    detail: `HTTP ${status}: ${message}`,
+    retryable: isRetryable,
+  });
 }
 
 export function toStepError(err: unknown): StepError {
