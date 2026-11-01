@@ -1,36 +1,37 @@
 import { supabase } from '../supabase';
+import { unwrapSingleOrNull } from '../supabase-helpers';
 
 export async function getLatestJob(args: { studyId: string }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: study } = await supabase
+  const study = unwrapSingleOrNull(await supabase
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single());
 
   if (!study) return null;
 
   // Check editor permission
-  const { data: membership } = await supabase
+  const membership = unwrapSingleOrNull(await supabase
     .from('workspace_members')
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single());
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     return null;
   }
 
-  const { data: job } = await supabase
+  const job = unwrapSingleOrNull(await supabase
     .from('generation_jobs')
     .select('*')
     .eq('study_id', args.studyId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .single());
 
   if (!job) return null;
 
@@ -39,8 +40,8 @@ export async function getLatestJob(args: { studyId: string }) {
     status: job.status,
     phase: job.phase,
     cursor: job.cursor,
-    totalChunks: job.chunks?.length || 0,
-    log: job.log || [],
+    totalChunks: Array.isArray(job.chunks) ? job.chunks.length : 0,
+    log: Array.isArray(job.log) ? job.log : [],
     error: job.error,
     _creationTime: new Date(job.created_at).getTime(),
   };
@@ -50,21 +51,21 @@ export async function startGeneration(args: { studyId: string }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: study } = await supabase
+  const study = unwrapSingleOrNull(await supabase
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single());
 
   if (!study) throw new Error('Study not found');
 
   // Check editor permission
-  const { data: membership } = await supabase
+  const membership = unwrapSingleOrNull(await supabase
     .from('workspace_members')
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single());
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
@@ -95,21 +96,21 @@ export async function cancelGeneration(args: { studyId: string }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: study } = await supabase
+  const study = unwrapSingleOrNull(await supabase
     .from('studies')
     .select('workspace_id')
     .eq('id', args.studyId)
-    .single();
+    .single());
 
   if (!study) throw new Error('Study not found');
 
   // Check editor permission
-  const { data: membership } = await supabase
+  const membership = unwrapSingleOrNull(await supabase
     .from('workspace_members')
     .select('role')
     .eq('workspace_id', study.workspace_id)
     .eq('user_id', user.id)
-    .single();
+    .single());
 
   if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
     throw new Error('Must be an editor');
