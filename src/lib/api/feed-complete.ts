@@ -136,7 +136,7 @@ export async function getComments(args: { reelId: string }): Promise<Comment[]> 
 
   const { data } = await supabase
     .from('comments')
-    .select('*, users(name, email)')
+    .select('*, users(name, email, avatar)')
     .eq('reel_id', args.reelId)
     .order('created_at', { ascending: true});
 

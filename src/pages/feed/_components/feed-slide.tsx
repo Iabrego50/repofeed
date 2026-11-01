@@ -6,20 +6,10 @@ import { Bookmark, Heart, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import { cn } from "@/lib/utils.ts";
+import type { FeedReel } from "../_lib/types";
 
 interface FeedSlideProps {
-  reel: {
-    _id: string;
-    title: string;
-    track: string;
-    trackIndex: number;
-    studyTitle: string;
-    scenes: any[];
-    footage: any[];
-    saved?: boolean;
-    reactions?: { heart: number };
-    commentCount?: number;
-  };
+  reel: FeedReel;
   onShowComments: () => void;
   onShowEvidence: () => void;
 }
@@ -43,7 +33,7 @@ export default function FeedSlide({ reel, onShowComments, onShowEvidence }: Feed
   });
 
   const reactMutation = useMutation({
-    mutationFn: () => api.feed.react({ reelId: reel._id, type: "heart" }),
+    mutationFn: () => api.feed.react({ reelId: reel._id, kind: "true" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
@@ -60,8 +50,8 @@ export default function FeedSlide({ reel, onShowComments, onShowEvidence }: Feed
             title: reel.title,
             track: reel.track,
             trackIndex: reel.trackIndex,
-            studyTitle: reel.studyTitle,
-            scenes: reel.scenes,
+            studyTitle: reel.studyTitle || '',
+            scenes: reel.scenes || [],
             footage: reel.footage,
           }}
           playing={playing}

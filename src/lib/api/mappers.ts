@@ -158,6 +158,7 @@ export interface Comment {
   author?: {
     name?: string;
     email?: string;
+    avatar?: string;
   };
 }
 
@@ -259,6 +260,7 @@ export function mapComment(row: DbComment): Comment {
     author: row.users ? {
       name: row.users.name || undefined,
       email: row.users.email || undefined,
+      avatar: row.users.avatar || undefined,
     } : undefined,
   };
 }
