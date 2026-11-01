@@ -65,7 +65,7 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
 
   switch (s.type) {
     case "summary": {
-      (s.items ?? []).forEach((item, i) => {
+      (s.items ?? []).forEach((item: string, i: number) => {
         const y = area.y + i * 0.92;
         slide.addShape("line", { x: area.x, y, w: area.w, h: 0, line: { color: hex(COLORS.border), width: 1 } });
         slide.addText(String(i + 1).padStart(2, "0"), { x: area.x, y: y + 0.12, w: 0.9, h: 0.65, fontFace: DISPLAY, fontSize: 26, bold: true, color: hex(COLORS.coral), valign: "middle" });
@@ -196,7 +196,7 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
     }
     case "next_steps": {
       const w = (area.w - 0.3) / 2;
-      (s.items ?? []).forEach((item, i) => {
+      (s.items ?? []).forEach((item: string, i: number) => {
         const x = area.x + (i % 2) * (w + 0.3);
         const y = area.y + Math.floor(i / 2) * 1.55;
         card(x, y, w, 1.3);
