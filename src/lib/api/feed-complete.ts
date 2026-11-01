@@ -269,3 +269,82 @@ export async function getEvidence(args: { reelId: string }): Promise<Finding[]> 
 
   return (findings || []).map(mapFinding);
 }
+
+export async function guestReact(args: { reelId: string; kind: string; token: string; secret: string }) {
+  const { data: guest } = await supabase
+    .from('guests')
+    .select('id')
+    .eq('token', args.token)
+    .eq('secret', args.secret)
+    .single();
+  
+  if (!guest) throw new Error('Guest not found');
+  
+  await supabase
+    .from('guest_reactions')
+    .upsert({
+      reel_id: args.reelId,
+      guest_id: guest.id,
+      kind: args.kind,
+    });
+}
+
+export async function guestRecordView(args: { reelId: string; completed: boolean; token: string; secret: string }) {
+  const { data: guest } = await supabase
+    .from('guests')
+    .select('id, study_id')
+    .eq('token', args.token)
+    .eq('secret', args.secret)
+    .single();
+  
+  if (!guest) throw new Error('Guest not found');
+  
+  const { data: reel } = await supabase
+    .from('reels')
+    .select('study_id')
+    .eq('id', args.reelId)
+    .single();
+  
+  if (!reel) return;
+  
+  await supabase
+    .from('guest_views')
+    .upsert({
+      reel_id: args.reelId,
+      guest_id: guest.id,
+      study_id: reel.study_id,
+      completed: args.completed,
+      last_viewed_at: new Date().toISOString(),
+    });
+}
+
+export async function guestAddComment(args: { reelId: string; kind: string; body: string; parentId?: string; token: string; secret: string }) {
+  const { data: guest } = await supabase
+    .from('guests')
+    .select('id')
+    .eq('token', args.token)
+    .eq('secret', args.secret)
+    .single();
+  
+  if (!guest) throw new Error('Guest not found');
+  
+  const { data: reel } = await supabase
+    .from('reels')
+    .select('study_id')
+    .eq('id', args.reelId)
+    .single();
+  
+  if (!reel) throw new Error('Reel not found');
+  
+  await supabase
+    .from('comments')
+    .insert({
+      reel_id: args.reelId,
+      study_id: reel.study_id,
+      guest_id: guest.id,
+      kind: args.kind,
+      body: args.body,
+      parent_id: args.parentId || null,
+      resolved: false,
+    });
+}

@@ -57,25 +57,31 @@ export function useFeedActions() {
 
   return {
     react: async (reelId: string, kind: ReactionType) => {
-      // Stub: reactions not yet implemented
-      console.log('Reaction not yet implemented', reelId, kind);
+      if (mode.kind === "member") {
+        await api.feed.react({ reelId, kind });
+      } else {
+        const secret = await guestSecret();
+        await api.feed.guestReact({ reelId, kind, token: mode.token, secret });
+      }
     },
     recordView: async (reelId: string, completed: boolean) => {
-      // Stub: view tracking not yet implemented
-      console.log('View recording not yet implemented', reelId, completed);
+      if (mode.kind === "member") {
+        await api.feed.recordView({ reelId, completed });
+      } else {
+        const secret = await guestSecret();
+        await api.feed.guestRecordView({ reelId, completed, token: mode.token, secret });
+      }
     },
     addComment: async (args: { reelId: string; kind: CommentKind; body: string; parentId?: string }) => {
       if (mode.kind === "member") {
         await api.feed.addComment(args);
       } else {
-        // Stub: guest comments not yet implemented
         const secret = await guestSecret();
-        console.log('Guest comment not yet implemented', mode.token, secret, args);
+        await api.feed.guestAddComment({ ...args, token: mode.token, secret });
       }
     },
     deleteComment: async (commentId: string) => {
-      // Stub: delete comment not yet implemented
-      console.log('Delete comment not yet implemented', commentId);
+      await api.feed.deleteComment({ commentId });
     },
   };
 }
