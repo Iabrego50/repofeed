@@ -227,7 +227,6 @@ export async function revokeInvite(args: { inviteId: string }) {
     throw new Error('Must be owner or editor');
   }
 
-  // @ts-expect-error - Supabase typing
   const { error } = await supabase
     .from('workspace_invites')
     .update({ revoked: true })

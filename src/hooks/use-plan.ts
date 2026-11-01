@@ -17,7 +17,7 @@ export function usePlan() {
 
     api.billing.getPlan({ workspaceId: current._id })
       .then((result) => {
-        setPlan(result.plan);
+        setPlan(result.plan as Plan);
         setLoading(false);
       })
       .catch((err) => {

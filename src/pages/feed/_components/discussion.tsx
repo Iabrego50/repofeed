@@ -104,7 +104,10 @@ function CommentCard({ comment, reelId, level }: { comment: Comment; reelId: str
   const [replying, setReplying] = useState(false);
 
   // Delete comment API method not implemented yet
-  const deleteMutation = { mutate: () => console.log('Delete not implemented') };
+  const deleteMutation = { 
+    mutate: () => console.log('Delete not implemented'),
+    isPending: false
+  };
 
   const meta = kindMeta(comment.kind);
 
