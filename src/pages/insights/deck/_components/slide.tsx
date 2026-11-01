@@ -33,7 +33,7 @@ function SlideBody({ deck, slide, animate }: { deck: Deck; slide: DeckSlide; ani
     case "summary":
       return (
         <ol className="flex h-full flex-col justify-start gap-4">
-          {slide.items?.map((item, i) => (
+          {slide.items?.map((item: string, i: number) => (
             <li key={i} className="flex items-center gap-6 border-t border-[#1F2A40] pt-4">
               <span className="w-14 shrink-0 font-display text-[40px] font-extrabold leading-none text-[#2F9BFF] tabular-nums">{String(i + 1).padStart(2, "0")}</span>
               <span className="text-[28px] leading-snug">{item}</span>
