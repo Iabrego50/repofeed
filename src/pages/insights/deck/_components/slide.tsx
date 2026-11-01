@@ -114,7 +114,7 @@ function Finding({ deck, slide }: { deck: Deck; slide: DeckSlide }) {
   return (
     <div className="flex h-full flex-col gap-6">
       <div className="flex min-h-0 flex-1 gap-6">
-        {stats.map((s, i) => (
+        {stats.map((s: any, i: number) => (
           <div key={i} className="flex w-[300px] shrink-0 flex-col justify-end rounded-3xl border border-[#1F2A40] bg-[#0E1422] p-8">
             <p className="font-display text-[68px] font-extrabold leading-none tabular-nums" style={{ color: i === 0 ? COLORS.coral : COLORS.fg }}>{s.num}</p>
             <p className="mt-3 line-clamp-3 text-[19px] leading-snug text-[#93A0B8]">{s.label}</p>

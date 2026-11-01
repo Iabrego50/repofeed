@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
+import { getErrorMessage } from "@/lib/errors";
 import PermissionDenied from "@/components/permission-denied.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
@@ -42,7 +43,7 @@ export default function DeckPage() {
       // Stub: Deck generation will be implemented
       toast.info("Deck generation not yet implemented");
     } catch (err) {
-      toastError(err, "Couldn't create the deck. Try again.");
+      toast.error(getErrorMessage(err, "Couldn't create the deck. Try again."));
     } finally {
       setBusy(false);
     }

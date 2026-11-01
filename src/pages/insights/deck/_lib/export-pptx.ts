@@ -76,7 +76,7 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
     case "figures": {
       const stats = s.stats ?? [];
       const w = (area.w - 0.3 * (stats.length - 1)) / Math.max(stats.length, 1);
-      stats.forEach((st, i) => {
+      stats.forEach((st: any, i: number) => {
         const x = area.x + i * (w + 0.3);
         card(x, area.y, w, area.h);
         slide.addText(st.num, { x: x + 0.3, y: area.y + 1.2, w: w - 0.6, h: 1.2, fontFace: DISPLAY, fontSize: 48, bold: true, color: hex(i === 0 ? COLORS.coral : COLORS.fg), fit: "shrink" });
@@ -87,11 +87,11 @@ function content(pptx: Pptx, slide: PSlide, deck: Deck, s: DeckSlide, index: num
     case "finding": {
       const stats = s.stats ?? [];
       const quote = s.quotes?.[0];
-      const found = s.reelTitle ? deck.reels.find((r) => r.title === s.reelTitle) : undefined;
+      const found = s.reelTitle ? deck.reels.find((r: any) => r.title === s.reelTitle) : undefined;
       const reel = found && found.trueCount + found.surprisedCount + found.pushbackCount > 0 ? found : undefined;
       const boxH = reel ? area.h - 0.55 : area.h;
       const sw = 2.9;
-      stats.forEach((st, i) => {
+      stats.forEach((st: any, i: number) => {
         const x = area.x + i * (sw + 0.3);
         card(x, area.y, sw, boxH);
         slide.addText(st.num, { x: x + 0.25, y: area.y + boxH - 2.0, w: sw - 0.5, h: 1.0, fontFace: DISPLAY, fontSize: 38, bold: true, color: hex(i === 0 ? COLORS.coral : COLORS.fg), fit: "shrink" });

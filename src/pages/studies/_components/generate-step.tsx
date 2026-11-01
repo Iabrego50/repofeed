@@ -148,7 +148,7 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
                     : PHASES.findIndex((p) => p.key === job.phase) > i
                       ? "done"
                       : "waiting";
-              const progress = job.totalChunks > 0 ? Math.round((job.cursor / job.totalChunks) * 100) : 0;
+              const progress = job.totalChunks > 0 ? `${Math.round((job.cursor / job.totalChunks) * 100)}%` : undefined;
               return <StepCard key={phase.key} index={i} label={phase.label} hint={phase.hint} state={state} progress={progress} />;
             })}
           </ul>
