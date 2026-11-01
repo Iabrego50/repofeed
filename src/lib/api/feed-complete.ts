@@ -293,11 +293,19 @@ export async function recordView(args: { reelId: string; completed: boolean }) {
     });
 }
 
-export async function guestReact(args: { reelId: string; kind: string; token: string; secret: string }) {
+export async function guestReact(args: { reelId: string; kind: 'true' | 'surprised' | 'pushback'; token: string; secret: string }) {
+  const { data: links } = await supabase
+    .from('share_links')
+    .select('id, study_id')
+    .eq('token', args.token)
+    .single();
+  
+  if (!links) throw new Error('Share link not found');
+  
   const { data: guest } = await supabase
     .from('guests')
     .select('id')
-    .eq('token', args.token)
+    .eq('link_id', links.id)
     .eq('secret', args.secret)
     .single();
   
@@ -313,10 +321,18 @@ export async function guestReact(args: { reelId: string; kind: string; token: st
 }
 
 export async function guestRecordView(args: { reelId: string; completed: boolean; token: string; secret: string }) {
-  const { data: guest } = await supabase
-    .from('guests')
+  const { data: links } = await supabase
+    .from('share_links')
     .select('id, study_id')
     .eq('token', args.token)
+    .single();
+  
+  if (!links) throw new Error('Share link not found');
+  
+  const { data: guest } = await supabase
+    .from('guests')
+    .select('id')
+    .eq('link_id', links.id)
     .eq('secret', args.secret)
     .single();
   
@@ -341,11 +357,19 @@ export async function guestRecordView(args: { reelId: string; completed: boolean
     });
 }
 
-export async function guestAddComment(args: { reelId: string; kind: string; body: string; parentId?: string; token: string; secret: string }) {
+export async function guestAddComment(args: { reelId: string; kind: 'note' | 'question' | 'action'; body: string; parentId?: string; token: string; secret: string }) {
+  const { data: links } = await supabase
+    .from('share_links')
+    .select('id, study_id')
+    .eq('token', args.token)
+    .single();
+  
+  if (!links) throw new Error('Share link not found');
+  
   const { data: guest } = await supabase
     .from('guests')
     .select('id')
-    .eq('token', args.token)
+    .eq('link_id', links.id)
     .eq('secret', args.secret)
     .single();
   
