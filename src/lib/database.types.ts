@@ -294,7 +294,7 @@ export type Database = {
           study_id: string
           workspace_id: string
           status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
-          phase: 'extract' | 'compose' | 'done'
+          phase: 'extract' | 'compose' | 'verify' | 'done'
           cursor: number
           chunks: Json
           attempts: number
@@ -311,7 +311,7 @@ export type Database = {
           study_id: string
           workspace_id: string
           status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
-          phase: 'extract' | 'compose' | 'done'
+          phase: 'extract' | 'compose' | 'verify' | 'done'
           cursor?: number
           chunks?: Json
           attempts?: number
@@ -328,7 +328,7 @@ export type Database = {
           study_id?: string
           workspace_id?: string
           status?: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
-          phase?: 'extract' | 'compose' | 'done'
+          phase?: 'extract' | 'compose' | 'verify' | 'done'
           cursor?: number
           chunks?: Json
           attempts?: number

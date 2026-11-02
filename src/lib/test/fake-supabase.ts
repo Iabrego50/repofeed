@@ -109,6 +109,11 @@ export class FakeQuery {
     return this;
   }
 
+  gte(column: string, value: unknown) {
+    this.filters.push({ method: "gte", args: [column, value] });
+    return this;
+  }
+
   or(expr: string) {
     this.filters.push({ method: "or", args: [expr] });
     return this;

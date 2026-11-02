@@ -1,9 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { isAuthError, isInternalGenerationCall, requireUser, requireWorkspaceEditor } from '../_lib/auth.js';
-import { enqueueGenerationProcess, registerProcessRunner } from '../_lib/generation-chain.js';
+import { enqueueGenerationProcess } from '../_lib/generation-chain.js';
 import { isServerNotConfigured, requiredEnv, requireSupabaseEnv, sendNotConfigured, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
 import { callTool, CHUNK_CHARS, MAX_COMPOSE_FINDINGS } from '../../src/lib/ai/client.js';
+import {
+  MAX_GENERATION_STEPS,
+  nextAttemptCount,
+  shouldSkipComposeInsert,
+  wouldExceedGenerationSteps,
+} from '../../src/lib/api/generation-guards.js';
+import { throwIfWriteError } from '../../src/lib/api/supabase-write.js';
 import {
   EXTRACT_SYSTEM,
   EXTRACT_TOOL,
@@ -84,7 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('Generation error:', error);
     const e = toStepError(error);
     
-    await supabase
+    const fail = await supabase
       .from('generation_jobs')
       .update({
         status: 'failed',
@@ -93,6 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', jobId);
+    if (fail.error) console.error('Failed to mark generation job failed:', fail.error);
 
     return res.status(e.httpStatus).json({
       error: e.message,
@@ -113,13 +121,27 @@ export async function runProcessStep(jobId: string): Promise<void> {
     throw new Error('Job not found');
   }
 
-  const { data: study } = await supabase
+  if (wouldExceedGenerationSteps(job.attempts)) {
+    await updateJob(jobId, {
+      status: 'failed',
+      error: 'Generation stopped after too many steps.',
+      error_detail: `attempts=${job.attempts} max=${MAX_GENERATION_STEPS}`,
+    });
+    throw new Error('Generation exceeded max steps');
+  }
+
+  await updateJob(jobId, {
+    status: job.status === 'queued' ? 'running' : job.status,
+    attempts: nextAttemptCount(job.attempts),
+  });
+
+  const { data: study, error: studyError } = await supabase
     .from('studies')
     .select('id, title, audience, goal')
     .eq('id', job.study_id)
     .single();
 
-  if (!study) {
+  if (studyError || !study) {
     await updateJob(jobId, {
       status: 'failed',
       error: 'Study was deleted',
@@ -145,8 +167,6 @@ export async function runProcessStep(jobId: string): Promise<void> {
 
   throw new Error('Invalid phase');
 }
-
-registerProcessRunner(runProcessStep);
 
 async function processExtraction(
   jobId: string,
@@ -220,7 +240,8 @@ async function processExtraction(
   }));
 
   if (findingsToSave.length > 0) {
-    await supabase.from('findings').insert(findingsToSave);
+    const inserted = await supabase.from('findings').insert(findingsToSave);
+    throwIfWriteError(inserted.error, 'findings');
   }
 
   // Update progress
@@ -241,13 +262,30 @@ async function processComposition(
   job: any,
   study: any
 ) {
-  // Fetch all findings for study
-  const { data: findings } = await supabase
+  const existing = await supabase
+    .from('reels')
+    .select('id', { count: 'exact', head: true })
+    .eq('study_id', study.id)
+    .gte('created_at', job.created_at || new Date(0).toISOString());
+  throwIfWriteError(existing.error, 'existing reels');
+
+  if (shouldSkipComposeInsert(existing.count)) {
+    await updateJob(jobId, {
+      phase: 'verify',
+      log: appendLog(job.log, 'info', 'Reels already composed for this job, verifying...'),
+    });
+    await enqueueGenerationProcess(jobId);
+    return;
+  }
+
+  const { data: findings, error: findingsError } = await supabase
     .from('findings')
     .select('*, sources!inner(name)')
     .eq('study_id', study.id)
     .order('strength', { ascending: false })
     .limit(MAX_COMPOSE_FINDINGS);
+
+  throwIfWriteError(findingsError, 'findings lookup');
 
   if (!findings || findings.length === 0) {
     await updateJob(jobId, {
@@ -332,7 +370,8 @@ async function processComposition(
     return;
   }
 
-  await supabase.from('reels').insert(reelsToSave);
+  const inserted = await supabase.from('reels').insert(reelsToSave);
+  throwIfWriteError(inserted.error, 'reels');
 
   // Move to verify phase
   await updateJob(jobId, {
@@ -348,29 +387,25 @@ async function processComposition(
 }
 
 async function processVerification(jobId: string, studyId: string) {
-  // Mark study as ready for review
-  await supabase
+  const studyUpdate = await supabase
     .from('studies')
     .update({ status: 'review', updated_at: new Date().toISOString() })
     .eq('id', studyId);
+  throwIfWriteError(studyUpdate.error, 'study status');
 
-  // Complete job
-  await supabase
-    .from('generation_jobs')
-    .update({
-      status: 'done',
-      phase: 'done',
-      locked_until: new Date(0).toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', jobId);
+  await updateJob(jobId, {
+    status: 'done',
+    phase: 'done',
+    locked_until: new Date(0).toISOString(),
+  });
 }
 
-async function updateJob(jobId: string, updates: any) {
-  await supabase
+async function updateJob(jobId: string, updates: Record<string, unknown>) {
+  const result = await supabase
     .from('generation_jobs')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', jobId);
+  throwIfWriteError(result.error, 'generation job');
 }
 
 function appendLog(

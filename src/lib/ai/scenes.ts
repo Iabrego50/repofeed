@@ -1,5 +1,5 @@
 import type { Scene } from '@/schema/validators';
-import type { RawScene } from './prompts';
+import { coerceSceneType, type RawScene } from './prompts.js';
 
 const stripStars = (s: string) => s.replace(/\*/g, '');
 const clean = (s: string | null | undefined) => (s ?? '').trim();
@@ -9,9 +9,15 @@ function wordsCap(s: string, max: number): string {
   return words.length <= max ? s : words.slice(0, max).join(' ');
 }
 
+function unknownSceneText(raw: RawScene): string {
+  const fromItems = (raw.items ?? []).map(clean).filter(Boolean).join(', ');
+  return clean(raw.text) || clean(raw.title) || fromItems;
+}
+
 /** Converts a loosely-typed AI scene into a strict Scene, or null if unusable. */
 export function toScene(raw: RawScene): Scene | null {
-  switch (raw.type) {
+  const type = coerceSceneType(raw.type);
+  switch (type) {
     case 'hook': {
       const text = clean(raw.text);
       return text ? { type: 'hook', text } : null;
@@ -49,6 +55,10 @@ export function toScene(raw: RawScene): Scene | null {
     case 'cta': {
       const text = clean(raw.text);
       return { type: 'cta', text: text || "That's the signal.", sub: '' };
+    }
+    default: {
+      const text = unknownSceneText(raw);
+      return text ? { type: 'line', text } : null;
     }
   }
 }

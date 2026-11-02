@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  enqueueGenerationProcess,
   generationProcessHeaders,
   generationProcessUrl,
   siteBaseUrl,
@@ -60,5 +61,24 @@ describe("generation process chaining URLs", () => {
     expect(headers[GENERATION_INTERNAL_SECRET_HEADER]).toBe("gen-secret");
     expect(headers["x-vercel-protection-bypass"]).toBe("bypass-secret");
     expect(headers["Content-Type"]).toBe("application/json");
+  });
+
+  it("does not wait for the next process invocation to finish", async () => {
+    let resolveFetch: (() => void) | undefined;
+    const fetchImpl = vi.fn(
+      () =>
+        new Promise<unknown>((resolve) => {
+          resolveFetch = () => resolve({ ok: true });
+        }),
+    );
+    const started = Date.now();
+    await enqueueGenerationProcess(
+      "job-1",
+      { SITE_URL: "https://example.com", GENERATION_INTERNAL_SECRET: "s" },
+      fetchImpl,
+    );
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    resolveFetch?.();
   });
 });

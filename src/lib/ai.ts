@@ -182,27 +182,7 @@ export const COMPOSE_TOOL = {
   },
 };
 
-/** Generate an image using OpenAI DALL-E */
-export async function generateImage(prompt: string): Promise<Blob> {
-  const client = getOpenAI();
-  
-  const response = await client.images.generate({
-    model: OPENAI_IMAGE_MODEL,
-    prompt,
-    size: '1024x1792', // Portrait orientation
-    quality: 'standard',
-    n: 1,
-    response_format: 'b64_json',
-  });
-
-  const b64 = response.data?.[0]?.b64_json;
-  if (!b64) {
-    throw new Error('No image data returned from OpenAI');
-  }
-
-  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  return new Blob([bytes], { type: 'image/png' });
-}
+export { generateImage } from './ai/client.js';
 
 /** Call OpenAI with a forced tool (JSON schema) once. */
 export async function callOpenAITool<T>(args: {

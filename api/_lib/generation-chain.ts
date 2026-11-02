@@ -37,24 +37,24 @@ export function generationProcessHeaders(
   return headers;
 }
 
-export async function fetchGenerationProcess(
+type FetchLike = (input: string, init?: RequestInit) => Promise<unknown>;
+
+function defaultFetch(): FetchLike {
+  return globalThis.fetch as FetchLike;
+}
+
+/** Kick the next process invocation. Does not wait for that invocation to finish. */
+export function fetchGenerationProcess(
   jobId: string,
   env: NodeJS.ProcessEnv = process.env,
-): Promise<void> {
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<unknown> {
   const url = generationProcessUrl(env);
-  await fetch(url, {
+  return fetchImpl(url, {
     method: "POST",
     headers: generationProcessHeaders(env),
     body: JSON.stringify({ jobId }),
   });
-}
-
-type ProcessRunner = (jobId: string) => Promise<void>;
-
-let inProcessRunner: ProcessRunner | undefined;
-
-export function registerProcessRunner(runner: ProcessRunner): void {
-  inProcessRunner = runner;
 }
 
 async function scheduleWaitUntil(work: Promise<unknown>): Promise<boolean> {
@@ -68,27 +68,17 @@ async function scheduleWaitUntil(work: Promise<unknown>): Promise<boolean> {
   }
 }
 
+/**
+ * Continue generation in a *new* invocation. Never await the downstream
+ * function — that nested the whole pipeline into one 300s Vercel timeout.
+ */
 export async function enqueueGenerationProcess(
   jobId: string,
   env: NodeJS.ProcessEnv = process.env,
+  fetchImpl: FetchLike = defaultFetch(),
 ): Promise<void> {
-  const work = inProcessRunner
-    ? inProcessRunner(jobId).catch((error) => {
-        console.error("Generation process continuation failed:", error);
-      })
-    : undefined;
-
-  if (work && (await scheduleWaitUntil(work))) {
-    return;
-  }
-
-  try {
-    await fetchGenerationProcess(jobId, env);
-  } catch (error) {
-    if (work) {
-      await work;
-      return;
-    }
-    console.error("Failed to enqueue generation process:", error);
-  }
+  const work = fetchGenerationProcess(jobId, env, fetchImpl).catch((error) => {
+    console.error("Generation process continuation failed:", error);
+  });
+  await scheduleWaitUntil(work);
 }

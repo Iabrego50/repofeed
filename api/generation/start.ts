@@ -128,10 +128,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to create generation job' });
     }
 
-    await supabase
+    const studyUpdate = await supabase
       .from('studies')
       .update({ status: 'generating', updated_at: new Date().toISOString() })
       .eq('id', studyId);
+    if (studyUpdate.error) {
+      console.error('Failed to mark study generating:', studyUpdate.error);
+      return res.status(500).json({ error: 'Failed to start generation' });
+    }
 
     await enqueueGenerationProcess(job.id);
 

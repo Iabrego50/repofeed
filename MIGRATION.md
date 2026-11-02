@@ -54,6 +54,8 @@ Push migrations:
 supabase db push
 ```
 
+Hosted Supabase is **not** updated by deploying this app. Apply new SQL files yourself with `supabase db push` (or the dashboard). `20261102075456_allow_generation_job_verify_phase.sql` allows generation jobs to enter the `verify` phase after compose.
+
 This creates:
 - All database tables with proper indexes
 - Row Level Security policies scoped to workspace membership

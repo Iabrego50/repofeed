@@ -167,6 +167,23 @@ describe("RLS policies from supabase/migrations", () => {
     expect(rows[0]?.started_by).toBe(OWNER);
   });
 
+  it("generation_jobs phase allows verify after compose", async () => {
+    await asSuper();
+    const inserted = await db.query<{ phase: string }>(
+      `insert into public.generation_jobs (study_id, workspace_id, status, phase, locked_until, started_by)
+       values ('${STUDY}', '${WS}', 'running', 'verify', now(), '${OWNER}')
+       returning phase`,
+    );
+    expect(inserted.rows[0]?.phase).toBe("verify");
+
+    await expect(
+      db.query(
+        `insert into public.generation_jobs (study_id, workspace_id, status, phase, locked_until, started_by)
+         values ('${STUDY}', '${WS}', 'running', 'nope', now(), '${OWNER}')`,
+      ),
+    ).rejects.toThrow(/phase|check|violates/i);
+  });
+
   it("a viewer cannot start a generation job", async () => {
     await asSuper();
     await setAuth(MEMBER);

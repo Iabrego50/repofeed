@@ -129,44 +129,61 @@ export const extractSchema = z.object({
   ),
 });
 
+export const SCENE_TYPES = ['hook', 'line', 'list', 'stat', 'quote', 'cta'] as const;
+export type SceneTypeName = (typeof SCENE_TYPES)[number];
+
+export function coerceSceneType(type: unknown): SceneTypeName {
+  if (typeof type === 'string' && (SCENE_TYPES as readonly string[]).includes(type)) {
+    return type as SceneTypeName;
+  }
+  return 'line';
+}
+
+const nullableString = { anyOf: [{ type: 'string' }, { type: 'null' }] };
+const nullableStringList = {
+  anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+};
+
+const composeSceneJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    type: { type: 'string', enum: [...SCENE_TYPES] },
+    text: nullableString,
+    kicker: nullableString,
+    title: nullableString,
+    items: nullableStringList,
+    num: nullableString,
+    label: nullableString,
+    by: nullableString,
+  },
+  required: ['type', 'text', 'kicker', 'title', 'items', 'num', 'label', 'by'],
+};
+
 export const COMPOSE_TOOL = {
   name: 'save_reels',
   description: 'Save the composed reels',
   parameters: {
     type: 'object',
+    additionalProperties: false,
     properties: {
       tracks: { type: 'array', items: { type: 'string' } },
       reels: {
         type: 'array',
         items: {
           type: 'object',
+          additionalProperties: false,
           properties: {
-            id: { type: 'string' },
+            id: nullableString,
             track: { type: 'string' },
             title: { type: 'string' },
             findingIds: { type: 'array', items: { type: 'string' } },
             scenes: {
               type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  type: {
-                    type: 'string',
-                    enum: ['hook', 'line', 'list', 'stat', 'quote', 'cta'],
-                  },
-                  text: { type: 'string' },
-                  kicker: { type: 'string' },
-                  title: { type: 'string' },
-                  items: { type: 'array', items: { type: 'string' } },
-                  num: { type: 'string' },
-                  label: { type: 'string' },
-                  by: { type: 'string' },
-                },
-                required: ['type'],
-              },
+              items: composeSceneJsonSchema,
             },
           },
-          required: ['track', 'title', 'findingIds', 'scenes'],
+          required: ['id', 'track', 'title', 'findingIds', 'scenes'],
         },
       },
     },
@@ -175,7 +192,7 @@ export const COMPOSE_TOOL = {
 };
 
 export const rawSceneSchema = z.object({
-  type: z.enum(['hook', 'line', 'list', 'stat', 'quote', 'cta']),
+  type: z.preprocess(coerceSceneType, z.enum(SCENE_TYPES)),
   text: z.string().nullish(),
   kicker: z.string().nullish(),
   title: z.string().nullish(),
