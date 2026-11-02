@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ensurePublicUser, isAuthError, requireUser, requireWorkspaceEditor } from '../_lib/auth.js';
-import { enqueueGenerationProcess } from '../_lib/generation-chain.js';
+import { dispatchGenerationProcess } from '../_lib/generation-chain.js';
 import { requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
 import { CHUNK_CHARS } from '../../src/lib/ai/client.js';
@@ -137,7 +137,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to start generation' });
     }
 
-    enqueueGenerationProcess(job.id);
+    try {
+      await dispatchGenerationProcess(job.id);
+    } catch (error) {
+      console.error('Failed to dispatch first generation step; status polling will recover:', error);
+    }
 
     return res.json({ jobId: job.id, status: 'queued' });
   } catch (error) {

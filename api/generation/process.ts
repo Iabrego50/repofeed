@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { waitUntil } from '@vercel/functions';
 import { isAuthError, isInternalGenerationCall, requireUser, requireWorkspaceEditor } from '../_lib/auth.js';
-import { enqueueGenerationProcess } from '../_lib/generation-chain.js';
+import { dispatchGenerationProcess } from '../_lib/generation-chain.js';
 import { isServerNotConfigured, requiredEnv, requireSupabaseEnv, sendNotConfigured, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
 import { callTool, CHUNK_CHARS, MAX_COMPOSE_FINDINGS } from '../../src/lib/ai/client.js';
@@ -9,7 +10,10 @@ import {
   COMPOSE_BATCH_SIZE,
   MAX_COMPOSE_REELS,
   MAX_GENERATION_STEPS,
+  PROCESS_LOCK_MS,
   STALE_JOB_FAIL_MESSAGE,
+  canRunAnotherStep,
+  isTerminalJobStatus,
   nextAttemptCount,
   previousStudyStatus,
   shouldFinishCompose,
@@ -91,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid phase' });
     }
 
-    if (job.status === 'done' || job.status === 'cancelled' || job.status === 'failed') {
+    if (isTerminalJobStatus(job.status)) {
       return res.json({ success: true, skipped: true, phase: job.phase, status: job.status });
     }
 
@@ -103,8 +107,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.warn(`[generation] recovering stale job=${jobId} phase=${phase} updated_at=${job.updated_at}`);
     }
 
-    await runProcessStep(jobId);
-    return res.json({ success: true, phase: phase === 'verify' ? 'done' : phase });
+    // Accept immediately so the caller can finish. Work continues in this
+    // invocation (await) and is also registered with waitUntil.
+    res.status(202).json({
+      accepted: true,
+      jobId,
+      phase: job.phase,
+      status: job.status,
+    });
+
+    const work = runAcceptedWork(jobId).catch(async (error) => {
+      console.error('Generation error:', error);
+      const e = toStepError(error);
+      const message = error instanceof Error ? error.message : e.message;
+      await failJob(jobId, message, e.detail.detail);
+    });
+    try {
+      waitUntil(work);
+    } catch (error) {
+      console.error('waitUntil failed; continuing on this invocation:', error);
+    }
+    await work;
+    return res;
   } catch (error) {
     if (isServerNotConfigured(error)) return sendNotConfigured(res, error);
     if (isAuthError(error)) return res.status(error.status).json({ error: error.message });
@@ -112,11 +136,106 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const e = toStepError(error);
     const message = error instanceof Error ? error.message : e.message;
     await failJob(jobId, message, e.detail.detail);
+    if (res.headersSent) return res;
     return res.status(e.httpStatus).json({
       error: e.message,
       detail: e.detail.detail,
       retryable: e.retryable,
     });
+  }
+}
+
+async function loadJob(jobId: string) {
+  const { data, error } = await supabase.from('generation_jobs').select('*').eq('id', jobId).single();
+  if (error || !data) return null;
+  return data;
+}
+
+async function claimJob(jobId: string): Promise<boolean> {
+  const now = new Date();
+  const { data, error } = await supabase
+    .from('generation_jobs')
+    .update({
+      locked_until: new Date(now.getTime() + PROCESS_LOCK_MS).toISOString(),
+      status: 'running',
+      updated_at: now.toISOString(),
+    })
+    .eq('id', jobId)
+    .in('status', ['queued', 'running'])
+    .lt('locked_until', now.toISOString())
+    .select('id')
+    .maybeSingle();
+  if (error) {
+    console.error(`[generation] claim failed job=${jobId}`, error);
+    return false;
+  }
+  return Boolean(data);
+}
+
+async function refreshLock(jobId: string) {
+  const now = new Date();
+  const refreshed = await supabase
+    .from('generation_jobs')
+    .update({
+      locked_until: new Date(now.getTime() + PROCESS_LOCK_MS).toISOString(),
+      updated_at: now.toISOString(),
+    })
+    .eq('id', jobId);
+  if (refreshed.error) console.error(`[generation] refresh lock failed job=${jobId}`, refreshed.error);
+}
+
+async function releaseJob(jobId: string) {
+  const released = await supabase
+    .from('generation_jobs')
+    .update({
+      locked_until: new Date(0).toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', jobId);
+  if (released.error) console.error(`[generation] release failed job=${jobId}`, released.error);
+}
+
+async function runAcceptedWork(jobId: string) {
+  const startedAt = Date.now();
+  const claimed = await claimJob(jobId);
+  if (!claimed) {
+    console.info(`[generation] busy job=${jobId}`);
+    return;
+  }
+
+  try {
+    while (true) {
+      const job = await loadJob(jobId);
+      if (!job || isTerminalJobStatus(job.status) || job.phase === 'done') return;
+      if (wouldExceedGenerationSteps(job.attempts) || staleJobDecision(job) === 'fail') {
+        throw new Error(
+          wouldExceedGenerationSteps(job.attempts)
+            ? `Generation stopped after too many steps (max ${MAX_GENERATION_STEPS}).`
+            : STALE_JOB_FAIL_MESSAGE,
+        );
+      }
+
+      await runProcessStep(jobId);
+
+      const after = await loadJob(jobId);
+      if (!after || isTerminalJobStatus(after.status) || after.phase === 'done') return;
+      if (!canRunAnotherStep({ startedAt })) {
+        console.info(`[generation] budget exhausted job=${jobId} phase=${after.phase}, dispatching`);
+        break;
+      }
+      await refreshLock(jobId);
+    }
+  } finally {
+    await releaseJob(jobId);
+  }
+
+  const leftover = await loadJob(jobId);
+  if (leftover && !isTerminalJobStatus(leftover.status) && leftover.phase !== 'done') {
+    try {
+      await dispatchGenerationProcess(jobId);
+    } catch (error) {
+      console.error(`[generation] dispatch after budget failed job=${jobId}; poll will recover`, error);
+    }
   }
 }
 
@@ -196,8 +315,6 @@ async function processExtraction(
       cursor: 0,
       log: appendLog(job.log, 'info', 'Extraction complete, starting composition'),
     });
-    // Trigger next phase
-    enqueueGenerationProcess(jobId);
     return;
   }
 
@@ -216,8 +333,6 @@ async function processExtraction(
       cursor: cursor + 1,
       log: appendLog(job.log, 'warn', 'Skipped a source that no longer exists'),
     });
-    // Trigger next chunk
-    enqueueGenerationProcess(jobId);
     return;
   }
 
@@ -271,8 +386,6 @@ async function processExtraction(
       `Extracted ${findingsToSave.length} findings from ${source.name} (${cursor + 1}/${chunks.length})`
     ),
   });
-
-  enqueueGenerationProcess(jobId);
 }
 
 async function processComposition(
@@ -295,7 +408,6 @@ async function processComposition(
       phase: 'verify',
       log: appendLog(job.log, 'info', 'Reels already composed for this job, verifying...'),
     });
-    enqueueGenerationProcess(jobId);
     return;
   }
 
@@ -421,8 +533,6 @@ async function processComposition(
       ),
     });
   }
-
-  enqueueGenerationProcess(jobId);
 }
 
 async function processVerification(jobId: string, studyId: string) {

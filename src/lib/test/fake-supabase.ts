@@ -114,6 +114,16 @@ export class FakeQuery {
     return this;
   }
 
+  lt(column: string, value: unknown) {
+    this.filters.push({ method: "lt", args: [column, value] });
+    return this;
+  }
+
+  lte(column: string, value: unknown) {
+    this.filters.push({ method: "lte", args: [column, value] });
+    return this;
+  }
+
   or(expr: string) {
     this.filters.push({ method: "or", args: [expr] });
     return this;
@@ -163,6 +173,10 @@ export class FakeQuery {
     };
     this.fake.calls.push(call);
 
+    if (this.op === "update" || this.op === "delete") {
+      return this.normalize(emptyResponse(this.payload ?? { id: "ok" }, 0));
+    }
+
     const queued = this.fake.take(this.table);
     if (queued) {
       return this.normalize(queued);
@@ -170,9 +184,6 @@ export class FakeQuery {
 
     if (this.op === "insert" || this.op === "upsert") {
       return this.normalize(emptyResponse(this.payload ?? null));
-    }
-    if (this.op === "update" || this.op === "delete") {
-      return emptyResponse(null, 0);
     }
     return this.normalize(emptyResponse(this.wantSingle ? null : [], this.countExact ? 0 : null));
   }

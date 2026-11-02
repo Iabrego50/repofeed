@@ -28,9 +28,19 @@ export function imageQuality(value: string | undefined = process.env.OPENAI_IMAG
 
 export const IMAGE_QUALITY = imageQuality();
 export const IMAGE_FALLBACK_MODEL = 'dall-e-3';
+export const IMAGE_LAST_FALLBACK_MODEL = 'dall-e-2';
+export const IMAGE_FALLBACK_MODELS = [IMAGE_FALLBACK_MODEL, IMAGE_LAST_FALLBACK_MODEL] as const;
 
 export function isGptImageModel(model: string): boolean {
   return model.startsWith('gpt-image');
+}
+
+export function isDalle2Model(model: string): boolean {
+  return model === 'dall-e-2' || model.startsWith('dall-e-2');
+}
+
+export function isDalle3Model(model: string): boolean {
+  return model === 'dall-e-3' || model.startsWith('dall-e-3');
 }
 
 export function dalleQuality(quality: ImageQuality = IMAGE_QUALITY): 'standard' | 'hd' {
@@ -217,27 +227,78 @@ export async function callTool<T>(args: {
   }
 }
 
+export type GptImageGenerateBody = {
+  model: string;
+  prompt: string;
+  size: '1024x1536';
+  quality: ImageQuality;
+  n: 1;
+};
+
+export type Dalle3GenerateBody = {
+  model: string;
+  prompt: string;
+  size: '1024x1792';
+  quality: 'standard' | 'hd';
+  n: 1;
+  response_format: 'b64_json';
+};
+
+export type Dalle2GenerateBody = {
+  model: string;
+  prompt: string;
+  size: '1024x1024';
+  n: 1;
+  response_format: 'b64_json';
+};
+
+export type ImageGenerateBody = GptImageGenerateBody | Dalle3GenerateBody | Dalle2GenerateBody;
+
+/** Exact JSON body for /v1/images/generations. No extra keys. */
 export function imageGenerateParams(
   prompt: string,
   model: string = IMAGE_MODEL,
   quality: ImageQuality = IMAGE_QUALITY,
-) {
+): ImageGenerateBody {
   if (isGptImageModel(model)) {
     return {
       model,
       prompt,
-      size: '1024x1536' as const,
+      size: '1024x1536',
       quality,
       n: 1,
+    };
+  }
+  if (isDalle2Model(model)) {
+    return {
+      model,
+      prompt,
+      size: '1024x1024',
+      n: 1,
+      response_format: 'b64_json',
     };
   }
   return {
     model,
     prompt,
-    size: '1024x1792' as const,
+    size: '1024x1792',
     quality: dalleQuality(quality),
     n: 1,
-    response_format: 'b64_json' as const,
+    response_format: 'b64_json',
+  };
+}
+
+export function imageErrorFields(err: unknown): {
+  status?: number | null;
+  message?: string;
+  code?: string | null;
+} {
+  if (!err || typeof err !== 'object') return { message: String(err) };
+  const rec = err as { status?: number | null; message?: string; code?: string | null };
+  return {
+    status: rec.status,
+    message: rec.message ?? (err instanceof Error ? err.message : String(err)),
+    code: rec.code,
   };
 }
 
@@ -255,6 +316,15 @@ export function isImageModelUnavailable(err: {
     return true;
   }
   return false;
+}
+
+export function isImageParamRejected(err: {
+  status?: number | null;
+  message?: string;
+  code?: string | null;
+}): boolean {
+  const message = err.message ?? '';
+  return (err.status === 400 || !err.status) && /unknown parameter|unrecognized.*parameter|invalid parameter/i.test(message);
 }
 
 export function pngBlobFromB64(b64: string): Blob {
@@ -295,25 +365,23 @@ export async function pngBlobFromImageResponse(
 export async function generateImageWithModels(
   prompt: string,
   models: string[],
-  generate: (params: ReturnType<typeof imageGenerateParams>) => Promise<ImageGenerateResponse>,
+  generate: (params: ImageGenerateBody) => Promise<ImageGenerateResponse>,
 ): Promise<{ blob: Blob; model: string }> {
   const unique = [...new Set(models.filter(Boolean))];
   let lastError: unknown;
   for (const model of unique) {
+    const params = imageGenerateParams(prompt, model);
+    console.info(`[art] image generate attempt model=${params.model} params=${JSON.stringify(params)}`);
     try {
-      const response = await generate(imageGenerateParams(prompt, model));
-      console.info(`[art] image model used: ${model}`);
-      return { blob: await pngBlobFromImageResponse(response), model };
+      const response = await generate(params);
+      console.info(`[art] image model used: ${params.model}`);
+      return { blob: await pngBlobFromImageResponse(response), model: params.model };
     } catch (err) {
       lastError = err;
-      const unavailable =
-        err instanceof OpenAI.APIError
-          ? isImageModelUnavailable(err)
-          : isImageModelUnavailable({
-              message: err instanceof Error ? err.message : String(err),
-            });
-      if (!unavailable) break;
-      console.warn(`[art] ${model} unavailable, trying next image model`, err);
+      const fields = err instanceof OpenAI.APIError ? err : imageErrorFields(err);
+      const retryNext = isImageModelUnavailable(fields) || isImageParamRejected(fields);
+      if (!retryNext) break;
+      console.warn(`[art] ${params.model} failed, trying next image model`, fields.message ?? err);
     }
   }
   if (lastError instanceof StepError) throw lastError;
@@ -327,7 +395,7 @@ export async function generateImageWithModels(
 
 /** Paints a portrait image and returns it as a PNG blob. */
 export async function generateImage(prompt: string): Promise<Blob> {
-  const models = [IMAGE_MODEL, IMAGE_FALLBACK_MODEL];
+  const models = [IMAGE_MODEL, ...IMAGE_FALLBACK_MODELS];
   const { blob } = await generateImageWithModels(prompt, models, async (params) => {
     const abort = abortAfter(AI_CALL_TIMEOUT_MS);
     try {

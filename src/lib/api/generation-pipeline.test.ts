@@ -10,6 +10,7 @@ import {
   imageQuality,
   isAbortError,
   isImageModelUnavailable,
+  isImageParamRejected,
   pngBlobFromB64,
   shouldRetryToolCall,
 } from "../ai/client";
@@ -126,10 +127,9 @@ describe("gpt-image-1 request", () => {
     expect(imageQuality(undefined)).toBe("medium");
     expect(imageQuality("standard")).toBe("medium");
     expect(imageQuality("high")).toBe("high");
-    const params = imageGenerateParams("a kitchen at dusk");
+    const params = imageGenerateParams("a kitchen at dusk", "gpt-image-1");
     expect(params).not.toHaveProperty("response_format");
-    expect(params.quality).toBe("medium");
-    expect(params.model).toBe(process.env.OPENAI_IMAGE_MODEL || "gpt-image-1");
+    expect(params).toMatchObject({ quality: "medium", model: "gpt-image-1" });
   });
 
   it("builds a PNG blob from b64_json output", async () => {
@@ -138,7 +138,17 @@ describe("gpt-image-1 request", () => {
     expect(Buffer.from(await blob.arrayBuffer())).toEqual(Buffer.from([1, 2, 3]));
   });
 
-  it("uses dall-e-3 size, quality, and response_format", () => {
+  it("sends the exact request body for gpt-image-1, dall-e-3, and dall-e-2", () => {
+    expect(imageGenerateParams("a kitchen at dusk", "gpt-image-1", "medium")).toEqual({
+      model: "gpt-image-1",
+      prompt: "a kitchen at dusk",
+      size: "1024x1536",
+      quality: "medium",
+      n: 1,
+    });
+    expect(imageGenerateParams("a kitchen at dusk", "gpt-image-1", "medium")).not.toHaveProperty(
+      "response_format",
+    );
     expect(imageGenerateParams("a kitchen at dusk", "dall-e-3", "medium")).toEqual({
       model: "dall-e-3",
       prompt: "a kitchen at dusk",
@@ -147,7 +157,22 @@ describe("gpt-image-1 request", () => {
       n: 1,
       response_format: "b64_json",
     });
-    expect(imageGenerateParams("a kitchen at dusk", "dall-e-3", "high").quality).toBe("hd");
+    expect(imageGenerateParams("a kitchen at dusk", "dall-e-3", "high")).toEqual({
+      model: "dall-e-3",
+      prompt: "a kitchen at dusk",
+      size: "1024x1792",
+      quality: "hd",
+      n: 1,
+      response_format: "b64_json",
+    });
+    expect(imageGenerateParams("a kitchen at dusk", "dall-e-2", "high")).toEqual({
+      model: "dall-e-2",
+      prompt: "a kitchen at dusk",
+      size: "1024x1024",
+      n: 1,
+      response_format: "b64_json",
+    });
+    expect(imageGenerateParams("a kitchen at dusk", "dall-e-2")).not.toHaveProperty("quality");
   });
 
   it("treats model-not-found and org verification errors as unavailable image models", () => {
@@ -176,20 +201,57 @@ describe("gpt-image-1 request", () => {
           code: "model_not_found",
         });
       }
-      expect(params).toMatchObject({
+      expect(params).toEqual({
         model: "dall-e-3",
+        prompt: "a kitchen",
         size: "1024x1792",
         quality: "standard",
+        n: 1,
         response_format: "b64_json",
       });
       return { data: [{ b64_json: "AQID" }] };
     });
     const result = await generateImageWithModels("a kitchen", ["gpt-image-1", "dall-e-3"], generate);
     expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[0]?.[0]).toEqual(imageGenerateParams("a kitchen", "gpt-image-1"));
+    expect(generate.mock.calls[1]?.[0]).toEqual(imageGenerateParams("a kitchen", "dall-e-3"));
     expect(result.model).toBe("dall-e-3");
     expect(result.blob.type).toBe("image/png");
     expect(info.mock.calls.some((call) => String(call[0]).includes("dall-e-3"))).toBe(true);
     info.mockRestore();
+  });
+
+  it("falls back to dall-e-2 when dall-e-3 rejects response_format", async () => {
+    expect(
+      isImageParamRejected({ status: 400, message: "Unknown parameter: 'response_format'" }),
+    ).toBe(true);
+    const generate = vi.fn(async (params: { model: string }) => {
+      if (params.model === "gpt-image-1") {
+        throw Object.assign(new Error("The model 'gpt-image-1' does not exist"), { status: 400 });
+      }
+      if (params.model === "dall-e-3") {
+        throw Object.assign(new Error("Unknown parameter: 'response_format'"), { status: 400 });
+      }
+      expect(params).toEqual({
+        model: "dall-e-2",
+        prompt: "a kitchen",
+        size: "1024x1024",
+        n: 1,
+        response_format: "b64_json",
+      });
+      return { data: [{ b64_json: "AQID" }] };
+    });
+    const result = await generateImageWithModels(
+      "a kitchen",
+      ["gpt-image-1", "dall-e-3", "dall-e-2"],
+      generate,
+    );
+    expect(generate.mock.calls.map((call) => call[0]?.model)).toEqual([
+      "gpt-image-1",
+      "dall-e-3",
+      "dall-e-2",
+    ]);
+    expect(result.model).toBe("dall-e-2");
   });
 });
 

@@ -17,6 +17,7 @@ vi.mock("../../../api/_lib/generation-chain.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../api/_lib/generation-chain")>();
   return {
     ...actual,
+    dispatchGenerationProcess: (jobId: string) => bag.enqueue(jobId),
     enqueueGenerationProcess: (jobId: string) => bag.enqueue(jobId),
     registerProcessRunner: () => undefined,
   };
@@ -160,22 +161,19 @@ describe("generation and paint API auth", () => {
   });
 
   it("process allows an internal secret without a user session", async () => {
-    fake().queue("generation_jobs", {
-      data: {
-        id: "job-1",
-        workspace_id: "ws-1",
-        study_id: "study-1",
-        phase: "verify",
-      },
-    });
-    fake().queue("generation_jobs", {
-      data: {
-        id: "job-1",
-        workspace_id: "ws-1",
-        study_id: "study-1",
-        phase: "verify",
-      },
-    });
+    const job = {
+      id: "job-1",
+      workspace_id: "ws-1",
+      study_id: "study-1",
+      phase: "verify",
+      status: "running",
+      attempts: 1,
+      updated_at: new Date().toISOString(),
+      locked_until: new Date(0).toISOString(),
+    };
+    fake().queue("generation_jobs", { data: job });
+    fake().queue("generation_jobs", { data: job });
+    fake().queue("generation_jobs", { data: job });
     fake().queue("studies", { data: { id: "study-1", title: "Study", audience: "PMs", goal: "" } });
 
     const { res, out } = mockRes();
@@ -183,8 +181,16 @@ describe("generation and paint API auth", () => {
       mockReq({ jobId: "job-1" }, { "x-generation-internal-secret": "internal-secret" }),
       res as unknown as VercelResponse,
     );
-    expect(out.statusCode).toBe(200);
-    expect(out.body).toEqual({ success: true, phase: "done" });
+    expect(out.statusCode).toBe(202);
+    expect(out.body).toEqual({
+      accepted: true,
+      jobId: "job-1",
+      phase: "verify",
+      status: "running",
+    });
+    expect(fake().lastCall("studies", "update")?.payload).toEqual(
+      expect.objectContaining({ status: "review" }),
+    );
   });
 
   it("marks the job failed with a message and restores study status when a step throws", async () => {
@@ -201,7 +207,6 @@ describe("generation and paint API auth", () => {
     fake().queue("generation_jobs", { data: runningJob });
     fake().queue("generation_jobs", { data: runningJob });
     fake().queue("studies", { data: null, error: { message: "No rows found" } });
-    fake().queue("generation_jobs", { data: runningJob });
     fake().queue("generation_jobs", { data: { study_id: "study-1" } });
     fake().queue("studies", { data: { published_at: "2026-01-15T00:00:00Z" } });
     fake().queue("reels", { data: [], count: 1 });
@@ -212,11 +217,11 @@ describe("generation and paint API auth", () => {
       res as unknown as VercelResponse,
     );
 
-    expect(out.statusCode).toBe(500);
+    expect(out.statusCode).toBe(202);
     expect(out.body).toEqual(
       expect.objectContaining({
-        error: "An unexpected error occurred.",
-        detail: "Study was deleted",
+        accepted: true,
+        jobId: "job-1",
       }),
     );
     const failUpdate = fake()

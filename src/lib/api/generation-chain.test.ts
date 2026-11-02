@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  enqueueGenerationProcess,
+  continuationAccepted,
+  dispatchGenerationProcess,
   generationProcessHeaders,
   generationProcessUrl,
   siteBaseUrl,
 } from "../../../api/_lib/generation-chain";
 import { GENERATION_INTERNAL_SECRET_HEADER } from "../../../api/_lib/auth";
+import { canRunAnotherStep } from "./generation-guards";
 
 const KEYS = [
   "SITE_URL",
@@ -63,42 +65,49 @@ describe("generation process chaining URLs", () => {
     expect(headers["Content-Type"]).toBe("application/json");
   });
 
-  it("does not wait for the next process invocation to finish", async () => {
-    let resolveFetch: (() => void) | undefined;
-    const fetchImpl = vi.fn(
-      () =>
-        new Promise<unknown>((resolve) => {
-          resolveFetch = () => resolve({ ok: true });
-        }),
-    );
-    const started = Date.now();
-    enqueueGenerationProcess(
+  it("treats 202 as continuation acceptance", () => {
+    expect(continuationAccepted({ status: 202 })).toEqual({ accepted: true, status: 202 });
+    expect(continuationAccepted({ status: 500 })).toEqual({ accepted: false, status: 500 });
+    expect(continuationAccepted({ ok: true })).toEqual({ accepted: true, status: 202 });
+  });
+
+  it("awaits 202 acceptance and retries after a failed dispatch", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 500, ok: false })
+      .mockResolvedValueOnce({ status: 202, ok: true });
+    const result = await dispatchGenerationProcess(
       "job-1",
       { SITE_URL: "https://example.com", GENERATION_INTERNAL_SECRET: "s" },
       fetchImpl,
     );
-    expect(Date.now() - started).toBeLessThan(500);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    resolveFetch?.();
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ ok: true, status: 202 });
   });
 
-  it("registers waitUntil with the continuation fetch before returning", () => {
-    const order: string[] = [];
-    const fetchImpl = vi.fn(() => {
-      order.push("fetch");
-      return Promise.resolve({ ok: true });
-    });
-    const waitUntilFn = vi.fn((work: Promise<unknown>) => {
-      order.push("waitUntil");
-      expect(work).toBeInstanceOf(Promise);
-    });
-    enqueueGenerationProcess(
+  it("does not wait for the downstream step to finish past 202", async () => {
+    let resolveFetch: ((value: unknown) => void) | undefined;
+    const fetchImpl = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    const pending = dispatchGenerationProcess(
       "job-1",
       { SITE_URL: "https://example.com" },
       fetchImpl,
-      waitUntilFn,
     );
-    expect(waitUntilFn).toHaveBeenCalledTimes(1);
-    expect(order).toEqual(["fetch", "waitUntil"]);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    resolveFetch?.({ status: 202, ok: true });
+    await expect(pending).resolves.toEqual({ ok: true, status: 202 });
+  });
+});
+
+describe("inline step budget", () => {
+  it("runs the next step in the same invocation when there is time left", () => {
+    const startedAt = 1_000_000;
+    expect(canRunAnotherStep({ startedAt, now: startedAt + 58 })).toBe(true);
+    expect(canRunAnotherStep({ startedAt, now: startedAt + 250_000 })).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 const API_ENTRIES = [
   "api/generation/process.ts",
   "api/generation/start.ts",
+  "api/generation/recover.ts",
   "api/stripe/webhook.ts",
   "api/art/paint.ts",
   "api/decks/generate.ts",

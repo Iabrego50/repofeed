@@ -9,10 +9,19 @@
     "api/generation/start.ts": {
       "maxDuration": 60
     },
+    "api/generation/recover.ts": {
+      "maxDuration": 60
+    },
     "api/art/paint.ts": {
       "maxDuration": 180
     }
   },
+  "crons": [
+    {
+      "path": "/api/generation/recover",
+      "schedule": "0 12 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!api(?:/|$)).*)",

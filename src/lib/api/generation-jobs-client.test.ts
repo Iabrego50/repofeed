@@ -16,7 +16,6 @@ function fake(): FakeSupabase {
 
 import { cancelGeneration, getLatestJob, startGeneration } from "./generation-jobs";
 import { jsonAuthHeaders } from "./bearer";
-import { MAX_GENERATION_STEPS, STALE_JOB_FAIL_MESSAGE } from "./generation-guards";
 
 describe("client generation and paint auth headers", () => {
   beforeEach(() => {
@@ -75,76 +74,43 @@ describe("client generation and paint auth headers", () => {
     );
   });
 
-  it("re-triggers a stale running job from the status poll", async () => {
+  it("status polling POSTs process so a dropped handoff self-heals", async () => {
     fake().setUser({ id: "editor-1" });
     fake().queue("studies", { data: { workspace_id: "ws-1" } });
     fake().queue("workspace_members", { data: { role: "editor" } });
-    fake().queue("generation_jobs", {
-      data: {
-        id: "job-1",
-        study_id: "study-1",
-        workspace_id: "ws-1",
-        status: "running",
-        phase: "compose",
-        cursor: 0,
-        chunks: [],
-        log: [],
-        error: null,
-        attempts: 4,
-        created_at: "2020-01-01T00:00:00.000Z",
-        updated_at: "2020-01-01T00:00:00.000Z",
-      },
-    });
+    const runningJob = {
+      id: "job-1",
+      study_id: "study-1",
+      workspace_id: "ws-1",
+      status: "running",
+      phase: "compose",
+      cursor: 0,
+      chunks: [],
+      log: [],
+      error: null,
+      attempts: 4,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    fake().queue("generation_jobs", { data: runningJob });
+    fake().queue("generation_jobs", { data: runningJob });
 
-    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ success: true }) }));
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 202,
+      json: async () => ({ accepted: true }),
+    }));
     vi.stubGlobal("fetch", fetchMock);
 
     const job = await getLatestJob({ studyId: "study-1" });
     expect(job?.status).toBe("running");
-    expect(fake().lastCall("generation_jobs", "update")?.payload).toEqual(
-      expect.objectContaining({ updated_at: expect.any(String) }),
-    );
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/generation/process",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ jobId: "job-1" }),
       }),
-    ));
+    );
     vi.unstubAllGlobals();
-  });
-
-  it("fails a stale job that already hit the step cap and restores the study", async () => {
-    fake().setUser({ id: "editor-1" });
-    fake().queue("studies", { data: { workspace_id: "ws-1" } });
-    fake().queue("workspace_members", { data: { role: "editor" } });
-    fake().queue("generation_jobs", {
-      data: {
-        id: "job-1",
-        study_id: "study-1",
-        workspace_id: "ws-1",
-        status: "running",
-        phase: "compose",
-        cursor: 0,
-        chunks: [],
-        log: [],
-        error: null,
-        attempts: MAX_GENERATION_STEPS,
-        created_at: "2020-01-01T00:00:00.000Z",
-        updated_at: "2020-01-01T00:00:00.000Z",
-      },
-    });
-    fake().queue("studies", { data: { published_at: "2026-01-15T00:00:00Z" } });
-    fake().queue("reels", { data: [], count: 3 });
-
-    const job = await getLatestJob({ studyId: "study-1" });
-    expect(job?.status).toBe("failed");
-    expect(job?.error).toBe(STALE_JOB_FAIL_MESSAGE);
-    expect(fake().lastCall("generation_jobs", "update")?.payload).toEqual(
-      expect.objectContaining({ status: "failed", error: STALE_JOB_FAIL_MESSAGE }),
-    );
-    expect(fake().lastCall("studies", "update")?.payload).toEqual(
-      expect.objectContaining({ status: "published" }),
-    );
   });
 });
