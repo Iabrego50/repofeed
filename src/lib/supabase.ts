@@ -1,19 +1,50 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export type BrowserSupabase = SupabaseClient<Database>;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+function readEnv(name: 'VITE_SUPABASE_URL' | 'VITE_SUPABASE_ANON_KEY'): string {
+  return String(import.meta.env[name] ?? '').trim();
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
+export function isSupabaseConfigured(): boolean {
+  return Boolean(readEnv('VITE_SUPABASE_URL') && readEnv('VITE_SUPABASE_ANON_KEY'));
+}
+
+let client: BrowserSupabase | undefined;
+
+/** Browser client, or null when env vars are missing so AuthProvider can still render. */
+export function getBrowserSupabase(): BrowserSupabase | null {
+  if (!isSupabaseConfigured()) return null;
+  if (!client) {
+    client = createClient<Database>(readEnv('VITE_SUPABASE_URL'), readEnv('VITE_SUPABASE_ANON_KEY'), {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+      },
+    });
+  }
+  return client;
+}
+
+function requireBrowserSupabase(): BrowserSupabase {
+  const next = getBrowserSupabase();
+  if (!next) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  return next;
+}
+
+/**
+ * Lazy client so importing this module does not crash when env is unset.
+ * First property access still requires config (API modules).
+ */
+export const supabase: BrowserSupabase = new Proxy({} as BrowserSupabase, {
+  get(_target, prop) {
+    const value = Reflect.get(requireBrowserSupabase(), prop);
+    return typeof value === 'function' ? value.bind(requireBrowserSupabase()) : value;
   },
 });
 

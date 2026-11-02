@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { getBrowserSupabase } from './supabase';
 
 interface UserProfile {
   id: string;
@@ -26,6 +26,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const unavailableAuth = async () => {
+  console.warn('[auth] Supabase is not configured');
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -33,76 +37,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    let cancelled = false;
+    const client = getBrowserSupabase();
+    if (!client) {
+      setLoading(false);
+      return;
+    }
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
+    const applySession = (next: Session | null) => {
+      if (cancelled) return;
+      setSession(next);
+      setUser(next?.user ?? null);
+      if (next?.user) {
+        void loadProfile(next.user.id);
       } else {
         setProfile(null);
         setLoading(false);
       }
+    };
+
+    client.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) console.warn('[auth] getSession', error.message);
+        applySession(data.session ?? null);
+      })
+      .catch((error: unknown) => {
+        console.warn('[auth] getSession failed', error);
+        applySession(null);
+      });
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((_event, next) => {
+      applySession(next);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function loadProfile(userId: string) {
-    const { data } = await supabase
-      .from('users')
-      .select('id, email, name, avatar')
-      .eq('id', userId)
-      .single();
-
-    if (data) {
-      setProfile({
-        id: data.id,
-        email: data.email || '',
-        name: data.name || undefined,
-        avatar: data.avatar || undefined,
-      });
+    const client = getBrowserSupabase();
+    if (!client) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    try {
+      const { data } = await client
+        .from('users')
+        .select('id, email, name, avatar')
+        .eq('id', userId)
+        .single();
+
+      if (data) {
+        setProfile({
+          id: data.id,
+          email: data.email || '',
+          name: data.name || undefined,
+          avatar: data.avatar || undefined,
+        });
+      }
+    } catch (error) {
+      console.warn('[auth] loadProfile failed', error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const signIn = async (provider: 'google' | 'azure' | 'apple') => {
+    const client = getBrowserSupabase();
+    if (!client) return unavailableAuth();
     const redirectTo = `${window.location.origin}/auth/callback`;
-    
-    await supabase.auth.signInWithOAuth({
+    await client.auth.signInWithOAuth({
       provider,
-      options: {
-        redirectTo,
-      },
+      options: { redirectTo },
     });
   };
 
   const signInWithOtp = async (email: string) => {
+    const client = getBrowserSupabase();
+    if (!client) return unavailableAuth();
     const redirectTo = `${window.location.origin}/auth/callback`;
-    
-    await supabase.auth.signInWithOtp({
+    await client.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: redirectTo,
-      },
+      options: { emailRedirectTo: redirectTo },
     });
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const client = getBrowserSupabase();
+    if (client) await client.auth.signOut();
     setProfile(null);
   };
 
@@ -120,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signInWithOtp,
         signOut,
-        signout: signOut, // Alias
+        signout: signOut,
       }}
     >
       {children}

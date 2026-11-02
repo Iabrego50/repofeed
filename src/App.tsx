@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { DefaultProviders } from "./components/providers/default.tsx";
+import { AppErrorBoundary } from "./components/app-error-boundary.tsx";
 import AppLayout from "./components/app-layout.tsx";
 import LandingPage from "./pages/landing/public-entry.tsx";
 import StudiesPage from "./pages/studies/page.tsx";
@@ -19,15 +20,6 @@ import TermsPage from "./pages/legal/terms.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 function FullScreenLoader() {
   return (
     <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background">
@@ -39,7 +31,7 @@ function FullScreenLoader() {
 
 function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -47,17 +39,17 @@ function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
 function UnauthenticatedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -65,37 +57,39 @@ function UnauthenticatedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (user) {
     return <Navigate to="/feed" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<UnauthenticatedRoute><LandingPage loader={<FullScreenLoader />} /></UnauthenticatedRoute>} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/share/:token" element={<SharePage />} />
-          <Route path="/invite/:token" element={<InvitePage />} />
-          <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
-            <Route path="/welcome" element={<WelcomePage />} />
-            <Route path="/feed" element={<FeedPage />} />
-            <Route path="/studies" element={<StudiesPage />} />
-            <Route path="/studies/new" element={<NewStudyPage />} />
-            <Route path="/studies/:id" element={<StudyDetailPage />} />
-            <Route path="/insights" element={<InsightsPage />} />
-            <Route path="/insights/deck" element={<InsightsDeckPage />} />
-            <Route path="/billing" element={<BillingPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <DefaultProviders>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<UnauthenticatedRoute><LandingPage loader={<FullScreenLoader />} /></UnauthenticatedRoute>} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/share/:token" element={<SharePage />} />
+            <Route path="/invite/:token" element={<InvitePage />} />
+            <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
+              <Route path="/welcome" element={<WelcomePage />} />
+              <Route path="/feed" element={<FeedPage />} />
+              <Route path="/studies" element={<StudiesPage />} />
+              <Route path="/studies/new" element={<NewStudyPage />} />
+              <Route path="/studies/:id" element={<StudyDetailPage />} />
+              <Route path="/insights" element={<InsightsPage />} />
+              <Route path="/insights/deck" element={<InsightsDeckPage />} />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </DefaultProviders>
+    </AppErrorBoundary>
   );
 }

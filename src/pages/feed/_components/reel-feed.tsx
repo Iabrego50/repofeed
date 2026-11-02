@@ -10,8 +10,11 @@ import FeedSlide from "./feed-slide.tsx";
 import ReelPanel, { type PanelTab } from "./reel-panel.tsx";
 
 function useIsDesktop() {
-  const [desktop, setDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const [desktop, setDesktop] = useState(
+    () => typeof window.matchMedia === "function" && window.matchMedia("(min-width: 1024px)").matches,
+  );
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
     const mq = window.matchMedia("(min-width: 1024px)");
     const on = () => setDesktop(mq.matches);
     mq.addEventListener("change", on);
