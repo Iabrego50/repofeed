@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { unwrapSingleOrNull } from '../supabase-helpers';
+import { jsonAuthHeaders } from './bearer';
 import { mapJob, type Job } from './mappers';
 
 export async function getLatestJob(args: { studyId: string }): Promise<Job | null> {
@@ -63,10 +64,9 @@ export async function startGeneration(args: { studyId: string }) {
     throw new Error('Must be an editor');
   }
 
-  // Call the generation API
-  const response = await fetch(`${process.env.VITE_SITE_URL}/api/generation/start`, {
+  const response = await fetch('/api/generation/start', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await jsonAuthHeaders(),
     body: JSON.stringify({ studyId: args.studyId }),
   });
 
@@ -111,7 +111,7 @@ export async function resumeGeneration(args: { studyId: string }) {
     
     await fetch('/api/generation/process', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await jsonAuthHeaders(),
       body: JSON.stringify({ jobId: job.id }),
     });
     

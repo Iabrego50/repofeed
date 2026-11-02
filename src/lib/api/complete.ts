@@ -7,6 +7,7 @@ import * as shareModule from './share';
 import * as footageModule from './footage';
 import { supabase } from '../supabase';
 import * as billing from '../billing/stripe';
+import { jsonAuthHeaders } from './bearer';
 
 // Export organized API object matching Convex structure
 export const api = {
@@ -160,7 +161,7 @@ export const api = {
     paintReel: async (args: { reelId: string }) => {
       const response = await fetch('/api/art/paint', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await jsonAuthHeaders(),
         body: JSON.stringify({ reelId: args.reelId }),
       });
       
@@ -181,11 +182,12 @@ export const api = {
       
       if (error) throw error;
       
+      const headers = await jsonAuthHeaders();
       const results = await Promise.allSettled(
         (reels || []).map(reel => 
           fetch('/api/art/paint', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ reelId: reel.id }),
           })
         )

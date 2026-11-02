@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { requiredEnv } from '../server-env.js';
-import { StepError, aiHttpError } from '../errors/step-error.js';
+import { StepError, mapOpenAIError } from '../errors/step-error.js';
 
 let openai: OpenAI | undefined;
 
@@ -13,7 +13,7 @@ export function getOpenAI(): OpenAI {
 /** Text/JSON model. Override with OPENAI_TEXT_MODEL. */
 export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-5.1';
 export const CHAT_MODEL = TEXT_MODEL;
-export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-flare';
+export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
 export const CHUNK_CHARS = 70_000;
 export const MAX_COMPOSE_FINDINGS = 180;
 
@@ -94,7 +94,7 @@ export async function callTool<T>(args: {
   } catch (err) {
     if (err instanceof StepError) throw err;
     if (err instanceof OpenAI.APIError) {
-      throw aiHttpError(err.status || 500, err.message);
+      throw mapOpenAIError(err);
     }
     throw new StepError("Couldn't reach the AI service.", {
       detail: err instanceof Error ? err.message : String(err),
@@ -130,7 +130,7 @@ export async function generateImage(prompt: string): Promise<Blob> {
   } catch (err) {
     if (err instanceof StepError) throw err;
     if (err instanceof OpenAI.APIError) {
-      throw aiHttpError(err.status || 500, err.message);
+      throw mapOpenAIError(err);
     }
     throw new StepError("Couldn't reach the image service.", {
       detail: err instanceof Error ? err.message : String(err),

@@ -145,6 +145,40 @@ describe("RLS policies from supabase/migrations", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("generation_jobs.started_by is required", async () => {
+    await asSuper();
+    await expect(
+      db.query(
+        `insert into public.generation_jobs (study_id, workspace_id, status, phase, locked_until)
+         values ('${STUDY}', '${WS}', 'queued', 'extract', now())`,
+      ),
+    ).rejects.toThrow(/started_by|not-null|null value/i);
+  });
+
+  it("generation_jobs insert stores started_by for a workspace editor", async () => {
+    await asSuper();
+    await setAuth(OWNER);
+    await asTester();
+    const { rows } = await db.query<{ started_by: string }>(
+      `insert into public.generation_jobs (study_id, workspace_id, status, phase, locked_until, started_by)
+       values ('${STUDY}', '${WS}', 'queued', 'extract', now(), '${OWNER}')
+       returning started_by`,
+    );
+    expect(rows[0]?.started_by).toBe(OWNER);
+  });
+
+  it("a viewer cannot start a generation job", async () => {
+    await asSuper();
+    await setAuth(MEMBER);
+    await asTester();
+    await expect(
+      db.query(
+        `insert into public.generation_jobs (study_id, workspace_id, status, phase, locked_until, started_by)
+         values ('${STUDY}', '${WS}', 'queued', 'extract', now(), '${MEMBER}')`,
+      ),
+    ).rejects.toThrow(/row-level security|violates/i);
+  });
+
   it("anon cannot write or delete objects in the generated bucket", async () => {
     await asSuper();
     await setAuth(null);

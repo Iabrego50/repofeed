@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { isAuthError, isInternalGenerationCall, requireUser, requireWorkspaceEditor } from '../_lib/auth.js';
+import { enqueueGenerationProcess, registerProcessRunner } from '../_lib/generation-chain.js';
 import { isServerNotConfigured, requiredEnv, requireSupabaseEnv, sendNotConfigured, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
 import { callTool, CHUNK_CHARS, MAX_COMPOSE_FINDINGS } from '../../src/lib/ai/client.js';
@@ -45,14 +47,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return sendRouteError(res, error);
   }
 
-  const { jobId } = req.body;
+  const { jobId } = req.body ?? {};
 
   if (!jobId) {
     return res.status(400).json({ error: 'Missing jobId' });
   }
 
   try {
-    // Fetch job
+    const internal = isInternalGenerationCall(req);
+    const user = internal ? null : await requireUser(req);
+
     const { data: job, error: jobError } = await supabase
       .from('generation_jobs')
       .select('*')
@@ -63,40 +67,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Fetch study
-    const { data: study } = await supabase
-      .from('studies')
-      .select('id, title, audience, goal')
-      .eq('id', job.study_id)
-      .single();
-
-    if (!study) {
-      await updateJob(jobId, {
-        status: 'failed',
-        error: 'Study was deleted',
-      });
-      return res.status(404).json({ error: 'Study not found' });
+    if (!internal && user) {
+      await requireWorkspaceEditor(user.id, job.workspace_id);
     }
 
-    // Process based on phase
-    if (job.phase === 'extract') {
-      await processExtraction(jobId, job, study);
-      return res.json({ success: true, phase: 'extract' });
+    const phase = String(job.phase);
+    if (phase !== 'extract' && phase !== 'compose' && phase !== 'verify') {
+      return res.status(400).json({ error: 'Invalid phase' });
     }
 
-    if (job.phase === 'compose') {
-      await processComposition(jobId, job, study);
-      return res.json({ success: true, phase: 'compose' });
-    }
-
-    if (job.phase === 'verify') {
-      await processVerification(jobId, job.study_id);
-      return res.json({ success: true, phase: 'done' });
-    }
-
-    return res.status(400).json({ error: 'Invalid phase' });
+    await runProcessStep(jobId);
+    return res.json({ success: true, phase: phase === 'verify' ? 'done' : phase });
   } catch (error) {
     if (isServerNotConfigured(error)) return sendNotConfigured(res, error);
+    if (isAuthError(error)) return res.status(error.status).json({ error: error.message });
     console.error('Generation error:', error);
     const e = toStepError(error);
     
@@ -110,13 +94,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
       .eq('id', jobId);
 
-    return res.status(500).json({
+    return res.status(e.httpStatus).json({
       error: e.message,
       detail: e.detail.detail,
       retryable: e.retryable,
     });
   }
 }
+
+export async function runProcessStep(jobId: string): Promise<void> {
+  const { data: job, error: jobError } = await supabase
+    .from('generation_jobs')
+    .select('*')
+    .eq('id', jobId)
+    .single();
+
+  if (jobError || !job) {
+    throw new Error('Job not found');
+  }
+
+  const { data: study } = await supabase
+    .from('studies')
+    .select('id, title, audience, goal')
+    .eq('id', job.study_id)
+    .single();
+
+  if (!study) {
+    await updateJob(jobId, {
+      status: 'failed',
+      error: 'Study was deleted',
+    });
+    throw new Error('Study not found');
+  }
+
+  const phase = String(job.phase);
+  if (phase === 'extract') {
+    await processExtraction(jobId, job, study);
+    return;
+  }
+
+  if (phase === 'compose') {
+    await processComposition(jobId, job, study);
+    return;
+  }
+
+  if (phase === 'verify') {
+    await processVerification(jobId, job.study_id);
+    return;
+  }
+
+  throw new Error('Invalid phase');
+}
+
+registerProcessRunner(runProcessStep);
 
 async function processExtraction(
   jobId: string,
@@ -134,11 +164,7 @@ async function processExtraction(
       log: appendLog(job.log, 'info', 'Extraction complete, starting composition'),
     });
     // Trigger next phase
-    await fetch(`${process.env.VITE_SITE_URL}/api/generation/process`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId }),
-    });
+    await enqueueGenerationProcess(jobId);
     return;
   }
 
@@ -158,11 +184,7 @@ async function processExtraction(
       log: appendLog(job.log, 'warn', 'Skipped a source that no longer exists'),
     });
     // Trigger next chunk
-    await fetch(`${process.env.VITE_SITE_URL}/api/generation/process`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId }),
-    });
+    await enqueueGenerationProcess(jobId);
     return;
   }
 
@@ -186,8 +208,8 @@ async function processExtraction(
   // Save findings
   const findingsToSave = result.findings.slice(0, 80).map((f) => ({
     study_id: study.id,
-    workspace_id: job.workspace_id,
     source_id: chunk.source_id,
+    chunk_index: cursor,
     type: f.type,
     text: f.text.trim(),
     speaker: f.speaker?.trim() || null,
@@ -211,12 +233,7 @@ async function processExtraction(
     ),
   });
 
-  // Trigger next chunk
-  await fetch(`${process.env.VITE_SITE_URL}/api/generation/process`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jobId }),
-  });
+  await enqueueGenerationProcess(jobId);
 }
 
 async function processComposition(
@@ -295,12 +312,12 @@ async function processComposition(
         study_id: study.id,
         workspace_id: job.workspace_id,
         track: r.track.trim(),
+        track_index: idx,
         title,
-        scenes: finalScenes,
+        scenes: JSON.parse(JSON.stringify(finalScenes)),
         finding_ids: findingIds,
         source_names: sourceNames,
         position: idx,
-        status: 'draft',
         created_at: new Date().toISOString(),
       },
     ];
@@ -327,12 +344,7 @@ async function processComposition(
     ),
   });
 
-  // Trigger verification
-  await fetch(`${process.env.VITE_SITE_URL}/api/generation/process`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jobId }),
-  });
+  await enqueueGenerationProcess(jobId);
 }
 
 async function processVerification(jobId: string, studyId: string) {

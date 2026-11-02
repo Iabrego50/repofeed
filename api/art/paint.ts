@@ -1,7 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { isAuthError, requireUser, requireWorkspaceEditor } from '../_lib/auth.js';
 import { configJsonResponse, requiredEnv, requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
-import { callTool, getOpenAI } from '../../src/lib/ai/client.js';
+import { callTool, generateImage } from '../../src/lib/ai/client.js';
+import { StepError } from '../../src/lib/errors/step-error.js';
 import { z } from 'zod';
 
 const ART_SYSTEM = `You art-direct the background image for a short vertical research video ("insight reel"). Animated text sits on top of the image, so the image sets the mood; it never carries the message.
@@ -70,43 +72,35 @@ function artCaption(caption: string): string {
   return caption.replace(/["*]/g, "").trim().split(/\s+/).slice(0, 5).join(" ").slice(0, 40);
 }
 
-async function generateImage(prompt: string): Promise<Buffer> {
-  const response = await getOpenAI().images.generate({
-    model: 'gpt-image-2.5-flare',
-    prompt,
-    size: '1024x1536',
-    quality: 'standard',
-    n: 1,
+function jsonResponse(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
   });
-
-  const imageUrl = response.data[0]?.url;
-  if (!imageUrl) {
-    throw new Error('No image URL in response');
-  }
-
-  const imageRes = await fetch(imageUrl);
-  if (!imageRes.ok) {
-    throw new Error(`Failed to fetch generated image: ${imageRes.status}`);
-  }
-
-  return Buffer.from(await imageRes.arrayBuffer());
 }
 
 export async function POST(req: Request) {
   try {
     requirePaintEnv();
   } catch (error) {
-    return configJsonResponse(error) ?? new Response(JSON.stringify({ error: 'Server not configured' }), { status: 503 });
+    return configJsonResponse(error) ?? jsonResponse({ error: 'Server not configured' }, 503);
+  }
+
+  let user;
+  try {
+    user = await requireUser(req);
+  } catch (error) {
+    if (isAuthError(error)) return jsonResponse({ error: error.message }, error.status);
+    throw error;
   }
 
   const { reelId } = await req.json();
   
   if (!reelId) {
-    return new Response(JSON.stringify({ error: 'reelId is required' }), { status: 400 });
+    return jsonResponse({ error: 'reelId is required' }, 400);
   }
 
   try {
-    // Get reel data
     const { data: reel, error: reelError } = await supabase
       .from('reels')
       .select('id, workspace_id, study_id, title, track, scenes, studies(title)')
@@ -114,14 +108,16 @@ export async function POST(req: Request) {
       .single();
 
     if (reelError || !reel) {
-      return new Response(JSON.stringify({ error: 'Reel not found' }), { status: 404 });
+      return jsonResponse({ error: 'Reel not found' }, 404);
     }
+
+    await requireWorkspaceEditor(user.id, reel.workspace_id);
 
     // Mark as pending
     await supabase
       .from('reels')
-      .update({ 
-        art_status: 'pending',
+      .update({
+        art: { status: 'pending' },
         updated_at: new Date().toISOString()
       })
       .eq('id', reelId);
@@ -140,8 +136,8 @@ export async function POST(req: Request) {
       maxTokens: 800,
     });
 
-    // Generate image
-    const imageBuffer = await generateImage(imagePrompt(scene.prompt));
+    const imageBlob = await generateImage(imagePrompt(scene.prompt));
+    const imageBuffer = Buffer.from(await imageBlob.arrayBuffer());
 
     // Upload to storage
     const fileName = `art-${reelId}-${Date.now()}.png`;
@@ -170,7 +166,11 @@ export async function POST(req: Request) {
           caption: artCaption(scene.caption),
           media: 'image',
         },
-        art_status: 'completed',
+        art: {
+          status: 'completed',
+          url: publicUrl,
+          caption: artCaption(scene.caption),
+        },
         updated_at: new Date().toISOString(),
       })
       .eq('id', reelId);
@@ -185,24 +185,32 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
+    if (isAuthError(error)) return jsonResponse({ error: error.message }, error.status);
     const configured = configJsonResponse(error);
     if (configured) return configured;
     console.error('Art painting failed:', error);
     
-    // Mark as failed
     await supabase
       .from('reels')
       .update({
-        art_status: 'failed',
-        art_error: error instanceof Error ? error.message : 'Unknown error',
+        art: {
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
         updated_at: new Date().toISOString(),
       })
       .eq('id', reelId);
 
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Art painting failed' 
-    }), { status: 500 });
+    const status = error instanceof StepError ? error.httpStatus : 500;
+    return jsonResponse({
+      error: error instanceof Error ? error.message : 'Art painting failed',
+    }, status);
   }
+}
+
+function incomingAuthorization(req: VercelRequest): string | undefined {
+  const raw = req.headers.authorization ?? req.headers.Authorization;
+  return Array.isArray(raw) ? raw[0] : raw;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -214,9 +222,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     return sendRouteError(res, error);
   }
+  const headers = new Headers({ 'content-type': 'application/json' });
+  const authorization = incomingAuthorization(req);
+  if (authorization) headers.set('authorization', authorization);
   const request = new Request('http://localhost/api/art/paint', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers,
     body: JSON.stringify(req.body ?? {}),
   });
   const response = await POST(request);

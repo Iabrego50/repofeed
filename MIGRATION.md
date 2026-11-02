@@ -150,12 +150,26 @@ VITE_SUPABASE_ANON_KEY=eyJhbG...
 # From OpenAI dashboard (text + images)
 OPENAI_API_KEY=sk-...
 OPENAI_TEXT_MODEL=gpt-5.1
+OPENAI_IMAGE_MODEL=gpt-image-1
 
 # From Resend dashboard
 RESEND_API_KEY=re_...
 
-# Your production URL
+# Public origin used by the browser and by server-side generation step chaining.
+# The process route derives its base URL from SITE_URL, then VITE_SITE_URL,
+# then https://${VERCEL_URL} (VERCEL_URL is provided automatically on Vercel).
+SITE_URL=https://repofeed.ai
+VITE_SITE_URL=https://repofeed.ai
 VITE_APP_URL=https://repofeed.ai
+
+# Server-only secret. /api/generation/process accepts either a workspace editor
+# bearer token or this value in x-generation-internal-secret.
+# Required for HTTP step chaining (in-process waitUntil is preferred on Vercel).
+GENERATION_INTERNAL_SECRET=
+
+# Optional. Lets preview deployments call themselves through Deployment Protection.
+# Project Settings → Deployment Protection → Protection Bypass for Automation.
+VERCEL_AUTOMATION_BYPASS_SECRET=
 ```
 
 ## Step 4: Deploy to Vercel
@@ -182,11 +196,17 @@ In Vercel Dashboard → Settings → Environment Variables, add:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_APP_URL`
+- `SITE_URL` (canonical public origin; used for generation step chaining)
+- `VITE_SITE_URL` (same origin for the browser / fallback for chaining)
 
-**Production only (secrets):**
+**Production & Preview (secrets):**
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
 - `RESEND_API_KEY`
+- `GENERATION_INTERNAL_SECRET` (protects `/api/generation/process` self-calls)
+- `VERCEL_AUTOMATION_BYPASS_SECRET` (optional; required on protected preview deployments so process can chain)
+
+Vercel also sets `VERCEL_URL` automatically. Chaining sends `x-generation-internal-secret` and, when configured, `x-vercel-protection-bypass`. The preferred path runs the next step in-process with `waitUntil` from `@vercel/functions`.
 
 ### 4.4 Deploy
 
@@ -381,7 +401,10 @@ When you push to `main` branch:
 
 **Problem:** Jobs stuck or erroring
 - Check `OPENAI_API_KEY` is set
-- Verify rate limits not exceeded
+- `api/generation/start` and `api/art/paint` require a Supabase bearer token and a workspace editor (`owner` or `editor`). `started_by` is set to that user.
+- `api/generation/process` allows that same editor token **or** `x-generation-internal-secret: $GENERATION_INTERNAL_SECRET`
+- If preview self-calls 401 from Deployment Protection, set `VERCEL_AUTOMATION_BYPASS_SECRET` and `SITE_URL` (or rely on `VERCEL_URL`)
+- OpenAI `insufficient_quota` is returned as HTTP 402 `{ error: "AI provider out of credits" }`; true rate limits are 429; other provider errors are 502
 - Check Vercel function logs for errors
 
 ### iOS build fails
@@ -403,7 +426,7 @@ When you push to `main` branch:
 
 **OpenAI:**
 - Text (`gpt-5.1` default, override with `OPENAI_TEXT_MODEL`): token usage varies by model
-- Images: per-image pricing
+- Images (`gpt-image-1` default, override with `OPENAI_IMAGE_MODEL`): per-image pricing
 - Estimate: $70-300/month depending on usage
 
 **Resend:**

@@ -4,6 +4,8 @@ import {
   requiredEnv,
   type ServerNotConfiguredError,
 } from "../../src/lib/server-env.js";
+import { isAuthError } from "./auth.js";
+import { toStepError } from "../../src/lib/errors/step-error.js";
 
 export { isServerNotConfigured, requiredEnv, ServerNotConfiguredError } from "../../src/lib/server-env.js";
 
@@ -22,6 +24,13 @@ export function sendRouteError(
   fallback = "Internal server error",
 ) {
   if (isServerNotConfigured(error)) return sendNotConfigured(res, error);
+  if (isAuthError(error)) return res.status(error.status).json({ error: error.message });
+  if (error instanceof Error && error.name === "StepError") {
+    const step = toStepError(error);
+    if (step.detail.httpStatus) {
+      return res.status(step.httpStatus).json({ error: step.message });
+    }
+  }
   const message = error instanceof Error ? error.message : fallback;
   return res.status(500).json({ error: message });
 }

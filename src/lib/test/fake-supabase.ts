@@ -211,12 +211,30 @@ export class FakeSupabase {
   private readonly queues = new Map<string, QueueItem[]>();
   private user: FakeUser | null = null;
 
+  private bearerToken = "test-access-token";
+
   readonly client = {
     from: (table: string) => new FakeQuery(table, this),
     auth: {
-      getUser: async () => ({
-        data: { user: this.user },
-        error: this.user ? null : { message: "Not authenticated" },
+      getUser: async (jwt?: string) => {
+        if (typeof jwt === "string") {
+          if (!this.user || jwt !== this.bearerToken) {
+            return { data: { user: null }, error: { message: "Invalid token" } };
+          }
+          return { data: { user: this.user }, error: null };
+        }
+        return {
+          data: { user: this.user },
+          error: this.user ? null : { message: "Not authenticated" },
+        };
+      },
+      getSession: async () => ({
+        data: {
+          session: this.user
+            ? { access_token: this.bearerToken, user: this.user }
+            : null,
+        },
+        error: null,
       }),
     },
     storage: {
@@ -226,6 +244,10 @@ export class FakeSupabase {
 
   setUser(user: FakeUser | null) {
     this.user = user;
+  }
+
+  setBearerToken(token: string) {
+    this.bearerToken = token;
   }
 
   queue(table: string, result: Partial<FakeResponse> & { data?: unknown }) {
