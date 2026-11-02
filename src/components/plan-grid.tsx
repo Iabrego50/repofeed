@@ -1,92 +1,127 @@
-import type { ReactNode } from "react";
-import { Check } from "lucide-react";
-import type { Plan } from "@/convex/schema/validators.ts";
-import { cn } from "@/lib/utils.ts";
-import { PLANS, formatPrice, type Interval } from "@/lib/plans.ts";
+import { Button } from '@/components/ui/button';
+import { Check } from 'lucide-react';
+import type { Plan } from '@/schema/validators';
 
-export function IntervalToggle({ value, onChange }: { value: Interval; onChange: (v: Interval) => void }) {
-  const options: { id: Interval; label: string }[] = [
-    { id: "month", label: "Monthly" },
-    { id: "year", label: "Yearly · save 20%" },
-  ];
-  return (
-    <div role="radiogroup" aria-label="Billing period" className="inline-flex rounded-full border border-border bg-card p-1">
-      {options.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          role="radio"
-          aria-checked={value === o.id}
-          onClick={() => onChange(o.id)}
-          className={cn(
-            "min-h-10 cursor-pointer rounded-full px-4 text-sm font-medium text-muted-foreground transition-colors focus-visible:outline-2 focus-visible:outline-ring",
-            value === o.id && "bg-primary text-primary-foreground",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+const PLANS = [
+  {
+    id: 'free' as Plan,
+    name: 'Free',
+    tagline: 'For individuals and small teams',
+    price: { month: 0, year: 0 },
+    features: [
+      '3 active studies',
+      '1 editor',
+      'Unlimited viewers',
+      'Basic features',
+    ],
+  },
+  {
+    id: 'pro' as const,
+    name: 'Pro',
+    tagline: 'For growing teams',
+    price: { month: 29, year: 24 },
+    highlight: true,
+    features: [
+      'Unlimited studies',
+      '1 editor',
+      'Unlimited viewers',
+      'All features',
+      'Priority support',
+    ],
+  },
+  {
+    id: 'team' as const,
+    name: 'Team',
+    tagline: 'For larger organizations',
+    price: { month: 49, year: 39 },
+    features: [
+      'Unlimited studies',
+      'Unlimited editors',
+      'Unlimited viewers',
+      'All features',
+      'Priority support',
+      'Advanced collaboration',
+    ],
+  },
+];
 
-/** Pricing cards. `renderAction` supplies each card's button so callers control checkout. */
 export default function PlanGrid({
-  interval,
-  current,
-  renderAction,
-  showTrial = true,
+  currentPlan,
+  onSelect,
+  usage,
+  trialAvailable,
 }: {
-  interval: Interval;
-  current?: Plan;
-  renderAction: (plan: Plan) => ReactNode;
-  /** False once the viewer has used their one free trial. */
-  showTrial?: boolean;
+  currentPlan: Plan;
+  onSelect: (plan: 'pro' | 'team', interval: 'month' | 'year') => void;
+  usage: { studies: number; editors: number };
+  trialAvailable: boolean;
 }) {
-  const trial = showTrial ? " 14-day free trial." : "";
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {PLANS.map((p) => (
+    <div className="grid gap-6 md:grid-cols-3">
+      {PLANS.map((plan) => (
         <div
-          key={p.id}
-          className={cn(
-            "relative flex flex-col rounded-2xl border border-border bg-card p-6",
-            p.highlight && "border-primary shadow-[0_30px_80px_-40px_rgba(47,155,255,0.6)]",
-          )}
+          key={plan.id}
+          className={`rounded-lg border p-6 ${plan.highlight ? 'border-primary shadow-lg' : 'border-border'}`}
         >
-          {p.highlight && (
-            <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
-              Most popular
-            </span>
+          {plan.highlight && (
+            <div className="mb-4 text-center text-xs font-semibold uppercase text-primary">
+              Most Popular
+            </div>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-display text-2xl font-extrabold">{p.name}</h3>
-            {current === p.id && (
-              <span className="rounded-full bg-secondary px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Current
-              </span>
-            )}
+          <h3 className="text-2xl font-bold">{plan.name}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
+          <div className="mt-6 text-4xl font-bold">
+            ${plan.price.year}
+            <span className="text-lg font-normal text-muted-foreground">/mo</span>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-          <p className="mt-6 flex items-baseline gap-2">
-            <span className="font-display text-5xl font-extrabold tracking-tight">{formatPrice(p.price[interval])}</span>
-            <span className="text-sm text-muted-foreground">{p.unit}</span>
-          </p>
-          <p className="mt-1 min-h-5 text-xs text-muted-foreground">
-            {p.id !== "free" &&
-              `${interval === "year" ? `${formatPrice(p.price.year * 12)}${p.id === "team" ? " per editor" : ""} billed yearly.` : "Cancel anytime."}${trial} Plus applicable tax.`}
-          </p>
-          <ul className="mt-6 flex-1 space-y-3">
-            {p.features.map((f) => (
-              <li key={f} className="flex gap-2 text-sm">
-                <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                <span>{f}</span>
+          {plan.id !== 'free' && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Billed yearly (save 20%)
+            </p>
+          )}
+          <ul className="mt-6 space-y-3">
+            {plan.features.map((feature) => (
+              <li key={feature} className="flex gap-2 text-sm">
+                <Check className="h-5 w-5 shrink-0 text-primary" />
+                <span>{feature}</span>
               </li>
             ))}
           </ul>
-          <div className="mt-8">{renderAction(p.id)}</div>
+          <div className="mt-8">
+            {currentPlan === plan.id ? (
+              <Button disabled className="w-full">
+                Current Plan
+              </Button>
+            ) : plan.id === 'free' ? (
+              <Button variant="outline" disabled className="w-full">
+                Downgrade unavailable
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  if (plan.id !== 'free') {
+                    onSelect(plan.id as 'pro' | 'team', 'year');
+                  }
+                }}
+                variant={plan.highlight ? 'default' : 'outline'}
+                className="w-full"
+              >
+                {trialAvailable ? 'Start 14-day trial' : 'Upgrade'}
+              </Button>
+            )}
+          </div>
         </div>
       ))}
     </div>
   );
 }
+
+export function IntervalToggle({ value, onChange }: { value: "month" | "year"; onChange: (v: "month" | "year") => void }) {
+  return (
+    <div className="inline-flex rounded-full border border-border bg-card p-1">
+      <button onClick={() => onChange("month")} className={value === "month" ? "bg-primary text-primary-foreground rounded-full px-4 py-2" : "px-4 py-2"}>Monthly</button>
+      <button onClick={() => onChange("year")} className={value === "year" ? "bg-primary text-primary-foreground rounded-full px-4 py-2" : "px-4 py-2"}>Yearly · save 20%</button>
+    </div>
+  );
+}
+

@@ -1,29 +1,45 @@
-import { useSearchParams } from "react-router-dom";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
-import { useWorkspace } from "@/hooks/use-workspace.ts";
-import FeedTour from "./feed-tour.tsx";
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 
-/**
- * Shows the tour on any app page until the user finishes or skips it, so new sign-ups
- * see it wherever they land. A missing user row (sync still running) counts as new.
- */
 export default function OnboardingTour() {
-  const { isEditor } = useWorkspace();
-  const [params, setParams] = useSearchParams();
-  const me = useQuery(api.users.getCurrentUser, {});
-  const completeOnboarding = useMutation(api.users.completeOnboarding);
-  const replay = params.get("tour") === "1";
-  const open = replay || (me !== undefined && !me?.onboardedAt);
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [showTour, setShowTour] = useState(false);
 
-  const close = () => {
-    if (params.has("tour")) {
-      const next = new URLSearchParams(params);
-      next.delete("tour");
-      setParams(next, { replace: true });
+  useEffect(() => {
+    if (!user) return;
+
+    api.users.current()
+      .then((profile) => {
+        setUserProfile(profile);
+        setShowTour(!profile?.onboardedAt);
+      })
+      .catch((err) => {
+        console.error('Failed to load user profile:', err);
+      });
+  }, [user]);
+
+  const completeTour = async () => {
+    if (!user) return;
+
+    try {
+      await api.users.update({
+        onboardedAt: new Date().toISOString(),
+      });
+      setShowTour(false);
+    } catch (err) {
+      console.error('Failed to complete tour:', err);
     }
-    void completeOnboarding().catch(() => undefined);
   };
 
-  return <FeedTour open={open} isEditor={isEditor} onDone={close} />;
+  if (!showTour) return null;
+
+  return (
+    <div className="onboarding-tour">
+      <h2>Welcome to Repofeed!</h2>
+      <p>Let's get you started...</p>
+      <button onClick={completeTour}>Complete Tour</button>
+    </div>
+  );
 }

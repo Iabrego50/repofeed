@@ -4,7 +4,7 @@ export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 export const COMPANY_NAME = "repofeed.ai";
 export const LEGAL_LAST_UPDATED = "October 30, 2026";
 
-/** Official public address. Matches the links used in emails (convex/lib/emailTemplates.ts). */
+/** Official public address. Used in email templates and share links. */
 export const SITE_URL = "https://repofeed.ai";
 
 /**

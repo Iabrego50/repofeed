@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useAction, useQuery } from "convex/react";
+import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Expand, Presentation, RotateCcw, Sparkles } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
+import { getErrorMessage } from "@/lib/errors";
 import PermissionDenied from "@/components/permission-denied.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
@@ -22,9 +21,31 @@ import { useElementSize } from "./_lib/use-element-size.ts";
 export default function DeckPage() {
   const { current, isEditor } = useWorkspace();
   const [params] = useSearchParams();
-  const studyId = (params.get("study") as Id<"studies"> | null) ?? undefined;
-  const deck = useQuery(api.decks.latest, current && isEditor ? { workspaceId: current._id, studyId } : "skip");
-  const generate = useAction(api.decks.generate);
+  const studyId = params.get("study") ?? undefined;
+  
+  const { data: deck } = useQuery({
+    queryKey: ['decks', 'latest', current?._id, studyId],
+    queryFn: async (): Promise<Deck | null> => {
+      if (!current?._id) return null;
+      
+      const { supabase } = await import('@/lib/supabase');
+      const query = supabase
+        .from('decks')
+        .select('*')
+        .eq('workspace_id', current._id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (studyId) {
+        query.eq('scope', studyId);
+      }
+      
+      const { data } = await query.maybeSingle();
+      return data as Deck | null;
+    },
+    enabled: !!(current && isEditor),
+  });
+  
   const [busy, setBusy] = useState(false);
   const backTo = studyId ? `/insights?study=${studyId}` : "/insights";
 
@@ -32,10 +53,20 @@ export default function DeckPage() {
     if (!current) return;
     setBusy(true);
     try {
-      await generate({ workspaceId: current._id, studyId });
-      toast.success("Your deck is ready.");
+      const response = await fetch('/api/decks/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: current._id, studyId }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate deck');
+      }
+      
+      window.location.reload();
     } catch (err) {
-      toastError(err, "Couldn't create the deck. Try again.");
+      toast.error(getErrorMessage(err, "Couldn't create the deck. Try again."));
     } finally {
       setBusy(false);
     }

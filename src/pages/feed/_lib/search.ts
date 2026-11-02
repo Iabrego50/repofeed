@@ -1,4 +1,4 @@
-import type { Scene } from "@/convex/schema/validators.ts";
+import type { Scene } from "@/schema/validators.ts";
 
 export type SearchableReel = {
   _id: string;
@@ -28,7 +28,7 @@ export function sceneText(scenes: Scene[]): string {
         case "line":
           return s.kicker ? `${s.kicker} ${s.text}` : s.text;
         case "list":
-          return `${s.title} ${s.items.join(" ")}`;
+          return `${s.title} ${(s.items || []).join(" ")}`;
         case "stat":
           return `${s.num} ${s.label}`;
         case "quote":

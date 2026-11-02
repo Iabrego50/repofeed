@@ -33,7 +33,7 @@ function SlideBody({ deck, slide, animate }: { deck: Deck; slide: DeckSlide; ani
     case "summary":
       return (
         <ol className="flex h-full flex-col justify-start gap-4">
-          {slide.items?.map((item, i) => (
+          {slide.items?.map((item: string, i: number) => (
             <li key={i} className="flex items-center gap-6 border-t border-[#1F2A40] pt-4">
               <span className="w-14 shrink-0 font-display text-[40px] font-extrabold leading-none text-[#2F9BFF] tabular-nums">{String(i + 1).padStart(2, "0")}</span>
               <span className="text-[28px] leading-snug">{item}</span>
@@ -46,7 +46,7 @@ function SlideBody({ deck, slide, animate }: { deck: Deck; slide: DeckSlide; ani
     case "figures":
       return (
         <div className="grid h-full gap-6" style={{ gridTemplateColumns: `repeat(${slide.stats?.length ?? 1}, minmax(0, 1fr))` }}>
-          {slide.stats?.map((s, i) => (
+          {slide.stats?.map((s: any, i: number) => (
             <div key={i} className="flex flex-col justify-end rounded-3xl border border-[#1F2A40] bg-[#0E1422] p-8">
               <p className="font-display text-[84px] font-extrabold leading-none tabular-nums" style={{ color: i === 0 ? COLORS.coral : COLORS.fg }}>{s.num}</p>
               <p className="mt-4 line-clamp-3 text-[22px] leading-snug text-[#93A0B8]">{s.label}</p>
@@ -57,7 +57,7 @@ function SlideBody({ deck, slide, animate }: { deck: Deck; slide: DeckSlide; ani
     case "numbers":
       return (
         <div className="grid h-full grid-cols-4 gap-6">
-          {headlineStats(deck).map((s, i) => (
+          {headlineStats(deck).map((s: any, i: number) => (
             <div key={s.label} className="flex flex-col justify-end rounded-3xl border border-[#1F2A40] bg-[#0E1422] p-8">
               <p className="font-mono text-[14px] font-bold uppercase tracking-wider text-[#93A0B8]">{s.label}</p>
               <p className="mt-3 font-display text-[64px] font-extrabold leading-none tabular-nums" style={{ color: i === 0 ? COLORS.coral : COLORS.fg }}>{s.value}</p>
@@ -77,7 +77,7 @@ function SlideBody({ deck, slide, animate }: { deck: Deck; slide: DeckSlide; ani
     case "voices":
       return (
         <div className={`grid h-full gap-6 ${(slide.quotes?.length ?? 0) > 1 ? "grid-cols-2" : "grid-cols-1"} ${(slide.quotes?.length ?? 0) > 2 ? "grid-cols-3" : ""}`}>
-          {slide.quotes?.map((q, i) => (
+          {slide.quotes?.map((q: any, i: number) => (
             <figure key={i} className="flex flex-col rounded-3xl border border-[#1F2A40] bg-[#0E1422] p-8">
               <Quote className="size-9 text-[#2F9BFF]" />
               <blockquote className="mt-4 line-clamp-6 flex-1 text-[24px] leading-snug">{q.text}</blockquote>
@@ -89,7 +89,7 @@ function SlideBody({ deck, slide, animate }: { deck: Deck; slide: DeckSlide; ani
     case "next_steps":
       return (
         <ol className="grid h-full grid-cols-2 content-start gap-5">
-          {slide.items?.map((item, i) => (
+          {slide.items?.map((item: string, i: number) => (
             <li key={i} className="flex items-start gap-5 rounded-3xl border border-[#1F2A40] bg-[#0E1422] p-7">
               <span className="grid size-12 shrink-0 place-items-center rounded-full bg-[#2F9BFF] font-display text-[22px] font-extrabold text-[#070B14]">{i + 1}</span>
               <span className="pt-1.5 text-[24px] leading-snug">{item}</span>
@@ -114,7 +114,7 @@ function Finding({ deck, slide }: { deck: Deck; slide: DeckSlide }) {
   return (
     <div className="flex h-full flex-col gap-6">
       <div className="flex min-h-0 flex-1 gap-6">
-        {stats.map((s, i) => (
+        {stats.map((s: any, i: number) => (
           <div key={i} className="flex w-[300px] shrink-0 flex-col justify-end rounded-3xl border border-[#1F2A40] bg-[#0E1422] p-8">
             <p className="font-display text-[68px] font-extrabold leading-none tabular-nums" style={{ color: i === 0 ? COLORS.coral : COLORS.fg }}>{s.num}</p>
             <p className="mt-3 line-clamp-3 text-[19px] leading-snug text-[#93A0B8]">{s.label}</p>

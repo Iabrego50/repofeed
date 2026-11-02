@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
+import { useQuery } from '@tanstack/react-query';
+import { api } from "@/lib/api/complete";
 import PublicShell from "@/components/public-shell.tsx";
 import Landing from "./page.tsx";
 
@@ -16,7 +16,13 @@ export default function PublicEntry({ loader }: { loader: React.ReactNode }) {
   const [params] = useSearchParams();
   const { pathname } = useLocation();
   const reelId = params.get("reel");
-  const token = useQuery(api.share.publicTokenForReel, reelId ? { reelId } : "skip");
+  
+  const { data: token } = useQuery({
+    queryKey: ['share', 'publicTokenForReel', reelId],
+    queryFn: () => api.share.publicTokenForReel!({ reelId: reelId! }),
+    enabled: !!reelId,
+  });
+  
   if (pathname === "/help") {
     return (
       <PublicShell>

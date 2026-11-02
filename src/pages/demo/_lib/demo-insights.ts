@@ -1,5 +1,5 @@
-import { DEMO_REELS, DEMO_TRACKS } from "@/convex/lib/demoReels.ts";
-import { SAMPLE_STUDY } from "@/convex/lib/sample.ts";
+import { DEMO_REELS, DEMO_TRACKS } from "./demo-reels.ts";
+import { SAMPLE_STUDY } from "./sample.ts";
 import type { DashboardRow, DashboardSummary } from "@/pages/insights/_lib/columns.ts";
 
 /** Sample team size for the made-up Supperly workspace. */
@@ -55,6 +55,7 @@ function rate(rows: DashboardRow[], done: (r: DashboardRow) => number, of: (r: D
 const sum = (pick: (r: DashboardRow) => number) => DEMO_INSIGHT_ROWS.reduce((n, r) => n + pick(r), 0);
 
 export const DEMO_INSIGHT_SUMMARY: DashboardSummary = {
+  studies: [{ _id: "demo", title: SAMPLE_STUDY.title }],
   reached: TEAM_REACHED,
   guestsReached: GUESTS_REACHED,
   memberCount: MEMBERS,

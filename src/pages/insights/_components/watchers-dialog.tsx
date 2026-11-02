@@ -1,8 +1,7 @@
-import { useQuery } from "convex/react";
+import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from "date-fns";
 import { Check, CircleQuestionMark, Users, Zap } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog.tsx";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
@@ -16,14 +15,18 @@ const REACTION = {
 } as const;
 
 type Props = {
-  reel: { reelId: Id<"reels">; title: string } | null;
+  reel: { reelId: string; title: string } | null;
   audience: Audience;
   onClose: () => void;
 };
 
 /** Who watched one scene, with guests labelled. Only subscribes while open. */
 export default function WatchersDialog({ reel, audience, onClose }: Props) {
-  const all = useQuery(api.insights.watchers, reel ? { reelId: reel.reelId } : "skip");
+  const { data: all } = useQuery({
+    queryKey: ['insights', 'watchers', reel?.reelId],
+    queryFn: () => api.insights.watchers({ reelId: reel!.reelId }),
+    enabled: !!reel,
+  });
   const list = all?.filter((w) => audience === "everyone" || (audience === "guests") === w.isGuest);
 
   return (

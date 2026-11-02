@@ -1,30 +1,31 @@
-import { useAction } from "convex/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
-import type { Plan } from "@/convex/schema/validators.ts";
+import { useState, useEffect } from 'react';
+import { useWorkspace } from '@/lib/workspace';
+import { api } from '@/lib/api';
+import type { Plan } from '@/schema/validators';
 
-const planKey = (workspaceId: Id<"workspaces"> | undefined) => ["plan", workspaceId];
+export function usePlan() {
+  const { current } = useWorkspace();
+  const [plan, setPlan] = useState<Plan>('free');
+  const [loading, setLoading] = useState(true);
 
-/** The workspace's plan, checked live with Hercules Commerce (never stored). */
-export function usePlan(workspaceId: Id<"workspaces"> | undefined) {
-  const getPlan = useAction(api.billing.actions.getPlan);
-  const client = useQueryClient();
-  const query = useQuery({
-    queryKey: planKey(workspaceId),
-    enabled: workspaceId !== undefined,
-    // Re-check when the user returns from the checkout tab.
-    refetchOnWindowFocus: true,
-    staleTime: 30_000,
-    queryFn: async (): Promise<Plan> => {
-      if (!workspaceId) return "free";
-      return (await getPlan({ workspaceId })).plan;
-    },
-  });
-  return {
-    plan: query.data,
-    isLoading: query.isPending,
-    isError: query.isError,
-    refresh: () => client.invalidateQueries({ queryKey: planKey(workspaceId) }),
-  };
+  useEffect(() => {
+    if (!current) {
+      setPlan('free');
+      setLoading(false);
+      return;
+    }
+
+    api.billing.getPlan({ workspaceId: current._id })
+      .then((result) => {
+        setPlan(result.plan as Plan);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load plan:', err);
+        setPlan('free');
+        setLoading(false);
+      });
+  }, [current]);
+
+  return { plan, loading };
 }

@@ -19,6 +19,12 @@ export default defineConfig({
     passWithNoTests: true,
     // Restore Vitest mocks before each test to reduce state leakage.
     restoreMocks: true,
+    env: {
+      VITE_SUPABASE_URL: "http://localhost:54321",
+      VITE_SUPABASE_ANON_KEY: "test-anon-key",
+      STRIPE_SECRET_KEY: "sk_test_dummy",
+      RESEND_API_KEY: "re_test_dummy",
+    },
     projects: [
       {
         extends: true,

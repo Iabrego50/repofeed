@@ -1,8 +1,6 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
 import { Label } from "@/components/ui/label.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
@@ -23,21 +21,26 @@ const OPTIONS: Array<{ key: PrefKey; title: string; description: string }> = [
   },
 ];
 
-export default function EmailUpdates({ workspaceId }: { workspaceId: Id<"workspaces"> }) {
-  const prefs = useQuery(api.emailPrefs.get, { workspaceId });
-  const set = useMutation(api.emailPrefs.set).withOptimisticUpdate((store, args) => {
-    const current = store.getQuery(api.emailPrefs.get, { workspaceId: args.workspaceId });
-    if (!current) return;
-    store.setQuery(api.emailPrefs.get, { workspaceId: args.workspaceId }, {
-      ...current,
-      newStudies: args.newStudies ?? current.newStudies,
-      feedback: args.feedback ?? current.feedback,
-    });
+export default function EmailUpdates({ workspaceId }: { workspaceId: string }) {
+  const { data: prefs } = useQuery({
+    queryKey: ['emailPrefs', workspaceId],
+    queryFn: async () => {
+      const { getEmailPrefs } = await import('@/lib/api/email-prefs');
+      return await getEmailPrefs(workspaceId);
+    },
+    enabled: !!workspaceId,
+  });
+
+  const setMutation = useMutation({
+    mutationFn: async (update: Partial<{ newStudies: boolean; feedback: boolean }>) => {
+      const { setEmailPrefs } = await import('@/lib/api/email-prefs');
+      await setEmailPrefs({ workspaceId, ...update });
+    },
   });
 
   const toggle = async (key: PrefKey, on: boolean) => {
     try {
-      await set({ workspaceId, [key]: on });
+      await setMutation.mutateAsync({ [key]: on });
       toast.success(on ? "Email updates turned on" : "Email updates turned off");
     } catch (err) {
       toast.error(errorMessage(err, "Couldn't save your email settings"));

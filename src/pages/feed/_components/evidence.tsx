@@ -5,7 +5,7 @@ import type { FeedReel } from "../_lib/types.ts";
 import { useReelEvidence } from "../_lib/use-feed-data.ts";
 
 export default function Evidence({ reel }: { reel: FeedReel }) {
-  const findings = useReelEvidence(reel._id);
+  const findings = useReelEvidence(reel._id || reel.id || '');
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4">
       <section>
@@ -40,7 +40,7 @@ export default function Evidence({ reel }: { reel: FeedReel }) {
       <section>
         <h3 className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Source files</h3>
         <ul className="mt-3 space-y-2">
-          {reel.sourceNames.map((n) => (
+          {(reel.sourceNames || []).map((n: string) => (
             <li key={n} className="flex items-center gap-2 text-sm">
               <FileText className="size-4 shrink-0 text-muted-foreground" />
               <span className="break-all">{n}</span>
@@ -50,7 +50,7 @@ export default function Evidence({ reel }: { reel: FeedReel }) {
       </section>
       <section>
         <h3 className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">On-screen script</h3>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{reelScript(reel.scenes)}</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{reelScript(reel.scenes || [])}</p>
       </section>
     </div>
   );

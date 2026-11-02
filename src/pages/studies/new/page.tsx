@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAction } from "convex/react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowRight, FileText, Sparkles, Wand2 } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
+import { api } from "@/lib/api/complete";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -21,10 +21,12 @@ const FLOW = [
 
 export default function NewStudyPage() {
   const { current, isEditor } = useWorkspace();
-  const create = useAction(api.billing.actions.createStudy);
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
-  const [saving, setSaving] = useState(false);
+
+  const createMutation = useMutation({
+    mutationFn: api.billing.actions.createStudy,
+  });
 
   if (!current) return null;
   if (!isEditor) return <PermissionDenied what="create studies" />;
@@ -47,13 +49,16 @@ export default function NewStudyPage() {
         className="mt-8 max-w-xl space-y-5"
         onSubmit={async (e) => {
           e.preventDefault();
-          setSaving(true);
           try {
-            const id = await create({ workspaceId: current._id, title, audience: "" });
+            const id = await createMutation.mutateAsync({
+              workspaceId: current._id,
+              title,
+              audience: "",
+            });
             navigate(`/studies/${id}?step=sources`);
           } catch (err) {
-            toast.error(errorMessage(err, "Couldn't create the study"));
-            setSaving(false);
+            const msg = err instanceof Error ? err.message : "Couldn't create the study";
+            toast.error(msg);
           }
         }}
       >
@@ -61,8 +66,8 @@ export default function NewStudyPage() {
           <Label htmlFor="study-title">Study title <span className="text-muted-foreground">(optional)</span></Label>
           <Input id="study-title" className="h-12" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Leave blank and the AI will suggest one" />
         </div>
-        <Button type="submit" size="lg" className="h-12 font-semibold" disabled={saving}>
-          {saving ? <Spinner /> : <ArrowRight className="size-4" />} Add files
+        <Button type="submit" size="lg" className="h-12 font-semibold" disabled={createMutation.isPending}>
+          {createMutation.isPending ? <Spinner /> : <ArrowRight className="size-4" />} Add files
         </Button>
       </form>
     </div>

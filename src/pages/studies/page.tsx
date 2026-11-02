@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ChevronDown, FolderPlus, Layers } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { FunctionReturnType } from "convex/server";
+import { api } from "@/lib/api/complete";
 import { Button } from "@/components/ui/button.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
@@ -13,10 +12,18 @@ import PermissionDenied from "@/components/permission-denied.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { usePlan } from "@/hooks/use-plan.ts";
 import { cn } from "@/lib/utils.ts";
+import type { StudyStatus } from "@/schema/validators.ts";
 import StatusBadge from "./_components/status-badge.tsx";
 import StudyActions from "./_components/study-actions.tsx";
 
-type Study = FunctionReturnType<typeof api.studies.list>[number];
+interface Study {
+  _id: string;
+  _creationTime: number;
+  title: string;
+  audience: string;
+  status: StudyStatus;
+  isDemo?: boolean;
+}
 
 const FREE_LIMIT = 3;
 
@@ -66,12 +73,22 @@ function FreeUsageNote({ used }: { used: number }) {
 
 export default function StudiesPage() {
   const { current, isEditor } = useWorkspace();
-  const studies = useQuery(api.studies.list, current && isEditor ? { workspaceId: current._id } : "skip");
-  const usage = useQuery(api.billing.data.usage, current && isEditor ? { workspaceId: current._id } : "skip");
-  const { plan } = usePlan(current?._id);
+  const { data: studies } = useQuery({
+    queryKey: ["studies", "list", current?._id],
+    queryFn: () => api.studies.list({ workspaceId: current!._id }),
+    enabled: !!current && isEditor,
+  });
+  const { data: usage } = useQuery({
+    queryKey: ["billing", "usage", current?._id],
+    queryFn: () => api.billing.data.usage({ workspaceId: current!._id }),
+    enabled: !!current && isEditor,
+  });
+  const { plan } = usePlan();
   const [showArchived, setShowArchived] = useState(false);
+  
   if (!current) return null;
   if (!isEditor) return <PermissionDenied what="manage studies" />;
+  
   const active = studies?.filter((s) => s.status !== "archived");
   const archived = studies?.filter((s) => s.status === "archived") ?? [];
 

@@ -1,4 +1,4 @@
-import type { StudyStatus } from "@/convex/schema/validators.ts";
+import type { StudyStatus } from "@/schema/validators.ts";
 import { cn } from "@/lib/utils.ts";
 
 const STYLE: Record<StudyStatus, { label: string; cls: string }> = {

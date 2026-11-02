@@ -1,11 +1,10 @@
-import type { FunctionReturnType } from "convex/server";
-import type { api } from "@/convex/_generated/api.js";
+import type { ReelRow, InsightSummary } from '@/lib/api/insights';
 
-export type Summary = FunctionReturnType<typeof api.insights.summary>;
-export type Row = Summary["rows"][number];
+export type Summary = InsightSummary;
+export type Row = ReelRow;
 /** Row shape the dashboard renders; plain string ids so the public demo can supply sample data. */
-export type DashboardRow = Omit<Row, "reelId" | "studyId"> & { reelId: string; studyId: string };
-export type DashboardSummary = Omit<Summary, "rows" | "studies"> & { rows: DashboardRow[] };
+export type DashboardRow = Row;
+export type DashboardSummary = Omit<Summary, "rows"> & { rows: DashboardRow[] };
 export type SortKey = "title" | "viewers" | "completionRate" | "trueCount" | "surprisedCount" | "pushbackCount" | "commentCount" | "openCount";
 export type Sort = { key: SortKey; dir: 1 | -1 };
 export type Audience = "everyone" | "team" | "guests";

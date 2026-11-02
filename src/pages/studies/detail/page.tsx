@@ -1,8 +1,7 @@
 import { useSearchParams, useParams, Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, FileSearch, LifeBuoy } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { api } from "@/lib/api/complete";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
@@ -28,9 +27,17 @@ function defaultStep(status: string): StepKey {
   return "sources";
 }
 
-function StudyBody({ studyId }: { studyId: Id<"studies"> }) {
-  const study = useQuery(api.studies.get, { studyId });
-  const sources = useQuery(api.studies.listSources, { studyId });
+function StudyBody({ studyId }: { studyId: string }) {
+  const { data: study } = useQuery({
+    queryKey: ["studies", "get", studyId],
+    queryFn: () => api.studies.get({ studyId }),
+  });
+  
+  const { data: sources } = useQuery({
+    queryKey: ["studies", "sources", studyId],
+    queryFn: () => api.studies.listSources({ studyId }),
+  });
+
   const hasSources = sources !== undefined && sources.length > 0;
   const [params, setParams] = useSearchParams();
 
@@ -43,80 +50,98 @@ function StudyBody({ studyId }: { studyId: Id<"studies"> }) {
       </div>
     );
   }
+  
   const step = (params.get("step") as StepKey | null) ?? defaultStep(study.status);
   const go = (s: StepKey) => setParams({ step: s });
-  const hasReels = study.status === "review" || study.status === "published" || study.tracks.length > 0;
+  const hasReels = study.status === "review" || study.status === "published" || (Array.isArray(study.tracks) && study.tracks.length > 0);
 
   return (
     <>
-      <PageHeader
-        eyebrow={study.audience ? `For ${study.audience}` : "Study"}
-        title={study.title}
-        actions={<StatusBadge status={study.status} />}
-      />
-      <nav aria-label="Study steps" className="mt-8 flex gap-1 overflow-x-auto border-b border-border scrollbar-none">
+      <div className="flex items-center justify-between gap-4">
+        <PageHeader title={study.title} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={study.status} />
+        </div>
+      </div>
+      <p className="text-sm text-muted-foreground">{study.audience}</p>
+
+      <nav className="mt-6 flex gap-2 overflow-x-auto border-b border-border">
         {STEPS.map((s, i) => {
-          const disabled = (s.key === "generate" && !hasSources) || (s.key === "review" && !hasReels);
+          const disabled = (s.key === "generate" || s.key === "review") && !hasSources;
+          const active = s.key === step;
           return (
             <button
               key={s.key}
               type="button"
+              onClick={() => !disabled && go(s.key)}
               disabled={disabled}
-              onClick={() => go(s.key)}
-              aria-current={step === s.key ? "step" : undefined}
               className={cn(
-                "-mb-px flex min-h-11 shrink-0 cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-40",
-                step === s.key && "border-primary text-foreground",
+                "shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "border-primary text-primary"
+                  : disabled
+                    ? "cursor-not-allowed border-transparent text-muted-foreground/50"
+                    : "cursor-pointer border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
-              <span className="font-mono text-xs">{i + 1}</span> {s.label}
+              {i + 1}. {s.label}
             </button>
           );
         })}
       </nav>
+
       <div className="mt-6">
-        {step === "sources" && (
-          <>
-            <SourcesStep studyId={studyId} />
-            <div className="mt-6 flex justify-end">
-              <Button size="lg" className="h-12 font-semibold" disabled={!hasSources} onClick={() => go("details")}>
-                {hasSources ? "Continue to details" : "Add a file to continue"}
-              </Button>
-            </div>
-          </>
-        )}
-        {step === "details" && <DetailsStep study={study} onSaved={() => go("generate")} />}
-        {step === "generate" && <GenerateStep studyId={studyId} onDone={() => go("review")} />}
-        {step === "review" && <ReviewStep study={study} />}
+        {!hasSources && (step === "generate" || step === "review") ? (
+          <Empty className="rounded-2xl border border-dashed border-border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><FileSearch /></EmptyMedia>
+              <EmptyTitle>Upload sources first</EmptyTitle>
+              <EmptyDescription>You need at least one source file to generate scenes.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button onClick={() => go("sources")}>Go to Sources</Button>
+            </EmptyContent>
+          </Empty>
+        ) : step === "sources" ? (
+          <SourcesStep studyId={studyId} study={study} sources={sources ?? []} onNext={() => go("details")} />
+        ) : step === "details" ? (
+          <DetailsStep studyId={studyId} study={study} onNext={() => go("generate")} />
+        ) : step === "generate" ? (
+          <GenerateStep studyId={studyId} study={study} onNext={() => go("review")} />
+        ) : step === "review" ? (
+          hasReels ? (
+            <ReviewStep studyId={studyId} study={study} />
+          ) : (
+            <Empty className="rounded-2xl border border-dashed border-border">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><LifeBuoy /></EmptyMedia>
+                <EmptyTitle>No scenes yet</EmptyTitle>
+                <EmptyDescription>Generate scenes from your sources first.</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={() => go("generate")}>Go to Generate</Button>
+              </EmptyContent>
+            </Empty>
+          )
+        ) : null}
       </div>
     </>
   );
 }
 
-export default function StudyPage() {
-  const { studyId } = useParams();
+export default function StudyDetailPage() {
+  const { studyId } = useParams<{ studyId: string }>();
+  if (!studyId) return null;
+
   return (
-    <div className="mx-auto max-w-6xl px-5 py-8 lg:py-10">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-        <Link to="/studies" className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> All studies
+    <div className="mx-auto max-w-5xl px-5 py-8 lg:py-12">
+      <Button variant="ghost" size="sm" className="mb-6 -ml-2" asChild>
+        <Link to="/studies">
+          <ArrowLeft className="size-4" />
+          Back to studies
         </Link>
-        <Link to="/help?article=create-study" className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <LifeBuoy className="size-4" /> How studies work
-        </Link>
-      </div>
-      {studyId ? (
-        <StudyBody studyId={studyId as Id<"studies">} />
-      ) : (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon"><FileSearch /></EmptyMedia>
-            <EmptyTitle>Study not found</EmptyTitle>
-            <EmptyDescription>It may have been removed.</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent><Button asChild><Link to="/studies">Back to studies</Link></Button></EmptyContent>
-        </Empty>
-      )}
+      </Button>
+      <StudyBody studyId={studyId} />
     </div>
   );
 }

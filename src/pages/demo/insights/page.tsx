@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import PageHeader from "@/components/page-header.tsx";
 import PublicShell from "@/components/public-shell.tsx";
-import { SAMPLE_STUDY } from "@/convex/lib/sample.ts";
+import { SAMPLE_STUDY } from "../_lib/sample.ts";
 import InsightsDashboard, { AudienceToggle } from "@/pages/insights/_components/insights-dashboard.tsx";
 import type { Audience } from "@/pages/insights/_lib/columns.ts";
 import { DEMO_INSIGHT_SUMMARY } from "../_lib/demo-insights.ts";

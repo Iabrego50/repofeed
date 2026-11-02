@@ -1,18 +1,15 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
-import { AlertTriangle, Film, Maximize2, Pencil, Send, Undo2, X } from "lucide-react";
-import { api } from "@/convex/_generated/api.js";
-import type { Doc } from "@/convex/_generated/dataModel.d.ts";
+import { AlertTriangle, Film, Loader2, Maximize2, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
-import { Spinner } from "@/components/ui/spinner.tsx";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import { trackColor } from "@/lib/reel/constants.ts";
 import { reelScript } from "@/lib/reel/painter.ts";
-import { errorMessage } from "@/lib/errors.ts";
 import { cn } from "@/lib/utils.ts";
 import EditReelDialog from "./edit-reel-dialog.tsx";
 import FootageDialog from "./footage-dialog.tsx";
@@ -20,8 +17,31 @@ import ShareLinkCard from "./share-link-card.tsx";
 import { ArtBadge, PaintReelButton, PaintStudyButton } from "./art-controls.tsx";
 import HelpHint from "@/components/help-hint.tsx";
 
-function ReelCard({ reel, studyTitle, onPreview }: { reel: Doc<"reels">; studyTitle: string; onPreview: () => void }) {
-  const setEnabled = useMutation(api.studies.setReelEnabled);
+interface ReviewReel {
+  _id: string;
+  title: string;
+  track: string;
+  trackIndex: number;
+  scenes: any[];
+  footage?: { url: string; caption: string; media?: "image" } | null;
+  sourceNames: string[];
+  enabled: boolean;
+  warning?: string;
+  art?: {
+    status: "pending" | "failed" | "completed";
+    error?: string;
+  };
+}
+
+function ReelCard({ reel, studyTitle, onPreview }: { reel: ReviewReel; studyTitle: string; onPreview: () => void }) {
+  const queryClient = useQueryClient();
+  const setEnabledMutation = useMutation({
+    mutationFn: (enabled: boolean) => api.studies.setReelEnabled({ reelId: reel._id, enabled }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies", "reviewReels"] });
+    },
+  });
+
   const [hover, setHover] = useState(false);
   const [editing, setEditing] = useState(false);
   const [pickingFootage, setPickingFootage] = useState(false);
@@ -67,7 +87,7 @@ function ReelCard({ reel, studyTitle, onPreview }: { reel: Doc<"reels">; studyTi
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
             <Switch
               checked={reel.enabled}
-              onCheckedChange={(v) => void setEnabled({ reelId: reel._id, enabled: v })}
+              onCheckedChange={(v) => setEnabledMutation.mutate(v)}
               aria-label={`Include ${reel.title}`}
             />
             {reel.enabled ? "Included" : "Excluded"}
@@ -89,107 +109,92 @@ function ReelCard({ reel, studyTitle, onPreview }: { reel: Doc<"reels">; studyTi
   );
 }
 
-export default function ReviewStep({ study }: { study: Doc<"studies"> }) {
-  const reels = useQuery(api.studies.reviewReels, { studyId: study._id });
-  const setPublished = useMutation(api.studies.setPublished);
-  const [preview, setPreview] = useState<Doc<"reels"> | null>(null);
+interface ReviewStepProps {
+  studyId: string;
+  study: any;
+}
+
+export default function ReviewStep({ studyId, study }: ReviewStepProps) {
+  const queryClient = useQueryClient();
+  const { data: reels } = useQuery({
+    queryKey: ["studies", "reviewReels", studyId],
+    queryFn: () => api.studies.reviewReels({ studyId }),
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: () => api.studies.publish({ studyId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies"] });
+      toast.success("Study published!");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Couldn't publish study");
+    },
+  });
+
+  const [preview, setPreview] = useState<ReviewReel | null>(null);
   const [busy, setBusy] = useState(false);
   const [onlyFlagged, setOnlyFlagged] = useState(false);
 
   if (reels === undefined) {
     return (
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-[9/20] w-full rounded-2xl" />)}
-      </ul>
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[600px] w-full rounded-2xl" />)}
+      </div>
     );
   }
 
-  const included = reels.filter((r) => r.enabled).length;
-  const flagged = reels.filter((r) => r.warning).length;
-  const published = study.status === "published";
-  const showFlagged = onlyFlagged && flagged > 0;
-  const visible = showFlagged ? reels.filter((r) => r.warning) : reels;
-
-  const togglePublish = async () => {
-    setBusy(true);
-    try {
-      await setPublished({ studyId: study._id, published: !published });
-      toast.success(published ? "Unpublished. It's hidden from the feed." : "Published to the workspace feed");
-    } catch (err) {
-      toast.error(errorMessage(err, "Couldn't update the study"));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const flagged = reels.filter((r: any) => r.warning);
+  const shown = onlyFlagged ? flagged : reels;
+  const enabled = reels.filter((r: any) => r.enabled);
+  const isPublished = study.status === "published";
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="font-display text-lg font-bold">
-            {included} of {reels.length} scenes included
-          </p>
-          <p className="flex items-center gap-1 text-sm text-muted-foreground">
-            {flagged ? `${flagged} flagged by verification and excluded until fixed.` : "Every quote and number matches your sources."}
-            {flagged > 0 && (
-              <HelpHint title="Flagged by verification" article="flagged-scenes">
-                A quote or number in the scene couldn't be matched to your files, so it's left out of the feed. Edit the wording to match, or turn on Included to use it anyway.
-              </HelpHint>
-            )}
-          </p>
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-display text-lg font-bold">Review & Publish</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {enabled.length} scene{enabled.length === 1 ? "" : "s"} ready to publish
+              {flagged.length > 0 && ` (${flagged.length} flagged)`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <PaintStudyButton studyId={studyId} />
+            <Button onClick={() => publishMutation.mutate()} disabled={busy || enabled.length === 0} size="lg">
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              {isPublished ? "Update" : "Publish"}
+            </Button>
+          </div>
         </div>
-        <Button size="lg" className="h-12 font-semibold" variant={published ? "secondary" : "default"} onClick={() => void togglePublish()} disabled={busy || (!published && included === 0)}>
-          {busy ? <Spinner /> : published ? <Undo2 className="size-4" /> : <Send className="size-4" />}
-          {published ? "Unpublish" : "Publish to feed"}
-        </Button>
+
+        {flagged.length > 0 && (
+          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm">
+            <Switch checked={onlyFlagged} onCheckedChange={setOnlyFlagged} />
+            Show only flagged scenes ({flagged.length})
+          </label>
+        )}
       </div>
-      {published && <ShareLinkCard studyId={study._id} published={published} />}
-      <PaintStudyButton studyId={study._id} reels={reels} />
-      {flagged > 0 && (
-        <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Filter scenes">
-          {[
-            { value: false, label: `All scenes (${reels.length})` },
-            { value: true, label: `Flagged (${flagged})` },
-          ].map((f) => (
-            <button
-              key={f.label}
-              type="button"
-              aria-pressed={showFlagged === f.value}
-              onClick={() => setOnlyFlagged(f.value)}
-              className={cn(
-                "flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-border px-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring",
-                showFlagged === f.value && "border-transparent bg-foreground text-background hover:text-background",
-              )}
-            >
-              {f.value && <AlertTriangle className={cn("size-3.5", showFlagged !== f.value && "text-[#FFC23D]")} />}
-              {f.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {visible.map((r) => (
-          <ReelCard key={r._id} reel={r} studyTitle={study.title} onPreview={() => setPreview(r)} />
+
+      {isPublished && <ShareLinkCard studyId={studyId} />}
+
+      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {shown.map((reel: any) => (
+          <ReelCard key={reel.id} reel={reel} studyTitle={study.title} onPreview={() => setPreview(reel)} />
         ))}
       </ul>
-      <Dialog open={preview !== null} onOpenChange={(o) => !o && setPreview(null)}>
-        <DialogContent showCloseButton={false} className="h-dvh max-w-none border-0 bg-black p-0 sm:max-w-none">
-          <DialogTitle className="sr-only">{preview?.title ?? "Preview"}</DialogTitle>
+
+      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+        <DialogContent className="max-w-[min(90vw,calc(90vh*9/16))] p-0">
+          <DialogTitle className="sr-only">{preview?.title}</DialogTitle>
           {preview && (
             <ReelCanvas
-              reel={{ title: preview.title, track: preview.track, trackIndex: preview.trackIndex, studyTitle: study.title, scenes: preview.scenes, footage: preview.footage }}
+              reel={{ ...preview, studyTitle: study.title }}
               playing
-              className="h-full w-full"
+              className="aspect-[9/16] w-full rounded-lg"
             />
           )}
-          <button
-            type="button"
-            onClick={() => setPreview(null)}
-            className="absolute right-4 top-4 grid size-11 cursor-pointer place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-ring"
-            aria-label="Close preview"
-          >
-            <X className="size-5" />
-          </button>
         </DialogContent>
       </Dialog>
     </div>

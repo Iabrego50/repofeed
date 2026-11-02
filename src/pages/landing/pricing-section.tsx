@@ -1,8 +1,33 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { SignInButton } from "@/components/ui/signin.tsx";
-import PlanGrid, { IntervalToggle } from "@/components/plan-grid.tsx";
+import { IntervalToggle } from "@/components/plan-grid.tsx";
 import type { Interval } from "@/lib/plans.ts";
+
+const PLANS = [
+  {
+    id: "free" as const,
+    name: "Free",
+    tagline: "For individuals getting started",
+    price: { month: 0, year: 0 },
+    features: ["1 study", "Unlimited viewers", "Basic support"],
+  },
+  {
+    id: "pro" as const,
+    name: "Pro",
+    tagline: "For power users",
+    price: { month: 29, year: 24 },
+    highlight: true,
+    features: ["Unlimited studies", "2 editors", "Priority support", "Custom branding"],
+  },
+  {
+    id: "team" as const,
+    name: "Team",
+    tagline: "For organizations",
+    price: { month: 99, year: 79 },
+    features: ["Everything in Pro", "Unlimited editors", "SSO", "Dedicated support"],
+  },
+];
 
 /** Public pricing; every button leads to sign-up, upgrades happen in-app. */
 export default function PricingSection() {
@@ -28,17 +53,48 @@ export default function PricingSection() {
         </div>
       </motion.div>
       <div className="mt-10">
-        <PlanGrid
-          interval={interval}
-          renderAction={(p) => (
-            <SignInButton
-              size="lg"
-              variant={p === "pro" ? "default" : "secondary"}
-              className="h-11 w-full font-semibold"
-              signInText={p === "free" ? "Get started free" : "Start 14-day trial"}
-            />
-          )}
-        />
+        <div className="grid gap-6 md:grid-cols-3">
+          {PLANS.map((plan) => (
+            <div
+              key={plan.id}
+              className={`rounded-lg border p-6 ${plan.highlight ? 'border-primary shadow-lg' : 'border-border'}`}
+            >
+              {plan.highlight && (
+                <div className="mb-4 text-center text-xs font-semibold uppercase text-primary">
+                  Most Popular
+                </div>
+              )}
+              <h3 className="text-2xl font-bold">{plan.name}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
+              <div className="mt-6 text-4xl font-bold">
+                ${interval === 'year' ? plan.price.year : plan.price.month}
+                <span className="text-base font-normal text-muted-foreground">
+                  /{interval === 'year' ? 'editor/month' : 'editor/month'}
+                </span>
+              </div>
+              {interval === 'year' && plan.price.year < plan.price.month && (
+                <p className="mt-1 text-sm text-primary">
+                  Save ${(plan.price.month - plan.price.year) * 12}/year
+                </p>
+              )}
+              <ul className="mt-6 space-y-3">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="text-sm">
+                    ✓ {feature}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6">
+                <SignInButton
+                  size="lg"
+                  variant={plan.id === "pro" ? "default" : "secondary"}
+                  className="h-11 w-full font-semibold"
+                  signInText={plan.id === "free" ? "Get started free" : "Start 14-day trial"}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

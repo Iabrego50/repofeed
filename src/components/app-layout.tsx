@@ -53,10 +53,10 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
           Workspaces
         </DropdownMenuLabel>
         {workspaces?.map((w) => (
-          <DropdownMenuItem key={w._id} onSelect={() => setCurrent(w._id)} className="cursor-pointer">
+          <DropdownMenuItem key={w._id} onSelect={() => setCurrent(w)} className="cursor-pointer">
             <span className="min-w-0 flex-1 truncate">{w.name}</span>
             <span className="font-mono text-[10px] uppercase text-muted-foreground">{w.role}</span>
-            {w._id === current._id && <Check className="size-4" />}
+            {w._id === current?._id && <Check className="size-4" />}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
