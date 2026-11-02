@@ -1,18 +1,28 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { StepError } from "../errors/step-error";
 import { composeSchema, coerceSceneType } from "../ai/prompts";
 import { toScene } from "../ai/scenes";
 import {
   abortAfter,
+  filterImageCapableModels,
   generateImageWithModels,
+  getListedImageModels,
   imageGenerateParams,
   imageQuality,
+  imagesGenerate,
+  imagesGenerateEndpoint,
   isAbortError,
+  isImageCapableModelId,
   isImageModelUnavailable,
   isImageParamRejected,
+  newestGptImageId,
   pngBlobFromB64,
+  pngBlobFromImageResponse,
+  resetListedImageModelsCache,
   shouldRetryToolCall,
+  type ImageGenerateBody,
+  type ImagesGenerateClient,
 } from "../ai/client";
 import {
   MAX_COMPOSE_REELS,
@@ -123,6 +133,10 @@ describe("compose scene validation", () => {
 });
 
 describe("gpt-image-1 request", () => {
+  afterEach(() => {
+    resetListedImageModelsCache();
+  });
+
   it("omits response_format and uses medium quality by default", () => {
     expect(imageQuality(undefined)).toBe("medium");
     expect(imageQuality("standard")).toBe("medium");
@@ -155,7 +169,6 @@ describe("gpt-image-1 request", () => {
       size: "1024x1792",
       quality: "standard",
       n: 1,
-      response_format: "b64_json",
     });
     expect(imageGenerateParams("a kitchen at dusk", "dall-e-3", "high")).toEqual({
       model: "dall-e-3",
@@ -163,16 +176,62 @@ describe("gpt-image-1 request", () => {
       size: "1024x1792",
       quality: "hd",
       n: 1,
-      response_format: "b64_json",
     });
     expect(imageGenerateParams("a kitchen at dusk", "dall-e-2", "high")).toEqual({
       model: "dall-e-2",
       prompt: "a kitchen at dusk",
       size: "1024x1024",
       n: 1,
-      response_format: "b64_json",
     });
     expect(imageGenerateParams("a kitchen at dusk", "dall-e-2")).not.toHaveProperty("quality");
+    for (const model of ["gpt-image-1", "gpt-image-1.5", "dall-e-3", "dall-e-2"]) {
+      expect(imageGenerateParams("a kitchen at dusk", model)).not.toHaveProperty("response_format");
+    }
+  });
+
+  it("targets client.images.generate at POST /v1/images/generations", async () => {
+    expect(imagesGenerateEndpoint()).toBe("/v1/images/generations");
+    expect(imagesGenerateEndpoint("https://api.openai.com/v1")).toBe("/v1/images/generations");
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const generate = vi.fn(async (params: ImageGenerateBody) => {
+      expect(params).not.toHaveProperty("response_format");
+      return { data: [{ b64_json: "AQID" }] };
+    });
+    const client: ImagesGenerateClient = {
+      baseURL: "https://api.openai.com/v1",
+      images: { generate },
+    };
+    const response = await imagesGenerate(imageGenerateParams("a kitchen", "dall-e-3"), client);
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(client).not.toHaveProperty("images.edit");
+    expect(String(info.mock.calls[0]?.[0])).toContain("sdk=client.images.generate");
+    expect(String(info.mock.calls[0]?.[0])).toContain("method=POST");
+    expect(String(info.mock.calls[0]?.[0])).toContain("path=/v1/images/generations");
+    expect(response.data?.[0]?.b64_json).toBe("AQID");
+    info.mockRestore();
+  });
+
+  it("reads b64_json when present and otherwise fetches the url bytes", async () => {
+    const skipFetch: typeof fetch = async () => {
+      throw new Error("should not fetch when b64_json is present");
+    };
+    const fromB64 = await pngBlobFromImageResponse(
+      { data: [{ b64_json: "AQID", url: "https://cdn.example/img.png" }] },
+      skipFetch,
+    );
+    expect(Buffer.from(await fromB64.arrayBuffer())).toEqual(Buffer.from([1, 2, 3]));
+
+    const fetchImpl: typeof fetch = async (input) => {
+      expect(String(input)).toBe("https://cdn.example/img.png");
+      return new Response(Uint8Array.from([9, 8, 7]), { status: 200 });
+    };
+    const fromUrl = await pngBlobFromImageResponse({ data: [{ url: "https://cdn.example/img.png" }] }, fetchImpl);
+    expect(fromUrl.type).toBe("image/png");
+    expect(Buffer.from(await fromUrl.arrayBuffer())).toEqual(Buffer.from([9, 8, 7]));
+
+    await expect(pngBlobFromImageResponse({ data: [{}] })).rejects.toMatchObject({
+      message: "The image service sent back no image.",
+    });
   });
 
   it("treats model-not-found and org verification errors as unavailable image models", () => {
@@ -207,7 +266,6 @@ describe("gpt-image-1 request", () => {
         size: "1024x1792",
         quality: "standard",
         n: 1,
-        response_format: "b64_json",
       });
       return { data: [{ b64_json: "AQID" }] };
     });
@@ -221,7 +279,7 @@ describe("gpt-image-1 request", () => {
     info.mockRestore();
   });
 
-  it("falls back to dall-e-2 when dall-e-3 rejects response_format", async () => {
+  it("falls back to dall-e-2 when dall-e-3 is unavailable", async () => {
     expect(
       isImageParamRejected({ status: 400, message: "Unknown parameter: 'response_format'" }),
     ).toBe(true);
@@ -237,8 +295,8 @@ describe("gpt-image-1 request", () => {
         prompt: "a kitchen",
         size: "1024x1024",
         n: 1,
-        response_format: "b64_json",
       });
+      expect(params).not.toHaveProperty("response_format");
       return { data: [{ b64_json: "AQID" }] };
     });
     const result = await generateImageWithModels(
@@ -252,6 +310,67 @@ describe("gpt-image-1 request", () => {
       "dall-e-2",
     ]);
     expect(result.model).toBe("dall-e-2");
+  });
+
+  it("lists image models once and tries the newest unused gpt-image* before giving up", async () => {
+    expect(isImageCapableModelId("gpt-image-1.5")).toBe(true);
+    expect(isImageCapableModelId("dall-e-3")).toBe(true);
+    expect(isImageCapableModelId("gpt-4o")).toBe(false);
+    const listed = [
+      { id: "gpt-4o", created: 9 },
+      { id: "dall-e-3", created: 2 },
+      { id: "gpt-image-1", created: 3 },
+      { id: "gpt-image-1.5", created: 8 },
+      { id: "gpt-image-mini", created: 4 },
+    ];
+    expect(filterImageCapableModels(listed).map((model) => model.id)).toEqual([
+      "dall-e-3",
+      "gpt-image-1",
+      "gpt-image-1.5",
+      "gpt-image-mini",
+    ]);
+    expect(newestGptImageId(listed, ["gpt-image-1"])).toBe("gpt-image-1.5");
+
+    const generate = vi.fn(async (params: { model: string }) => {
+      if (params.model !== "gpt-image-1.5") {
+        throw Object.assign(new Error(`The model '${params.model}' does not exist`), {
+          status: 400,
+          code: "model_not_found",
+        });
+      }
+      expect(params).not.toHaveProperty("response_format");
+      return { data: [{ b64_json: "AQID" }] };
+    });
+    const discover = vi.fn(async () => listed);
+    const result = await generateImageWithModels(
+      "a kitchen",
+      ["gpt-image-1", "dall-e-3", "dall-e-2"],
+      generate,
+      discover,
+    );
+    expect(discover).toHaveBeenCalledTimes(1);
+    expect(generate.mock.calls.map((call) => call[0]?.model)).toEqual([
+      "gpt-image-1",
+      "dall-e-3",
+      "dall-e-2",
+      "gpt-image-1.5",
+    ]);
+    expect(result.model).toBe("gpt-image-1.5");
+  });
+
+  it("caches listed image-capable models for the function lifetime", async () => {
+    resetListedImageModelsCache();
+    const listAll = vi.fn(async () => [
+      { id: "gpt-4o", created: 1 },
+      { id: "gpt-image-1.5", created: 9 },
+      { id: "dall-e-3", created: 2 },
+      { id: "whisper-1", created: 0 },
+    ]);
+    const first = await getListedImageModels(listAll);
+    const second = await getListedImageModels(listAll);
+    expect(listAll).toHaveBeenCalledTimes(1);
+    expect(first.map((model) => model.id)).toEqual(["gpt-image-1.5", "dall-e-3"]);
+    expect(second).toBe(first);
   });
 });
 

@@ -18,6 +18,7 @@ const API_ENTRIES = [
   "api/stripe/webhook.ts",
   "api/art/paint.ts",
   "api/decks/generate.ts",
+  "api/admin/ai-models.ts",
 ];
 
 export function isTypeOnlyImport(statement) {

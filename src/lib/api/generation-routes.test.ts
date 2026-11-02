@@ -50,8 +50,12 @@ function mockRes() {
   return { res, out };
 }
 
-function mockReq(body: unknown, headers: Record<string, string> = {}): VercelRequest {
-  return { method: "POST", body, headers } as VercelRequest;
+function mockReq(
+  body: unknown,
+  headers: Record<string, string> = {},
+  method = "POST",
+): VercelRequest {
+  return { method, body, headers } as VercelRequest;
 }
 
 const ENV_KEYS = [

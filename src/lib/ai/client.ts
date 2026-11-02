@@ -241,7 +241,6 @@ export type Dalle3GenerateBody = {
   size: '1024x1792';
   quality: 'standard' | 'hd';
   n: 1;
-  response_format: 'b64_json';
 };
 
 export type Dalle2GenerateBody = {
@@ -249,12 +248,81 @@ export type Dalle2GenerateBody = {
   prompt: string;
   size: '1024x1024';
   n: 1;
-  response_format: 'b64_json';
 };
 
 export type ImageGenerateBody = GptImageGenerateBody | Dalle3GenerateBody | Dalle2GenerateBody;
 
-/** Exact JSON body for /v1/images/generations. No extra keys. */
+export const IMAGES_GENERATE_PATH = '/v1/images/generations';
+
+/** Path for client.images.generate → POST /v1/images/generations. */
+export function imagesGenerateEndpoint(baseURL = 'https://api.openai.com/v1'): string {
+  try {
+    const url = new URL(baseURL);
+    const prefix = url.pathname.replace(/\/$/, '') || '/v1';
+    return `${prefix}/images/generations`;
+  } catch {
+    return IMAGES_GENERATE_PATH;
+  }
+}
+
+export type ListedImageModel = { id: string; created?: number };
+
+export function isImageCapableModelId(id: string): boolean {
+  return /image|dall/i.test(id);
+}
+
+export function filterImageCapableModels(models: ListedImageModel[]): ListedImageModel[] {
+  return models.filter((model) => isImageCapableModelId(model.id));
+}
+
+export function newestGptImageId(
+  models: ListedImageModel[],
+  exclude: Iterable<string> = [],
+): string | undefined {
+  const skip = new Set(exclude);
+  const gpt = models.filter((model) => model.id.startsWith('gpt-image') && !skip.has(model.id));
+  gpt.sort((a, b) => (b.created ?? 0) - (a.created ?? 0) || b.id.localeCompare(a.id));
+  return gpt[0]?.id;
+}
+
+let listedImageModelsCache: ListedImageModel[] | undefined;
+let listedImageModelsInflight: Promise<ListedImageModel[]> | undefined;
+
+export function resetListedImageModelsCache() {
+  listedImageModelsCache = undefined;
+  listedImageModelsInflight = undefined;
+}
+
+async function listAllOpenAIModels(): Promise<ListedImageModel[]> {
+  const rows: ListedImageModel[] = [];
+  for await (const model of getOpenAI().models.list()) {
+    rows.push({ id: model.id, created: model.created });
+  }
+  return rows;
+}
+
+export async function getListedImageModels(
+  listAll: () => Promise<ListedImageModel[]> = listAllOpenAIModels,
+): Promise<ListedImageModel[]> {
+  if (listedImageModelsCache) return listedImageModelsCache;
+  if (!listedImageModelsInflight) {
+    listedImageModelsInflight = listAll()
+      .then((rows) => {
+        listedImageModelsCache = filterImageCapableModels(rows);
+        console.info(
+          `[art] listed image-capable models: ${JSON.stringify(listedImageModelsCache.map((model) => model.id))}`,
+        );
+        return listedImageModelsCache;
+      })
+      .catch((error) => {
+        listedImageModelsInflight = undefined;
+        throw error;
+      });
+  }
+  return listedImageModelsInflight;
+}
+
+/** Exact JSON body for POST /v1/images/generations. Never send response_format. */
 export function imageGenerateParams(
   prompt: string,
   model: string = IMAGE_MODEL,
@@ -275,7 +343,6 @@ export function imageGenerateParams(
       prompt,
       size: '1024x1024',
       n: 1,
-      response_format: 'b64_json',
     };
   }
   return {
@@ -284,7 +351,6 @@ export function imageGenerateParams(
     size: '1024x1792',
     quality: dalleQuality(quality),
     n: 1,
-    response_format: 'b64_json',
   };
 }
 
@@ -357,19 +423,63 @@ export async function pngBlobFromImageResponse(
   }
 
   throw new StepError('The image service sent back no image.', {
-    detail: 'missing b64_json',
+    detail: 'missing b64_json and url',
     retryable: true,
   });
+}
+
+export type ImagesGenerateClient = {
+  baseURL: string;
+  images: {
+    generate: (
+      body: ImageGenerateBody,
+      options?: { signal: AbortSignal; timeout: number },
+    ) => Promise<ImageGenerateResponse>;
+  };
+};
+
+/**
+ * POST /v1/images/generations via client.images.generate only.
+ * Do not use images.edit or the Responses API for art.
+ */
+export async function imagesGenerate(
+  params: ImageGenerateBody,
+  client: ImagesGenerateClient = getOpenAI(),
+): Promise<ImageGenerateResponse> {
+  const path = imagesGenerateEndpoint(client.baseURL);
+  console.info(`[art] image request sdk=client.images.generate method=POST path=${path}`);
+  const abort = abortAfter(AI_CALL_TIMEOUT_MS);
+  try {
+    return await client.images.generate(params, abort.options);
+  } catch (err) {
+    if (isAbortError(err)) {
+      throw new StepError('The AI timed out.', {
+        detail: `Aborted after ${AI_CALL_TIMEOUT_MS}ms`,
+        retryable: true,
+        httpStatus: 504,
+      });
+    }
+    throw err;
+  } finally {
+    abort.cancel();
+  }
 }
 
 export async function generateImageWithModels(
   prompt: string,
   models: string[],
   generate: (params: ImageGenerateBody) => Promise<ImageGenerateResponse>,
+  discover?: () => Promise<ListedImageModel[]>,
 ): Promise<{ blob: Blob; model: string }> {
-  const unique = [...new Set(models.filter(Boolean))];
+  const queue = [...new Set(models.filter(Boolean))];
+  const tried = new Set<string>();
   let lastError: unknown;
-  for (const model of unique) {
+  let discovered = false;
+
+  while (queue.length > 0) {
+    const model = queue.shift();
+    if (!model || tried.has(model)) continue;
+    tried.add(model);
     const params = imageGenerateParams(prompt, model);
     console.info(`[art] image generate attempt model=${params.model} params=${JSON.stringify(params)}`);
     try {
@@ -379,6 +489,19 @@ export async function generateImageWithModels(
     } catch (err) {
       lastError = err;
       const fields = err instanceof OpenAI.APIError ? err : imageErrorFields(err);
+      if (isImageModelUnavailable(fields) && !discovered && discover) {
+        discovered = true;
+        try {
+          const listed = await discover();
+          const newest = newestGptImageId(listed, tried);
+          if (newest) {
+            console.info(`[art] trying discovered gpt-image model: ${newest}`);
+            queue.push(newest);
+          }
+        } catch (listError) {
+          console.warn('[art] models.list failed', listError);
+        }
+      }
       const retryNext = isImageModelUnavailable(fields) || isImageParamRejected(fields);
       if (!retryNext) break;
       console.warn(`[art] ${params.model} failed, trying next image model`, fields.message ?? err);
@@ -396,22 +519,11 @@ export async function generateImageWithModels(
 /** Paints a portrait image and returns it as a PNG blob. */
 export async function generateImage(prompt: string): Promise<Blob> {
   const models = [IMAGE_MODEL, ...IMAGE_FALLBACK_MODELS];
-  const { blob } = await generateImageWithModels(prompt, models, async (params) => {
-    const abort = abortAfter(AI_CALL_TIMEOUT_MS);
-    try {
-      return await getOpenAI().images.generate(params, abort.options);
-    } catch (err) {
-      if (isAbortError(err)) {
-        throw new StepError('The AI timed out.', {
-          detail: `Aborted after ${AI_CALL_TIMEOUT_MS}ms`,
-          retryable: true,
-          httpStatus: 504,
-        });
-      }
-      throw err;
-    } finally {
-      abort.cancel();
-    }
-  });
+  const { blob } = await generateImageWithModels(
+    prompt,
+    models,
+    (params) => imagesGenerate(params),
+    () => getListedImageModels(),
+  );
   return blob;
 }
