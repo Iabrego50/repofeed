@@ -1,3 +1,2 @@
-// Demo data - temporary stub until demo functionality is restored
-export const demoReels: any[] = [];
-export const demoFindings: any[] = [];
+export { DEMO_REELS, DEMO_TRACKS } from "./demo-reels.ts";
+export { SAMPLE_FILES, SAMPLE_STUDY } from "./sample.ts";

@@ -1,18 +1,15 @@
-// Auth UI components
-import { useAuth } from '@/lib/auth';
+import { Link } from 'react-router-dom';
 import { Button, type ButtonProps } from './button';
-import { cn } from '@/lib/utils';
 
-interface SignInButtonProps extends Omit<ButtonProps, 'onClick'> {
+interface SignInButtonProps extends Omit<ButtonProps, 'onClick' | 'asChild'> {
   signInText?: string;
 }
 
+/** Sends visitors to the sign-in page instead of starting OAuth on the landing screen. */
 export function SignInButton({ signInText = 'Sign in', className, ...props }: SignInButtonProps) {
-  const { signIn } = useAuth();
-  
   return (
-    <Button onClick={() => signIn('google')} className={className} {...props}>
-      {signInText}
+    <Button asChild className={className} {...props}>
+      <Link to="/signin">{signInText}</Link>
     </Button>
   );
 }

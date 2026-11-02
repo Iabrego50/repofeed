@@ -1,24 +1,51 @@
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { useWorkspace } from "@/hooks/use-workspace.ts";
+import { useServiceWorker } from "@/hooks/use-service-worker.ts";
 import { DefaultProviders } from "./components/providers/default.tsx";
 import { AppErrorBoundary } from "./components/app-error-boundary.tsx";
 import AppLayout from "./components/app-layout.tsx";
-import LandingPage from "./pages/landing/public-entry.tsx";
-import StudiesPage from "./pages/studies/page.tsx";
-import StudyDetailPage from "./pages/studies/detail/page.tsx";
-import NewStudyPage from "./pages/studies/new/page.tsx";
-import FeedPage from "./pages/feed/page.tsx";
-import InsightsPage from "./pages/insights/page.tsx";
-import InsightsDeckPage from "./pages/insights/deck/page.tsx";
-import BillingPage from "./pages/billing/page.tsx";
-import SettingsPage from "./pages/settings/page.tsx";
-import WelcomePage from "./pages/welcome/page.tsx";
-import InvitePage from "./pages/invite/page.tsx";
-import SharePage from "./pages/share/page.tsx";
-import PrivacyPage from "./pages/legal/privacy.tsx";
-import TermsPage from "./pages/legal/terms.tsx";
+import PublicEntry from "./pages/landing/public-entry.tsx";
+import AuthCallback from "./pages/auth/Callback.tsx";
+import SignInPage from "./pages/auth/signin.tsx";
+import NotFound from "./pages/NotFound.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
+import { signInPath } from "./app-paths.ts";
+
+const Welcome = lazy(() => import("./pages/welcome/page.tsx"));
+const InvitePage = lazy(() => import("./pages/invite/page.tsx"));
+const SharePage = lazy(() => import("./pages/share/page.tsx"));
+const DemoPage = lazy(() => import("./pages/demo/page.tsx"));
+const DemoInsightsPage = lazy(() => import("./pages/demo/insights/page.tsx"));
+const FeedPage = lazy(() => import("./pages/feed/page.tsx"));
+const StudiesPage = lazy(() => import("./pages/studies/page.tsx"));
+const NewStudyPage = lazy(() => import("./pages/studies/new/page.tsx"));
+const StudyPage = lazy(() => import("./pages/studies/detail/page.tsx"));
+const InsightsPage = lazy(() => import("./pages/insights/page.tsx"));
+const DeckPage = lazy(() => import("./pages/insights/deck/page.tsx"));
+const SettingsPage = lazy(() => import("./pages/settings/page.tsx"));
+const BillingPage = lazy(() => import("./pages/billing/page.tsx"));
+const HelpPage = lazy(() => import("./pages/help/page.tsx"));
+const TermsPage = lazy(() => import("./pages/legal/terms.tsx"));
+const PrivacyPage = lazy(() => import("./pages/legal/privacy.tsx"));
+
+function PageLoader() {
+  return (
+    <div className="flex h-full min-h-40 items-center justify-center">
+      <Spinner className="size-6 text-primary" />
+    </div>
+  );
+}
+
+function ShellOutlet() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Outlet />
+    </Suspense>
+  );
+}
 
 function FullScreenLoader() {
   return (
@@ -29,65 +56,88 @@ function FullScreenLoader() {
   );
 }
 
-function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
+function GuestOnly({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
+  if (loading) return <FullScreenLoader />;
+  if (user) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
-function UnauthenticatedRoute({ children }: { children: React.ReactNode }) {
+/** Signed-in users with no workspace go to onboarding. */
+function RequireWorkspace() {
+  const { workspaces, loading } = useWorkspace();
+  if (loading || workspaces === undefined) return <FullScreenLoader />;
+  if (workspaces.length === 0) return <Navigate to="/welcome" replace />;
+  return <Outlet />;
+}
+
+/**
+ * `/` and `/help` stay public when signed out (landing / help center).
+ * Every other nested route sends signed-out visitors to sign-in.
+ */
+function Gate() {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
+  if (loading) return <FullScreenLoader />;
+  if (!user) {
+    if (location.pathname === "/" || location.pathname === "/help") {
+      return <PublicEntry loader={<FullScreenLoader />} />;
+    }
+    return <Navigate to={signInPath(`${location.pathname}${location.search}`)} replace />;
   }
-
-  if (user) {
-    return <Navigate to="/feed" replace />;
-  }
-
-  return <>{children}</>;
+  return <Outlet />;
 }
 
 export default function App() {
+  useServiceWorker();
   return (
     <AppErrorBoundary>
       <DefaultProviders>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<UnauthenticatedRoute><LandingPage loader={<FullScreenLoader />} /></UnauthenticatedRoute>} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/share/:token" element={<SharePage />} />
-            <Route path="/invite/:token" element={<InvitePage />} />
-            <Route element={<AuthenticatedRoute><AppLayout /></AuthenticatedRoute>}>
-              <Route path="/welcome" element={<WelcomePage />} />
-              <Route path="/feed" element={<FeedPage />} />
-              <Route path="/studies" element={<StudiesPage />} />
-              <Route path="/studies/new" element={<NewStudyPage />} />
-              <Route path="/studies/:id" element={<StudyDetailPage />} />
-              <Route path="/insights" element={<InsightsPage />} />
-              <Route path="/insights/deck" element={<InsightsDeckPage />} />
-              <Route path="/billing" element={<BillingPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
-          </Routes>
+          <Suspense fallback={<FullScreenLoader />}>
+            <Routes>
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route
+                path="/signin"
+                element={
+                  <GuestOnly>
+                    <SignInPage />
+                  </GuestOnly>
+                }
+              />
+              <Route path="/login" element={<Navigate to="/signin" replace />} />
+              <Route path="/auth" element={<Navigate to="/signin" replace />} />
+              <Route path="/invite/:token" element={<InvitePage />} />
+              <Route path="/s/:token" element={<SharePage />} />
+              <Route path="/share/:token" element={<SharePage />} />
+              <Route path="/demo" element={<DemoPage />} />
+              <Route path="/demo/insights" element={<DemoInsightsPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route element={<Gate />}>
+                <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
+                <Route element={<RequireWorkspace />}>
+                  <Route path="/insights/deck" element={<DeckPage />} />
+                  <Route path="/feed" element={<Navigate to="/" replace />} />
+                  <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                  <Route element={<AppLayout />}>
+                    <Route element={<ShellOutlet />}>
+                      <Route path="/" element={<FeedPage />} />
+                      <Route path="/studies" element={<StudiesPage />} />
+                      <Route path="/studies/new" element={<NewStudyPage />} />
+                      <Route path="/studies/:studyId" element={<StudyPage />} />
+                      <Route path="/insights" element={<InsightsPage />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/billing" element={<BillingPage />} />
+                      <Route path="/help" element={<HelpPage />} />
+                    </Route>
+                  </Route>
+                </Route>
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </DefaultProviders>
     </AppErrorBoundary>

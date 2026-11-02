@@ -48,6 +48,10 @@ if (typeof HTMLMediaElement !== "undefined") {
   };
 }
 
+if (typeof Element !== "undefined" && typeof Element.prototype.scrollTo !== "function") {
+  Element.prototype.scrollTo = function scrollTo() {};
+}
+
 // Vitest globals are disabled, so explicitly unmount trees rendered through
 // Testing Library after each test.
 afterEach(() => {

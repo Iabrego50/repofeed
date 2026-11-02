@@ -1,6 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { getBrowserSupabase } from './supabase';
+import { resolveReturnTo } from '@/pages/auth/return-to.ts';
+
+function authCallbackUrl(): string {
+  const origin = window.location.origin;
+  const returnTo = resolveReturnTo({
+    returnTo: new URLSearchParams(window.location.search).get('returnTo'),
+  });
+  if (returnTo === '/') return `${origin}/auth/callback`;
+  return `${origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`;
+}
 
 interface UserProfile {
   id: string;
@@ -110,20 +120,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (provider: 'google' | 'azure' | 'apple') => {
     const client = getBrowserSupabase();
     if (!client) return unavailableAuth();
-    const redirectTo = `${window.location.origin}/auth/callback`;
     await client.auth.signInWithOAuth({
       provider,
-      options: { redirectTo },
+      options: { redirectTo: authCallbackUrl() },
     });
   };
 
   const signInWithOtp = async (email: string) => {
     const client = getBrowserSupabase();
     if (!client) return unavailableAuth();
-    const redirectTo = `${window.location.origin}/auth/callback`;
     await client.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo },
+      options: { emailRedirectTo: authCallbackUrl() },
     });
   };
 

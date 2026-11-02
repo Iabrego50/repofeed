@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { signInPath } from "@/app-paths.ts";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
@@ -10,8 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Logo from "@/components/logo.tsx";
 
 export default function InvitePage() {
+  const { token: routeToken } = useParams();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const token = routeToken || searchParams.get("token");
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const [accepting, setAccepting] = useState(false);
@@ -41,9 +43,8 @@ export default function InvitePage() {
   }, [token, navigate]);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      navigate(`/?redirect=/invite?token=${token}`);
-    }
+    if (!token || isLoading || user) return;
+    navigate(signInPath(`/invite/${token}`), { replace: true });
   }, [isLoading, user, token, navigate]);
 
   const handleAccept = async () => {
