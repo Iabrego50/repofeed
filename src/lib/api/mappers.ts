@@ -1,4 +1,5 @@
 import type { CommentKind, JobStatus, JobPhase } from '@/schema/validators';
+import { hydrateFootageMedia, publicStorageOrigin } from './storage-urls';
 
 // Database row types (snake_case from Supabase)
 export interface DbReel {
@@ -110,6 +111,8 @@ export interface FeedReel {
     url: string;
     caption: string;
     media?: 'image';
+    storageId?: string;
+    bucket?: string;
   } | null;
   warning: string | null;
   enabled: boolean;
@@ -235,7 +238,7 @@ export function mapReel(row: DbReel): FeedReel {
     scenes: parseJson(row.scenes),
     findingIds: parseJson(row.finding_ids),
     sourceNames: parseJson(row.source_names),
-    footage: parseJson(row.footage),
+    footage: hydrateFootageMedia(parseJson(row.footage), publicStorageOrigin()),
     warning: row.warning,
     enabled: row.enabled,
     createdAt: row.created_at,

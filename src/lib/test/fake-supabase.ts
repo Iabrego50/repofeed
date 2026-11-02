@@ -26,6 +26,12 @@ export type StorageRemove = {
   paths: string[];
 };
 
+export type StorageUpload = {
+  bucket: string;
+  path: string;
+  contentType?: string;
+};
+
 export type FakeUser = {
   id: string;
   email?: string;
@@ -213,6 +219,29 @@ export class FakeStorageBucket {
     private readonly fake: FakeSupabase,
   ) {}
 
+  async upload(
+    path: string,
+    _body: unknown,
+    options?: { contentType?: string; upsert?: boolean; cacheControl?: string },
+  ): Promise<FakeResponse<{ path: string }>> {
+    this.fake.storageUploads.push({
+      bucket: this.bucket,
+      path,
+      contentType: options?.contentType,
+    });
+    const queued = this.fake.take(`storage:${this.bucket}:upload`);
+    if (queued) return queued as FakeResponse<{ path: string }>;
+    return { data: { path }, error: null, count: 1 };
+  }
+
+  getPublicUrl(path: string): { data: { publicUrl: string } } {
+    return {
+      data: {
+        publicUrl: `https://example.supabase.co/storage/v1/object/public/${this.bucket}/${path}`,
+      },
+    };
+  }
+
   async remove(paths: string[]): Promise<FakeResponse<string[]>> {
     this.fake.storageRemoves.push({ bucket: this.bucket, paths: [...paths] });
     const queued = this.fake.take(`storage:${this.bucket}`);
@@ -224,6 +253,7 @@ export class FakeStorageBucket {
 export class FakeSupabase {
   readonly calls: FakeCall[] = [];
   readonly storageRemoves: StorageRemove[] = [];
+  readonly storageUploads: StorageUpload[] = [];
   private readonly queues = new Map<string, QueueItem[]>();
   private user: FakeUser | null = null;
 
@@ -285,6 +315,7 @@ export class FakeSupabase {
   reset() {
     this.calls.length = 0;
     this.storageRemoves.length = 0;
+    this.storageUploads.length = 0;
     this.queues.clear();
     this.user = null;
   }

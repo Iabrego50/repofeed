@@ -1,8 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { isAuthError, requireUser, requireWorkspaceEditor } from '../_lib/auth.js';
 import { configJsonResponse, requiredEnv, requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
-import { supabase } from '../_lib/supabase.js';
+import { supabase, supabaseUrl } from '../_lib/supabase.js';
 import { callTool, generateImage } from '../../src/lib/ai/client.js';
+import { ART_BUCKET, artStoragePath, paintedArtFields } from '../../src/lib/api/storage-urls.js';
+import { throwIfWriteError } from '../../src/lib/api/supabase-write.js';
 import { StepError } from '../../src/lib/errors/step-error.js';
 import { z } from 'zod';
 
@@ -139,47 +141,43 @@ export async function POST(req: Request) {
     const imageBlob = await generateImage(imagePrompt(scene.prompt));
     const imageBuffer = Buffer.from(await imageBlob.arrayBuffer());
 
-    // Upload to storage
-    const fileName = `art-${reelId}-${Date.now()}.png`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(fileName, imageBuffer, {
+    const storageId = artStoragePath(reelId);
+    const { error: uploadError } = await supabase.storage
+      .from(ART_BUCKET)
+      .upload(storageId, imageBuffer, {
         contentType: 'image/png',
         upsert: false,
+        cacheControl: '3600',
       });
 
     if (uploadError) {
       throw uploadError;
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(fileName);
+    const caption = artCaption(scene.caption);
+    const painted = paintedArtFields({
+      origin: supabaseUrl(),
+      storageId,
+      caption,
+    });
 
-    // Update reel with art
-    await supabase
+    const { error: saveError } = await supabase
       .from('reels')
       .update({
-        footage: {
-          url: publicUrl,
-          caption: artCaption(scene.caption),
-          media: 'image',
-        },
-        art: {
-          status: 'completed',
-          url: publicUrl,
-          caption: artCaption(scene.caption),
-        },
+        footage: painted.footage,
+        art: painted.art,
         updated_at: new Date().toISOString(),
       })
       .eq('id', reelId);
+    throwIfWriteError(saveError, 'painted art');
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       status: 'completed',
-      url: publicUrl,
-      caption: artCaption(scene.caption),
-    }), { 
+      url: painted.footage.url,
+      storageId,
+      bucket: ART_BUCKET,
+      caption,
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });

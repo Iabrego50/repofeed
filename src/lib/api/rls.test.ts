@@ -216,4 +216,18 @@ describe("RLS policies from supabase/migrations", () => {
     );
     expect(rows.map((r) => r.name)).toEqual([GENERATED_PATH]);
   });
+
+  it("the art bucket is public and anon cannot write to it", async () => {
+    await asSuper();
+    const { rows } = await db.query<{ id: string; public: boolean }>(
+      'select id, "public" from storage.buckets where id = \'art\'',
+    );
+    expect(rows).toEqual([{ id: "art", public: true }]);
+
+    await setAuth(null);
+    await asTester();
+    await expect(
+      db.query("insert into storage.objects (bucket_id, name) values ('art', 'pwned.png')"),
+    ).rejects.toThrow(/row-level security|violates/i);
+  });
 });

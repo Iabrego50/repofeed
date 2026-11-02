@@ -110,6 +110,8 @@ export async function saveUpload(args: {
     .insert({
       workspace_id: args.workspaceId,
       storage_id: args.storageId,
+      // Footage lives in the private `footage` bucket. Store the object path,
+      // never a /object/public URL (those 400 on private buckets).
       url: args.storageId,
       name: args.name.slice(0, 200),
       size: args.size ?? 0,

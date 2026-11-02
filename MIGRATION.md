@@ -93,9 +93,10 @@ In Supabase Dashboard → Authentication → Providers:
 ### 1.4 Configure Storage
 
 Storage buckets are created automatically by the migration. They are:
-- `uploads`: User-uploaded research files
-- `footage`: Video clips for reel backgrounds
-- `generated`: AI-generated images
+- `uploads`: User-uploaded research files (private)
+- `footage`: Video clips for reel backgrounds (private)
+- `generated`: Reserved private generated assets
+- `art`: AI reel backdrops (public; share pages load these without login)
 
 No additional configuration needed.
 
@@ -152,7 +153,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbG...
 # From OpenAI dashboard (text + images)
 OPENAI_API_KEY=sk-...
 OPENAI_TEXT_MODEL=gpt-5.1
-OPENAI_IMAGE_MODEL=gpt-image-1
+OPENAI_IMAGE_MODEL=gpt-image-2.5-sunburst
 
 # From Resend dashboard
 RESEND_API_KEY=re_...
@@ -428,7 +429,7 @@ When you push to `main` branch:
 
 **OpenAI:**
 - Text (`gpt-5.1` default, override with `OPENAI_TEXT_MODEL`): token usage varies by model
-- Images (`gpt-image-1` default, override with `OPENAI_IMAGE_MODEL`): per-image pricing
+- Images (`gpt-image-2.5-sunburst` default, override with `OPENAI_IMAGE_MODEL`): per-image pricing
 - Estimate: $70-300/month depending on usage
 
 **Resend:**

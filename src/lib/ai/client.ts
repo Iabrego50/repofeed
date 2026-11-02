@@ -14,7 +14,7 @@ export function getOpenAI(): OpenAI {
 /** Text/JSON model. Override with OPENAI_TEXT_MODEL. */
 export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-5.1';
 export const CHAT_MODEL = TEXT_MODEL;
-export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
+export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst';
 export const CHUNK_CHARS = 70_000;
 export const MAX_COMPOSE_FINDINGS = 180;
 
@@ -27,9 +27,6 @@ export function imageQuality(value: string | undefined = process.env.OPENAI_IMAG
 }
 
 export const IMAGE_QUALITY = imageQuality();
-export const IMAGE_FALLBACK_MODEL = 'dall-e-3';
-export const IMAGE_LAST_FALLBACK_MODEL = 'dall-e-2';
-export const IMAGE_FALLBACK_MODELS = [IMAGE_FALLBACK_MODEL, IMAGE_LAST_FALLBACK_MODEL] as const;
 
 export function isGptImageModel(model: string): boolean {
   return model.startsWith('gpt-image');
@@ -496,7 +493,7 @@ export async function generateImageWithModels(
           const newest = newestGptImageId(listed, tried);
           if (newest) {
             console.info(`[art] trying discovered gpt-image model: ${newest}`);
-            queue.push(newest);
+            queue.unshift(newest);
           }
         } catch (listError) {
           console.warn('[art] models.list failed', listError);
@@ -516,12 +513,16 @@ export async function generateImageWithModels(
   });
 }
 
+/** Image models to try before discovery. OPENAI_IMAGE_MODEL is always first. */
+export function imageModelQueue(): string[] {
+  return [IMAGE_MODEL];
+}
+
 /** Paints a portrait image and returns it as a PNG blob. */
 export async function generateImage(prompt: string): Promise<Blob> {
-  const models = [IMAGE_MODEL, ...IMAGE_FALLBACK_MODELS];
   const { blob } = await generateImageWithModels(
     prompt,
-    models,
+    imageModelQueue(),
     (params) => imagesGenerate(params),
     () => getListedImageModels(),
   );
