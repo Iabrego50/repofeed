@@ -2,6 +2,17 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "framework": null,
+  "functions": {
+    "api/generation/process.ts": {
+      "maxDuration": 300
+    },
+    "api/generation/start.ts": {
+      "maxDuration": 60
+    },
+    "api/art/paint.ts": {
+      "maxDuration": 180
+    }
+  },
   "rewrites": [
     {
       "source": "/((?!api(?:/|$)).*)",

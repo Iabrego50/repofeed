@@ -68,7 +68,7 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return false;
-      return data.status === "running" ? 2000 : false;
+      return data.status === "running" || data.status === "queued" ? 2000 : false;
     },
   });
 
@@ -106,7 +106,7 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
     }
   };
 
-  const isRunning = job?.status === "running";
+  const isRunning = job?.status === "running" || job?.status === "queued";
   const isDone = job?.status === "done";
   const isFailed = job?.status === "failed";
 

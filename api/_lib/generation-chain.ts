@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { GENERATION_INTERNAL_SECRET_HEADER } from "./auth.js";
 
 export function siteBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
@@ -38,9 +39,20 @@ export function generationProcessHeaders(
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<unknown>;
+export type WaitUntilFn = (work: Promise<unknown>) => void;
 
 function defaultFetch(): FetchLike {
   return globalThis.fetch as FetchLike;
+}
+
+function defaultWaitUntil(): WaitUntilFn {
+  return (work) => {
+    try {
+      waitUntil(work);
+    } catch (error) {
+      console.error("waitUntil failed; continuation fetch already started:", error);
+    }
+  };
 }
 
 /** Kick the next process invocation. Does not wait for that invocation to finish. */
@@ -57,28 +69,18 @@ export function fetchGenerationProcess(
   });
 }
 
-async function scheduleWaitUntil(work: Promise<unknown>): Promise<boolean> {
-  try {
-    const { waitUntil } = await import("@vercel/functions");
-    if (typeof waitUntil !== "function") return false;
-    waitUntil(work);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Continue generation in a *new* invocation. Never await the downstream
- * function — that nested the whole pipeline into one 300s Vercel timeout.
+ * Register the next invocation with waitUntil *before* this function returns
+ * so the current response can end without killing the continuation fetch.
  */
-export async function enqueueGenerationProcess(
+export function enqueueGenerationProcess(
   jobId: string,
   env: NodeJS.ProcessEnv = process.env,
   fetchImpl: FetchLike = defaultFetch(),
-): Promise<void> {
+  waitUntilFn: WaitUntilFn = defaultWaitUntil(),
+): void {
   const work = fetchGenerationProcess(jobId, env, fetchImpl).catch((error) => {
     console.error("Generation process continuation failed:", error);
   });
-  await scheduleWaitUntil(work);
+  waitUntilFn(work);
 }

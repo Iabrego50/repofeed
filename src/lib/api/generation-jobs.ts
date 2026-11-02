@@ -1,5 +1,11 @@
 import { supabase } from '../supabase';
 import { unwrapSingleOrNull } from '../supabase-helpers';
+import {
+  STALE_JOB_FAIL_MESSAGE,
+  STALE_JOB_MS,
+  previousStudyStatus,
+  staleJobDecision,
+} from './generation-guards';
 import { jsonAuthHeaders } from './bearer';
 import { mapJob, type Job } from './mappers';
 
@@ -37,7 +43,72 @@ export async function getLatestJob(args: { studyId: string }): Promise<Job | nul
 
   if (!job) return null;
 
-  return mapJob(job);
+  const current = await recoverStaleJob(job);
+  return mapJob(current);
+}
+
+async function kickGenerationProcess(jobId: string) {
+  try {
+    await fetch('/api/generation/process', {
+      method: 'POST',
+      headers: await jsonAuthHeaders(),
+      body: JSON.stringify({ jobId }),
+    });
+  } catch (error) {
+    console.error('Failed to re-trigger generation process:', error);
+  }
+}
+
+export async function restoreStudyAfterGeneration(studyId: string) {
+  const study = unwrapSingleOrNull(await supabase
+    .from('studies')
+    .select('published_at')
+    .eq('id', studyId)
+    .single());
+  const { count } = await supabase
+    .from('reels')
+    .select('id', { count: 'exact', head: true })
+    .eq('study_id', studyId);
+  const status = previousStudyStatus({
+    publishedAt: study?.published_at,
+    reelCount: count,
+  });
+  await supabase
+    .from('studies')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', studyId);
+}
+
+async function recoverStaleJob<T extends {
+  id: string;
+  study_id: string;
+  status: string;
+  updated_at: string;
+  attempts?: number | null;
+  error?: string | null;
+}>(job: T): Promise<T> {
+  const decision = staleJobDecision(job);
+  if (decision === 'ok') return job;
+  if (decision === 'fail') {
+    await supabase
+      .from('generation_jobs')
+      .update({
+        status: 'failed',
+        error: STALE_JOB_FAIL_MESSAGE,
+        error_detail: `No progress for ${STALE_JOB_MS}ms`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', job.id)
+      .in('status', ['queued', 'running']);
+    await restoreStudyAfterGeneration(job.study_id);
+    return { ...job, status: 'failed', error: STALE_JOB_FAIL_MESSAGE };
+  }
+  await supabase
+    .from('generation_jobs')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', job.id);
+  void kickGenerationProcess(job.id);
+  return job;
 }
 
 export async function startGeneration(args: { studyId: string }) {
@@ -94,8 +165,15 @@ export async function resumeGeneration(args: { studyId: string }) {
   if (jobError || !job) {
     return startGeneration(args);
   }
-  
-  if (job.status === 'running') {
+
+  const recovered = await recoverStaleJob(job);
+  if (recovered.status === 'failed' && recovered.error === STALE_JOB_FAIL_MESSAGE) {
+    return { jobId: job.id, status: 'failed' as const };
+  }
+  if (job.status === 'running' && staleJobDecision(job) === 'ok') {
+    return { jobId: job.id, status: 'running' as const };
+  }
+  if (staleJobDecision(job) === 'retrigger') {
     return { jobId: job.id, status: 'running' as const };
   }
   
@@ -159,9 +237,5 @@ export async function cancelGeneration(args: { studyId: string }) {
       .in('id', jobs.map(j => j.id));
   }
 
-  // Update study status
-  await supabase
-    .from('studies')
-    .update({ status: 'draft', updated_at: new Date().toISOString() })
-    .eq('id', args.studyId);
+  await restoreStudyAfterGeneration(args.studyId);
 }

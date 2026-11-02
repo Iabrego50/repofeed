@@ -5,9 +5,16 @@ import { isServerNotConfigured, requiredEnv, requireSupabaseEnv, sendNotConfigur
 import { supabase } from '../_lib/supabase.js';
 import { callTool, CHUNK_CHARS, MAX_COMPOSE_FINDINGS } from '../../src/lib/ai/client.js';
 import {
+  AI_CALL_TIMEOUT_MS,
+  COMPOSE_BATCH_SIZE,
+  MAX_COMPOSE_REELS,
   MAX_GENERATION_STEPS,
+  STALE_JOB_FAIL_MESSAGE,
   nextAttemptCount,
+  previousStudyStatus,
+  shouldFinishCompose,
   shouldSkipComposeInsert,
+  staleJobDecision,
   wouldExceedGenerationSteps,
 } from '../../src/lib/api/generation-guards.js';
 import { throwIfWriteError } from '../../src/lib/api/supabase-write.js';
@@ -25,7 +32,8 @@ import { toScene, finalizeScenes } from '../../src/lib/ai/scenes.js';
 import type { Scene } from '../../src/schema/validators';
 import { toStepError } from '../../src/lib/errors/step-error.js';
 
-const MAX_SOURCES_CHARS = 2_000_000;
+export const maxDuration = 300;
+
 const MAX_LOG = 200;
 
 type LogEntry = {
@@ -83,6 +91,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid phase' });
     }
 
+    if (job.status === 'done' || job.status === 'cancelled' || job.status === 'failed') {
+      return res.json({ success: true, skipped: true, phase: job.phase, status: job.status });
+    }
+
+    const stale = staleJobDecision(job);
+    if (stale === 'fail') {
+      throw new Error(STALE_JOB_FAIL_MESSAGE);
+    }
+    if (stale === 'retrigger') {
+      console.warn(`[generation] recovering stale job=${jobId} phase=${phase} updated_at=${job.updated_at}`);
+    }
+
     await runProcessStep(jobId);
     return res.json({ success: true, phase: phase === 'verify' ? 'done' : phase });
   } catch (error) {
@@ -90,18 +110,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (isAuthError(error)) return res.status(error.status).json({ error: error.message });
     console.error('Generation error:', error);
     const e = toStepError(error);
-    
-    const fail = await supabase
-      .from('generation_jobs')
-      .update({
-        status: 'failed',
-        error: e.message,
-        error_detail: e.detail.detail,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', jobId);
-    if (fail.error) console.error('Failed to mark generation job failed:', fail.error);
-
+    const message = error instanceof Error ? error.message : e.message;
+    await failJob(jobId, message, e.detail.detail);
     return res.status(e.httpStatus).json({
       error: e.message,
       detail: e.detail.detail,
@@ -121,13 +131,17 @@ export async function runProcessStep(jobId: string): Promise<void> {
     throw new Error('Job not found');
   }
 
-  if (wouldExceedGenerationSteps(job.attempts)) {
-    await updateJob(jobId, {
-      status: 'failed',
-      error: 'Generation stopped after too many steps.',
-      error_detail: `attempts=${job.attempts} max=${MAX_GENERATION_STEPS}`,
-    });
-    throw new Error('Generation exceeded max steps');
+  if (job.status === 'cancelled' || job.status === 'failed' || job.status === 'done') {
+    console.info(`[generation] skip job=${jobId} status=${job.status}`);
+    return;
+  }
+
+  if (wouldExceedGenerationSteps(job.attempts) || staleJobDecision(job) === 'fail') {
+    throw new Error(
+      wouldExceedGenerationSteps(job.attempts)
+        ? `Generation stopped after too many steps (max ${MAX_GENERATION_STEPS}).`
+        : STALE_JOB_FAIL_MESSAGE,
+    );
   }
 
   await updateJob(jobId, {
@@ -142,30 +156,29 @@ export async function runProcessStep(jobId: string): Promise<void> {
     .single();
 
   if (studyError || !study) {
-    await updateJob(jobId, {
-      status: 'failed',
-      error: 'Study was deleted',
-    });
-    throw new Error('Study not found');
+    throw new Error('Study was deleted');
   }
 
   const phase = String(job.phase);
-  if (phase === 'extract') {
-    await processExtraction(jobId, job, study);
-    return;
+  const started = Date.now();
+  console.info(
+    `[generation] start job=${jobId} phase=${phase} cursor=${job.cursor ?? 0} attempts=${job.attempts ?? 0}`,
+  );
+  try {
+    if (phase === 'extract') {
+      await processExtraction(jobId, job, study);
+    } else if (phase === 'compose') {
+      await processComposition(jobId, job, study);
+    } else if (phase === 'verify') {
+      await processVerification(jobId, job.study_id);
+    } else {
+      throw new Error('Invalid phase');
+    }
+    console.info(`[generation] end job=${jobId} phase=${phase} ms=${Date.now() - started}`);
+  } catch (error) {
+    console.error(`[generation] fail job=${jobId} phase=${phase} ms=${Date.now() - started}`, error);
+    throw error;
   }
-
-  if (phase === 'compose') {
-    await processComposition(jobId, job, study);
-    return;
-  }
-
-  if (phase === 'verify') {
-    await processVerification(jobId, job.study_id);
-    return;
-  }
-
-  throw new Error('Invalid phase');
 }
 
 async function processExtraction(
@@ -184,7 +197,7 @@ async function processExtraction(
       log: appendLog(job.log, 'info', 'Extraction complete, starting composition'),
     });
     // Trigger next phase
-    await enqueueGenerationProcess(jobId);
+    enqueueGenerationProcess(jobId);
     return;
   }
 
@@ -204,12 +217,15 @@ async function processExtraction(
       log: appendLog(job.log, 'warn', 'Skipped a source that no longer exists'),
     });
     // Trigger next chunk
-    await enqueueGenerationProcess(jobId);
+    enqueueGenerationProcess(jobId);
     return;
   }
 
   // Extract findings from chunk
   const text = source.text.slice(chunk.start, chunk.end);
+  console.info(
+    `[generation] extract OpenAI start job=${jobId} cursor=${cursor} timeoutMs=${AI_CALL_TIMEOUT_MS}`,
+  );
   const result = await callTool({
     system: EXTRACT_SYSTEM,
     user: extractUserPrompt({
@@ -223,7 +239,9 @@ async function processExtraction(
     tool: EXTRACT_TOOL,
     schema: extractSchema,
     maxTokens: 16000,
+    timeoutMs: AI_CALL_TIMEOUT_MS,
   });
+  console.info(`[generation] extract OpenAI end job=${jobId} findings=${result.findings.length}`);
 
   // Save findings
   const findingsToSave = result.findings.slice(0, 80).map((f) => ({
@@ -254,7 +272,7 @@ async function processExtraction(
     ),
   });
 
-  await enqueueGenerationProcess(jobId);
+  enqueueGenerationProcess(jobId);
 }
 
 async function processComposition(
@@ -264,17 +282,20 @@ async function processComposition(
 ) {
   const existing = await supabase
     .from('reels')
-    .select('id', { count: 'exact', head: true })
+    .select('id, title', { count: 'exact' })
     .eq('study_id', study.id)
     .gte('created_at', job.created_at || new Date(0).toISOString());
   throwIfWriteError(existing.error, 'existing reels');
 
-  if (shouldSkipComposeInsert(existing.count)) {
+  const existingRows = existing.data ?? [];
+  const existingCount = existing.count ?? existingRows.length;
+
+  if (shouldSkipComposeInsert(existingCount)) {
     await updateJob(jobId, {
       phase: 'verify',
       log: appendLog(job.log, 'info', 'Reels already composed for this job, verifying...'),
     });
-    await enqueueGenerationProcess(jobId);
+    enqueueGenerationProcess(jobId);
     return;
   }
 
@@ -288,36 +309,41 @@ async function processComposition(
   throwIfWriteError(findingsError, 'findings lookup');
 
   if (!findings || findings.length === 0) {
-    await updateJob(jobId, {
-      status: 'failed',
-      error: "We couldn't find any findings in your files.",
-      error_detail: 'No findings were extracted from the sources',
-    });
-    return;
+    throw new Error("We couldn't find any findings in your files.");
   }
 
-  // Compose reels
+  const batchIndex = Math.floor(existingCount / COMPOSE_BATCH_SIZE);
+  console.info(
+    `[generation] compose OpenAI start job=${jobId} batch=${batchIndex} timeoutMs=${AI_CALL_TIMEOUT_MS}`,
+  );
   const result = await callTool({
     system: COMPOSE_SYSTEM,
     user: composeUserPrompt({
       studyTitle: study.title,
       audience: study.audience,
       goal: study.goal,
-      findings: findings.map((f: any) => ({
+      findings: findings.map((f) => ({
         id: f.id,
         type: f.type,
         text: f.text,
-        speaker: f.speaker,
-        number: f.number,
-        label: f.label,
+        speaker: f.speaker ?? undefined,
+        number: f.number ?? undefined,
+        label: f.label ?? undefined,
         strength: f.strength,
         file: f.sources?.name || 'unknown',
       })),
+      batch: {
+        index: batchIndex,
+        size: COMPOSE_BATCH_SIZE,
+        existingTitles: existingRows.map((row: { title?: string }) => row.title).filter(Boolean) as string[],
+      },
     }),
     tool: COMPOSE_TOOL,
     schema: composeSchema,
-    maxTokens: 24000,
+    maxTokens: 8000,
+    timeoutMs: AI_CALL_TIMEOUT_MS,
   });
+  console.info(`[generation] compose OpenAI end job=${jobId} reels=${result.reels.length}`);
 
   const findingIdMap = new Map(findings.map((f: any) => [f.id, f.id]));
   const fileByFinding = new Map(
@@ -325,7 +351,7 @@ async function processComposition(
   );
 
   // Save reels
-  const reelsToSave = result.reels.slice(0, 24).flatMap((r, idx) => {
+  const reelsToSave = result.reels.slice(0, COMPOSE_BATCH_SIZE).flatMap((r, idx) => {
     const findingIds = r.findingIds
       .flatMap((id) => {
         const real = findingIdMap.get(id);
@@ -350,40 +376,53 @@ async function processComposition(
         study_id: study.id,
         workspace_id: job.workspace_id,
         track: r.track.trim(),
-        track_index: idx,
+        track_index: existingCount + idx,
         title,
         scenes: JSON.parse(JSON.stringify(finalScenes)),
         finding_ids: findingIds,
         source_names: sourceNames,
-        position: idx,
+        position: existingCount + idx,
         created_at: new Date().toISOString(),
       },
     ];
   });
 
-  if (reelsToSave.length === 0) {
-    await updateJob(jobId, {
-      status: 'failed',
-      error: "The AI didn't write any usable reels.",
-      error_detail: 'No reels referenced known findings',
-    });
-    return;
+  if (reelsToSave.length === 0 && existingCount === 0) {
+    throw new Error("The AI didn't write any usable reels.");
   }
 
-  const inserted = await supabase.from('reels').insert(reelsToSave);
-  throwIfWriteError(inserted.error, 'reels');
+  if (reelsToSave.length > 0) {
+    const inserted = await supabase.from('reels').insert(reelsToSave);
+    throwIfWriteError(inserted.error, 'reels');
+  }
 
-  // Move to verify phase
-  await updateJob(jobId, {
-    phase: 'verify',
-    log: appendLog(
-      job.log,
-      'info',
-      `Composed ${reelsToSave.length} reels, verifying...`
-    ),
-  });
+  if (
+    shouldFinishCompose({
+      existingCount,
+      savedThisBatch: reelsToSave.length,
+      batchSize: COMPOSE_BATCH_SIZE,
+      maxReels: MAX_COMPOSE_REELS,
+    })
+  ) {
+    await updateJob(jobId, {
+      phase: 'verify',
+      log: appendLog(
+        job.log,
+        'info',
+        `Composed ${existingCount + reelsToSave.length} reels, verifying...`,
+      ),
+    });
+  } else {
+    await updateJob(jobId, {
+      log: appendLog(
+        job.log,
+        'info',
+        `Compose batch ${batchIndex + 1}: ${reelsToSave.length} reels (${existingCount + reelsToSave.length} total)`,
+      ),
+    });
+  }
 
-  await enqueueGenerationProcess(jobId);
+  enqueueGenerationProcess(jobId);
 }
 
 async function processVerification(jobId: string, studyId: string) {
@@ -398,6 +437,53 @@ async function processVerification(jobId: string, studyId: string) {
     phase: 'done',
     locked_until: new Date(0).toISOString(),
   });
+}
+
+async function failJob(jobId: string, error: string, errorDetail?: string) {
+  const fail = await supabase
+    .from('generation_jobs')
+    .update({
+      status: 'failed',
+      error,
+      error_detail: errorDetail ?? error,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', jobId)
+    .in('status', ['queued', 'running']);
+  if (fail.error) console.error('Failed to mark generation job failed:', fail.error);
+  await restoreStudyAfterGeneration(jobId);
+}
+
+async function restoreStudyAfterGeneration(jobId: string) {
+  const { data: job } = await supabase
+    .from('generation_jobs')
+    .select('study_id')
+    .eq('id', jobId)
+    .maybeSingle();
+  if (!job?.study_id) return;
+  await restoreStudyStatus(job.study_id);
+}
+
+export async function restoreStudyStatus(studyId: string) {
+  const { data: study } = await supabase
+    .from('studies')
+    .select('published_at')
+    .eq('id', studyId)
+    .maybeSingle();
+  const { count } = await supabase
+    .from('reels')
+    .select('id', { count: 'exact', head: true })
+    .eq('study_id', studyId);
+  const status = previousStudyStatus({
+    publishedAt: study?.published_at,
+    reelCount: count,
+  });
+  const updated = await supabase
+    .from('studies')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', studyId);
+  if (updated.error) console.error('Failed to restore study status:', updated.error);
+  else console.info(`[generation] restored study=${studyId} status=${status}`);
 }
 
 async function updateJob(jobId: string, updates: Record<string, unknown>) {

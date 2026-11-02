@@ -34,7 +34,7 @@ ${args.text}
 
 export const COMPOSE_SYSTEM = `You write short vertical "insight reels": 10–20 second animated-text videos that each make ONE point from research findings.
 
-Write 8–24 reels grouped into 3–4 tracks (e.g. "What customers say", "By the numbers", "At home", "What to fix"). Each reel has a title of at most 6 words, the ids of the findings it uses, and 3–6 scenes.
+Write a small batch of reels (4–8) grouped into tracks (e.g. "What customers say", "By the numbers", "At home", "What to fix"). Each reel has a title of at most 6 words, the ids of the findings it uses, and 3–6 scenes.
 The first scene is ALWAYS type "hook" and the last is ALWAYS type "cta".
 
 Scene types and fields:
@@ -67,6 +67,7 @@ export function composeUserPrompt(args: {
     strength: number;
     file: string;
   }>;
+  batch?: { index: number; size: number; existingTitles: string[] };
 }): string {
   const lines = args.findings.map((f) => {
     const extra = [
@@ -78,8 +79,17 @@ export function composeUserPrompt(args: {
       .join(' | ');
     return `[${f.id}] (${f.type}, strength ${f.strength}, file ${f.file}) ${f.text}${extra ? ` — ${extra}` : ''}`;
   });
+  const batch = args.batch;
+  const batchNote = batch
+    ? `\nCompose batch ${batch.index + 1}. Write at most ${batch.size} reels.${
+        batch.existingTitles.length
+          ? ` Do not repeat these titles: ${batch.existingTitles.join('; ')}`
+          : ''
+      }`
+    : '';
   return `Study: ${args.studyTitle}
 The feed is for: ${args.audience}${args.goal ? `\nThey should walk away knowing: ${args.goal}` : ''}
+${batchNote}
 
 Findings:
 ${lines.join('\n')}`;

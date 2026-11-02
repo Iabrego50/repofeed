@@ -77,7 +77,7 @@ function restoreEnv() {
 }
 
 import startHandler from "../../../api/generation/start";
-import processHandler from "../../../api/generation/process";
+import processHandler, { maxDuration } from "../../../api/generation/process";
 import paintHandler from "../../../api/art/paint";
 
 describe("generation and paint API auth", () => {
@@ -185,6 +185,56 @@ describe("generation and paint API auth", () => {
     );
     expect(out.statusCode).toBe(200);
     expect(out.body).toEqual({ success: true, phase: "done" });
+  });
+
+  it("marks the job failed with a message and restores study status when a step throws", async () => {
+    const runningJob = {
+      id: "job-1",
+      workspace_id: "ws-1",
+      study_id: "study-1",
+      phase: "compose",
+      status: "running",
+      attempts: 4,
+      updated_at: new Date().toISOString(),
+    };
+    fake().queue("generation_jobs", { data: runningJob });
+    fake().queue("generation_jobs", { data: runningJob });
+    fake().queue("generation_jobs", { data: runningJob });
+    fake().queue("studies", { data: null, error: { message: "No rows found" } });
+    fake().queue("generation_jobs", { data: runningJob });
+    fake().queue("generation_jobs", { data: { study_id: "study-1" } });
+    fake().queue("studies", { data: { published_at: "2026-01-15T00:00:00Z" } });
+    fake().queue("reels", { data: [], count: 1 });
+
+    const { res, out } = mockRes();
+    await processHandler(
+      mockReq({ jobId: "job-1" }, { "x-generation-internal-secret": "internal-secret" }),
+      res as unknown as VercelResponse,
+    );
+
+    expect(out.statusCode).toBe(500);
+    expect(out.body).toEqual(
+      expect.objectContaining({
+        error: "An unexpected error occurred.",
+        detail: "Study was deleted",
+      }),
+    );
+    const failUpdate = fake()
+      .callsFor("generation_jobs", "update")
+      .find((call) => (call.payload as { status?: string }).status === "failed");
+    expect(failUpdate?.payload).toEqual(
+      expect.objectContaining({
+        status: "failed",
+        error: "Study was deleted",
+      }),
+    );
+    expect(fake().lastCall("studies", "update")?.payload).toEqual(
+      expect.objectContaining({ status: "published" }),
+    );
+  });
+
+  it("exports a 300s maxDuration for the process function", () => {
+    expect(maxDuration).toBe(300);
   });
 
   it("paint returns 401 without a bearer token", async () => {

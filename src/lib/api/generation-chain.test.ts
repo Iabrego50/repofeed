@@ -72,7 +72,7 @@ describe("generation process chaining URLs", () => {
         }),
     );
     const started = Date.now();
-    await enqueueGenerationProcess(
+    enqueueGenerationProcess(
       "job-1",
       { SITE_URL: "https://example.com", GENERATION_INTERNAL_SECRET: "s" },
       fetchImpl,
@@ -80,5 +80,25 @@ describe("generation process chaining URLs", () => {
     expect(Date.now() - started).toBeLessThan(500);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     resolveFetch?.();
+  });
+
+  it("registers waitUntil with the continuation fetch before returning", () => {
+    const order: string[] = [];
+    const fetchImpl = vi.fn(() => {
+      order.push("fetch");
+      return Promise.resolve({ ok: true });
+    });
+    const waitUntilFn = vi.fn((work: Promise<unknown>) => {
+      order.push("waitUntil");
+      expect(work).toBeInstanceOf(Promise);
+    });
+    enqueueGenerationProcess(
+      "job-1",
+      { SITE_URL: "https://example.com" },
+      fetchImpl,
+      waitUntilFn,
+    );
+    expect(waitUntilFn).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(["fetch", "waitUntil"]);
   });
 });

@@ -137,7 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to start generation' });
     }
 
-    await enqueueGenerationProcess(job.id);
+    enqueueGenerationProcess(job.id);
 
     return res.json({ jobId: job.id, status: 'queued' });
   } catch (error) {

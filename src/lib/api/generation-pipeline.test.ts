@@ -1,11 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
 import { StepError } from "../errors/step-error";
 import { composeSchema, coerceSceneType } from "../ai/prompts";
 import { toScene } from "../ai/scenes";
-import { imageGenerateParams, imageQuality, pngBlobFromB64, shouldRetryToolCall } from "../ai/client";
 import {
+  abortAfter,
+  generateImageWithModels,
+  imageGenerateParams,
+  imageQuality,
+  isAbortError,
+  isImageModelUnavailable,
+  pngBlobFromB64,
+  shouldRetryToolCall,
+} from "../ai/client";
+import {
+  MAX_COMPOSE_REELS,
   MAX_GENERATION_STEPS,
+  STALE_JOB_MS,
+  previousStudyStatus,
+  shouldFinishCompose,
   shouldSkipComposeInsert,
+  staleJobDecision,
   wouldExceedGenerationSteps,
 } from "./generation-guards";
 import { throwIfWriteError } from "./supabase-write";
@@ -18,10 +33,40 @@ describe("generation pipeline guards", () => {
     expect(wouldExceedGenerationSteps(MAX_GENERATION_STEPS + 3)).toBe(true);
   });
 
-  it("skips compose insert when reels for this job already exist", () => {
+  it("skips further compose inserts only after the reel cap", () => {
     expect(shouldSkipComposeInsert(0)).toBe(false);
     expect(shouldSkipComposeInsert(null)).toBe(false);
-    expect(shouldSkipComposeInsert(12)).toBe(true);
+    expect(shouldSkipComposeInsert(12)).toBe(false);
+    expect(shouldSkipComposeInsert(MAX_COMPOSE_REELS - 1)).toBe(false);
+    expect(shouldSkipComposeInsert(MAX_COMPOSE_REELS)).toBe(true);
+  });
+
+  it("finishes compose on a short batch, empty follow-up, or the reel cap", () => {
+    expect(shouldFinishCompose({ existingCount: 0, savedThisBatch: 8 })).toBe(false);
+    expect(shouldFinishCompose({ existingCount: 8, savedThisBatch: 8 })).toBe(false);
+    expect(shouldFinishCompose({ existingCount: 16, savedThisBatch: 8 })).toBe(true);
+    expect(shouldFinishCompose({ existingCount: 8, savedThisBatch: 3 })).toBe(true);
+    expect(shouldFinishCompose({ existingCount: 8, savedThisBatch: 0 })).toBe(true);
+    expect(shouldFinishCompose({ existingCount: 0, savedThisBatch: 0 })).toBe(false);
+  });
+
+  it("restores the previous study status from published_at or existing reels", () => {
+    expect(previousStudyStatus({ publishedAt: "2026-01-01T00:00:00Z", reelCount: 0 })).toBe("published");
+    expect(previousStudyStatus({ publishedAt: null, reelCount: 4 })).toBe("review");
+    expect(previousStudyStatus({ publishedAt: null, reelCount: 0 })).toBe("draft");
+  });
+
+  it("re-triggers stale running jobs and fails them after too many steps", () => {
+    const now = Date.parse("2026-11-02T12:00:00.000Z");
+    const fresh = new Date(now - STALE_JOB_MS + 1_000).toISOString();
+    const stale = new Date(now - STALE_JOB_MS - 1_000).toISOString();
+    expect(staleJobDecision({ status: "running", updated_at: fresh, attempts: 4 }, now)).toBe("ok");
+    expect(staleJobDecision({ status: "running", updated_at: stale, attempts: 4 }, now)).toBe("retrigger");
+    expect(staleJobDecision({ status: "queued", updated_at: stale, attempts: 0 }, now)).toBe("retrigger");
+    expect(
+      staleJobDecision({ status: "running", updated_at: stale, attempts: MAX_GENERATION_STEPS }, now),
+    ).toBe("fail");
+    expect(staleJobDecision({ status: "done", updated_at: stale, attempts: 4 }, now)).toBe("ok");
   });
 
   it("throws on a failed Supabase write so the job can be marked failed", () => {
@@ -91,5 +136,80 @@ describe("gpt-image-1 request", () => {
     const blob = pngBlobFromB64("AQID");
     expect(blob.type).toBe("image/png");
     expect(Buffer.from(await blob.arrayBuffer())).toEqual(Buffer.from([1, 2, 3]));
+  });
+
+  it("uses dall-e-3 size, quality, and response_format", () => {
+    expect(imageGenerateParams("a kitchen at dusk", "dall-e-3", "medium")).toEqual({
+      model: "dall-e-3",
+      prompt: "a kitchen at dusk",
+      size: "1024x1792",
+      quality: "standard",
+      n: 1,
+      response_format: "b64_json",
+    });
+    expect(imageGenerateParams("a kitchen at dusk", "dall-e-3", "high").quality).toBe("hd");
+  });
+
+  it("treats model-not-found and org verification errors as unavailable image models", () => {
+    expect(
+      isImageModelUnavailable({
+        status: 400,
+        code: "model_not_found",
+        message: "The model 'gpt-image-1' does not exist",
+      }),
+    ).toBe(true);
+    expect(
+      isImageModelUnavailable({
+        status: 403,
+        message: "Your organization must be verified to use the model",
+      }),
+    ).toBe(true);
+    expect(isImageModelUnavailable({ status: 500, message: "upstream exploded" })).toBe(false);
+  });
+
+  it("falls back from gpt-image-1 to dall-e-3 when the model does not exist", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const generate = vi.fn(async (params: { model: string }) => {
+      if (params.model === "gpt-image-1") {
+        throw Object.assign(new Error("The model 'gpt-image-1' does not exist"), {
+          status: 400,
+          code: "model_not_found",
+        });
+      }
+      expect(params).toMatchObject({
+        model: "dall-e-3",
+        size: "1024x1792",
+        quality: "standard",
+        response_format: "b64_json",
+      });
+      return { data: [{ b64_json: "AQID" }] };
+    });
+    const result = await generateImageWithModels("a kitchen", ["gpt-image-1", "dall-e-3"], generate);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(result.model).toBe("dall-e-3");
+    expect(result.blob.type).toBe("image/png");
+    expect(info.mock.calls.some((call) => String(call[0]).includes("dall-e-3"))).toBe(true);
+    info.mockRestore();
+  });
+});
+
+describe("OpenAI abort timeout", () => {
+  it("maps abort errors and fires AbortController after the deadline", async () => {
+    expect(isAbortError({ name: "AbortError" })).toBe(true);
+    expect(isAbortError({ name: "APIUserAbortError" })).toBe(true);
+    expect(isAbortError({ name: "APIConnectionTimeoutError" })).toBe(true);
+    const abort = abortAfter(20);
+    await new Promise((resolve) => abort.signal.addEventListener("abort", resolve, { once: true }));
+    expect(abort.signal.aborted).toBe(true);
+    abort.cancel();
+  });
+});
+
+describe("process function duration", () => {
+  it("sets maxDuration 300 for the process function in vercel.json", () => {
+    const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as {
+      functions?: Record<string, { maxDuration?: number }>;
+    };
+    expect(vercel.functions?.["api/generation/process.ts"]?.maxDuration).toBe(300);
   });
 });

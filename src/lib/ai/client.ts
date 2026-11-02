@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { requiredEnv } from '../server-env.js';
 import { StepError, mapOpenAIError } from '../errors/step-error.js';
+import { AI_CALL_TIMEOUT_MS } from '../api/generation-guards.js';
 
 let openai: OpenAI | undefined;
 
@@ -26,6 +27,15 @@ export function imageQuality(value: string | undefined = process.env.OPENAI_IMAG
 }
 
 export const IMAGE_QUALITY = imageQuality();
+export const IMAGE_FALLBACK_MODEL = 'dall-e-3';
+
+export function isGptImageModel(model: string): boolean {
+  return model.startsWith('gpt-image');
+}
+
+export function dalleQuality(quality: ImageQuality = IMAGE_QUALITY): 'standard' | 'hd' {
+  return quality === 'high' ? 'hd' : 'standard';
+}
 
 type ToolDef = {
   name: string;
@@ -56,6 +66,36 @@ export function shouldRetryToolCall(err: unknown): boolean {
   return isFormatError(err) || badRequest;
 }
 
+export function isAbortError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const name = String((err as { name?: string }).name ?? '');
+  return (
+    name === 'AbortError' ||
+    name === 'TimeoutError' ||
+    name === 'APIUserAbortError' ||
+    name === 'APIConnectionTimeoutError'
+  );
+}
+
+/** AbortController timeout passed as OpenAI RequestOptions, not in the JSON body. */
+export function abortAfter(ms: number): {
+  signal: AbortSignal;
+  cancel: () => void;
+  options: { signal: AbortSignal; timeout: number };
+} {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    cancel: () => clearTimeout(timer),
+    options: { signal: controller.signal, timeout: ms },
+  };
+}
+
+export function timeoutSignal(ms: number): AbortSignal {
+  return abortAfter(ms).signal;
+}
+
 async function callToolOnce<T>(args: {
   system: string;
   user: string;
@@ -63,30 +103,40 @@ async function callToolOnce<T>(args: {
   schema: z.ZodType<T>;
   maxTokens: number;
   strict: boolean;
+  timeoutMs: number;
 }): Promise<T> {
-  const response = await getOpenAI().chat.completions.create({
-    model: TEXT_MODEL,
-    max_completion_tokens: args.maxTokens,
-    messages: [
+  const abort = abortAfter(args.timeoutMs);
+  let response: OpenAI.Chat.Completions.ChatCompletion;
+  try {
+    response = await getOpenAI().chat.completions.create(
       {
-        role: 'system',
-        content: `${args.system}\n\nAlways respond by calling the \`${args.tool.name}\` tool exactly once. Do not reply with plain text.`,
+        model: TEXT_MODEL,
+        max_completion_tokens: args.maxTokens,
+        messages: [
+          {
+            role: 'system',
+            content: `${args.system}\n\nAlways respond by calling the \`${args.tool.name}\` tool exactly once. Do not reply with plain text.`,
+          },
+          { role: 'user', content: args.user },
+        ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: args.tool.name,
+              description: args.tool.description,
+              parameters: args.tool.parameters as Record<string, unknown>,
+              ...(args.strict ? { strict: true } : {}),
+            },
+          },
+        ],
+        tool_choice: { type: 'function', function: { name: args.tool.name } },
       },
-      { role: 'user', content: args.user },
-    ],
-    tools: [
-      {
-        type: 'function',
-        function: {
-          name: args.tool.name,
-          description: args.tool.description,
-          parameters: args.tool.parameters as Record<string, unknown>,
-          ...(args.strict ? { strict: true } : {}),
-        },
-      },
-    ],
-    tool_choice: { type: 'function', function: { name: args.tool.name } },
-  });
+      abort.options,
+    );
+  } finally {
+    abort.cancel();
+  }
 
   const message = response.choices[0]?.message;
   const toolCall = message?.tool_calls?.find(
@@ -125,43 +175,86 @@ async function callToolOnce<T>(args: {
   return result.data;
 }
 
+function toToolError(err: unknown): never {
+  if (isAbortError(err)) {
+    throw new StepError('The AI timed out.', {
+      detail: `Aborted after ${AI_CALL_TIMEOUT_MS}ms`,
+      retryable: true,
+      httpStatus: 504,
+    });
+  }
+  if (err instanceof OpenAI.APIError) throw mapOpenAIError(err);
+  if (err instanceof StepError) throw err;
+  throw new StepError("Couldn't reach the AI service.", {
+    detail: err instanceof Error ? err.message : String(err),
+    retryable: true,
+    cause: err,
+  });
+}
+
 export async function callTool<T>(args: {
   system: string;
   user: string;
   tool: ToolDef;
   schema: z.ZodType<T>;
   maxTokens: number;
+  timeoutMs?: number;
 }): Promise<T> {
+  const timeoutMs = args.timeoutMs ?? AI_CALL_TIMEOUT_MS;
   const strictFirst = args.tool.name === 'save_reels';
   try {
-    return await callToolOnce({ ...args, strict: strictFirst });
+    return await callToolOnce({ ...args, strict: strictFirst, timeoutMs });
   } catch (err) {
+    if (isAbortError(err)) toToolError(err);
     if (shouldRetryToolCall(err)) {
       try {
-        return await callToolOnce({ ...args, strict: false });
+        return await callToolOnce({ ...args, strict: false, timeoutMs });
       } catch (retryErr) {
-        if (retryErr instanceof OpenAI.APIError) throw mapOpenAIError(retryErr);
-        throw retryErr;
+        toToolError(retryErr);
       }
     }
-    if (err instanceof OpenAI.APIError) throw mapOpenAIError(err);
-    if (err instanceof StepError) throw err;
-    throw new StepError("Couldn't reach the AI service.", {
-      detail: err instanceof Error ? err.message : String(err),
-      retryable: true,
-      cause: err,
-    });
+    toToolError(err);
   }
 }
 
-export function imageGenerateParams(prompt: string, quality: ImageQuality = IMAGE_QUALITY) {
+export function imageGenerateParams(
+  prompt: string,
+  model: string = IMAGE_MODEL,
+  quality: ImageQuality = IMAGE_QUALITY,
+) {
+  if (isGptImageModel(model)) {
+    return {
+      model,
+      prompt,
+      size: '1024x1536' as const,
+      quality,
+      n: 1,
+    };
+  }
   return {
-    model: IMAGE_MODEL,
+    model,
     prompt,
-    size: '1024x1536' as const,
-    quality,
+    size: '1024x1792' as const,
+    quality: dalleQuality(quality),
     n: 1,
+    response_format: 'b64_json' as const,
   };
+}
+
+export function isImageModelUnavailable(err: {
+  status?: number | null;
+  message?: string;
+  code?: string | null;
+}): boolean {
+  const status = err.status ?? 0;
+  const message = err.message ?? '';
+  const code = err.code ?? '';
+  if (code === 'model_not_found' || /model_not_found/i.test(message)) return true;
+  if (/does not exist|unknown model|invalid model/i.test(message)) return true;
+  if ((status === 403 || status === 400) && /verif|organization|must be verified/i.test(message)) {
+    return true;
+  }
+  return false;
 }
 
 export function pngBlobFromB64(b64: string): Blob {
@@ -199,20 +292,58 @@ export async function pngBlobFromImageResponse(
   });
 }
 
-/** Paints a portrait image (1024×1536) and returns it as a PNG blob. */
-export async function generateImage(prompt: string): Promise<Blob> {
-  try {
-    const response = await getOpenAI().images.generate(imageGenerateParams(prompt));
-    return pngBlobFromImageResponse(response);
-  } catch (err) {
-    if (err instanceof StepError) throw err;
-    if (err instanceof OpenAI.APIError) {
-      throw mapOpenAIError(err);
+export async function generateImageWithModels(
+  prompt: string,
+  models: string[],
+  generate: (params: ReturnType<typeof imageGenerateParams>) => Promise<ImageGenerateResponse>,
+): Promise<{ blob: Blob; model: string }> {
+  const unique = [...new Set(models.filter(Boolean))];
+  let lastError: unknown;
+  for (const model of unique) {
+    try {
+      const response = await generate(imageGenerateParams(prompt, model));
+      console.info(`[art] image model used: ${model}`);
+      return { blob: await pngBlobFromImageResponse(response), model };
+    } catch (err) {
+      lastError = err;
+      const unavailable =
+        err instanceof OpenAI.APIError
+          ? isImageModelUnavailable(err)
+          : isImageModelUnavailable({
+              message: err instanceof Error ? err.message : String(err),
+            });
+      if (!unavailable) break;
+      console.warn(`[art] ${model} unavailable, trying next image model`, err);
     }
-    throw new StepError("Couldn't reach the image service.", {
-      detail: err instanceof Error ? err.message : String(err),
-      retryable: true,
-      cause: err,
-    });
   }
+  if (lastError instanceof StepError) throw lastError;
+  if (lastError instanceof OpenAI.APIError) throw mapOpenAIError(lastError);
+  throw new StepError("Couldn't reach the image service.", {
+    detail: lastError instanceof Error ? lastError.message : String(lastError),
+    retryable: true,
+    cause: lastError,
+  });
+}
+
+/** Paints a portrait image and returns it as a PNG blob. */
+export async function generateImage(prompt: string): Promise<Blob> {
+  const models = [IMAGE_MODEL, IMAGE_FALLBACK_MODEL];
+  const { blob } = await generateImageWithModels(prompt, models, async (params) => {
+    const abort = abortAfter(AI_CALL_TIMEOUT_MS);
+    try {
+      return await getOpenAI().images.generate(params, abort.options);
+    } catch (err) {
+      if (isAbortError(err)) {
+        throw new StepError('The AI timed out.', {
+          detail: `Aborted after ${AI_CALL_TIMEOUT_MS}ms`,
+          retryable: true,
+          httpStatus: 504,
+        });
+      }
+      throw err;
+    } finally {
+      abort.cancel();
+    }
+  });
+  return blob;
 }
