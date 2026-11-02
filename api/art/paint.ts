@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { configJsonResponse, requiredEnv, requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
-import { getAnthropic, getOpenAI } from '../../src/lib/ai/client.js';
+import { callTool, getOpenAI } from '../../src/lib/ai/client.js';
 import { z } from 'zod';
 
 const ART_SYSTEM = `You art-direct the background image for a short vertical research video ("insight reel"). Animated text sits on top of the image, so the image sets the mood; it never carries the message.
@@ -38,7 +38,6 @@ const artSchema = z.object({
 
 function requirePaintEnv() {
   requireSupabaseEnv();
-  requiredEnv('ANTHROPIC_API_KEY');
   requiredEnv('OPENAI_API_KEY');
 }
 
@@ -69,36 +68,6 @@ Style: candid documentary photograph, vertical 2:3 portrait, natural light, shal
 
 function artCaption(caption: string): string {
   return caption.replace(/["*]/g, "").trim().split(/\s+/).slice(0, 5).join(" ").slice(0, 40);
-}
-
-async function callTool<T>(args: {
-  system: string;
-  user: string;
-  tool: { name: string; description: string; parameters: object };
-  schema: z.ZodType<T>;
-  maxTokens: number;
-}): Promise<T> {
-  const response = await getAnthropic().messages.create({
-    model: 'claude-sonnet-5-5',
-    max_tokens: args.maxTokens,
-    system: args.system,
-    messages: [{ role: 'user', content: args.user }],
-    tools: [
-      {
-        name: args.tool.name,
-        description: args.tool.description,
-        input_schema: args.tool.parameters,
-      },
-    ],
-    tool_choice: { type: 'tool', name: args.tool.name },
-  });
-
-  const toolUse = response.content.find((block) => block.type === 'tool_use');
-  if (!toolUse || toolUse.type !== 'tool_use') {
-    throw new Error('No tool call in AI response');
-  }
-
-  return args.schema.parse(toolUse.input);
 }
 
 async function generateImage(prompt: string): Promise<Buffer> {

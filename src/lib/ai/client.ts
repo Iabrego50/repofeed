@@ -1,28 +1,21 @@
-import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { requiredEnv } from '../server-env.js';
 import { StepError, aiHttpError } from '../errors/step-error.js';
 
-let anthropic: Anthropic | undefined;
 let openai: OpenAI | undefined;
-
-export function getAnthropic(): Anthropic {
-  if (!anthropic) anthropic = new Anthropic({ apiKey: requiredEnv('ANTHROPIC_API_KEY') });
-  return anthropic;
-}
 
 export function getOpenAI(): OpenAI {
   if (!openai) openai = new OpenAI({ apiKey: requiredEnv('OPENAI_API_KEY') });
   return openai;
 }
 
-// Model configuration - use the correct current model IDs
-export const CHAT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+/** Text/JSON model. Override with OPENAI_TEXT_MODEL. */
+export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || 'gpt-5.1';
+export const CHAT_MODEL = TEXT_MODEL;
 export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-flare';
 export const CHUNK_CHARS = 70_000;
 export const MAX_COMPOSE_FINDINGS = 180;
-const AI_TIMEOUT_MS = 6 * 60_000;
 
 type ToolDef = {
   name: string;
@@ -47,36 +40,39 @@ export async function callTool<T>(args: {
   maxTokens: number;
 }): Promise<T> {
   try {
-    const response = await getAnthropic().messages.create({
-      model: CHAT_MODEL,
-      max_tokens: args.maxTokens,
-      system: `${args.system}\n\nAlways respond by calling the \`${args.tool.name}\` tool exactly once. Do not reply with plain text.`,
-      messages: [{ role: 'user', content: args.user }],
+    const response = await getOpenAI().chat.completions.create({
+      model: TEXT_MODEL,
+      max_completion_tokens: args.maxTokens,
+      messages: [
+        {
+          role: 'system',
+          content: `${args.system}\n\nAlways respond by calling the \`${args.tool.name}\` tool exactly once. Do not reply with plain text.`,
+        },
+        { role: 'user', content: args.user },
+      ],
       tools: [
         {
-          name: args.tool.name,
-          description: args.tool.description,
-          input_schema: args.tool.parameters as Anthropic.Tool.InputSchema,
+          type: 'function',
+          function: {
+            name: args.tool.name,
+            description: args.tool.description,
+            parameters: args.tool.parameters as Record<string, unknown>,
+          },
         },
       ],
-      tool_choice: { type: 'tool', name: args.tool.name },
+      tool_choice: { type: 'function', function: { name: args.tool.name } },
     });
 
-    const toolUse = response.content.find(
-      (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
-    );
+    const message = response.choices[0]?.message;
+    const toolCall = message?.tool_calls?.find(
+      (call) => call.type === 'function' && call.function.name === args.tool.name,
+    ) ?? message?.tool_calls?.[0];
 
     let parsed: unknown;
-    if (toolUse) {
-      parsed = toolUse.input;
-    } else {
-      // Fallback: try to extract JSON from text blocks
-      const textBlock = response.content.find(
-        (block): block is Anthropic.TextBlock => block.type === 'text'
-      );
-      if (textBlock) {
-        parsed = extractJson(textBlock.text);
-      }
+    if (toolCall && toolCall.type === 'function' && toolCall.function.arguments) {
+      parsed = JSON.parse(toolCall.function.arguments);
+    } else if (message?.content) {
+      parsed = extractJson(message.content);
     }
 
     if (parsed === undefined) {
@@ -97,7 +93,7 @@ export async function callTool<T>(args: {
     return result.data;
   } catch (err) {
     if (err instanceof StepError) throw err;
-    if (err instanceof Anthropic.APIError) {
+    if (err instanceof OpenAI.APIError) {
       throw aiHttpError(err.status || 500, err.message);
     }
     throw new StepError("Couldn't reach the AI service.", {

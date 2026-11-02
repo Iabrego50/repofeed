@@ -31,7 +31,7 @@ function logEntry(level: LogEntry['level'], message: string): LogEntry {
 
 function requireProcessEnv() {
   requireSupabaseEnv();
-  requiredEnv('ANTHROPIC_API_KEY');
+  requiredEnv('OPENAI_API_KEY');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

@@ -101,7 +101,6 @@ async function transpileGraph(files) {
 
 const SECRET_ENV = [
   "OPENAI_API_KEY",
-  "ANTHROPIC_API_KEY",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "SUPABASE_URL",

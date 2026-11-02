@@ -1,53 +1,23 @@
-import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { getOpenAI, TEXT_MODEL, IMAGE_MODEL } from './ai/client.js';
 
 // This file will be used in Edge Functions / server-side code
 // Client-side code should call Edge Functions instead
 
 export interface AIConfig {
-  anthropicApiKey: string;
   openaiApiKey: string;
 }
 
-let anthropicClient: Anthropic | null = null;
-let openaiClient: OpenAI | null = null;
-
 export function initializeAI(config: AIConfig) {
-  if (config.anthropicApiKey) {
-    anthropicClient = new Anthropic({
-      apiKey: config.anthropicApiKey,
-    });
-  }
-  
-  if (config.openaiApiKey) {
-    openaiClient = new OpenAI({
-      apiKey: config.openaiApiKey,
-    });
-  }
-}
-
-export function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('Server not configured: ANTHROPIC_API_KEY missing');
-    anthropicClient = new Anthropic({ apiKey });
-  }
-  return anthropicClient;
+  if (config.openaiApiKey) process.env.OPENAI_API_KEY ||= config.openaiApiKey;
 }
 
 export function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error('Server not configured: OPENAI_API_KEY missing');
-    openaiClient = new OpenAI({ apiKey });
-  }
-  return openaiClient;
+  return getOpenAI();
 }
 
-// Model constants - using direct Anthropic and OpenAI SDKs
-// Configure via env vars to allow swapping for self-hosted
-export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20241022';
-export const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'dall-e-3';
+export const OPENAI_TEXT_MODEL = TEXT_MODEL;
+export const OPENAI_IMAGE_MODEL = IMAGE_MODEL;
 
 export const CHUNK_CHARS = 70_000;
 export const MAX_COMPOSE_FINDINGS = 180;
@@ -214,7 +184,7 @@ export const COMPOSE_TOOL = {
 
 /** Generate an image using OpenAI DALL-E */
 export async function generateImage(prompt: string): Promise<Blob> {
-  const client = getOpenAIClient();
+  const client = getOpenAI();
   
   const response = await client.images.generate({
     model: OPENAI_IMAGE_MODEL,
@@ -234,33 +204,41 @@ export async function generateImage(prompt: string): Promise<Blob> {
   return new Blob([bytes], { type: 'image/png' });
 }
 
-/** Call Anthropic with a tool */
-export async function callAnthropicTool<T>(args: {
+/** Call OpenAI with a forced tool (JSON schema) once. */
+export async function callOpenAITool<T>(args: {
   system: string;
   user: string;
   tool: typeof EXTRACT_TOOL | typeof COMPOSE_TOOL;
   maxTokens: number;
 }): Promise<T> {
-  const client = getAnthropicClient();
+  const client = getOpenAI();
 
-  const response = await client.messages.create({
-    model: ANTHROPIC_MODEL,
-    max_tokens: args.maxTokens,
-    system: args.system,
+  const response = await client.chat.completions.create({
+    model: TEXT_MODEL,
+    max_completion_tokens: args.maxTokens,
     messages: [
+      { role: 'system', content: args.system },
+      { role: 'user', content: args.user },
+    ],
+    tools: [
       {
-        role: 'user',
-        content: args.user,
+        type: 'function',
+        function: {
+          name: args.tool.name,
+          description: args.tool.description,
+          parameters: args.tool.input_schema,
+        },
       },
     ],
-    tools: [args.tool],
-    tool_choice: { type: 'tool', name: args.tool.name },
+    tool_choice: { type: 'function', function: { name: args.tool.name } },
   });
 
-  const toolUse = response.content.find((block) => block.type === 'tool_use');
-  if (!toolUse || toolUse.type !== 'tool_use') {
+  const toolCall = response.choices[0]?.message?.tool_calls?.find(
+    (call) => call.type === 'function' && call.function.name === args.tool.name,
+  ) ?? response.choices[0]?.message?.tool_calls?.[0];
+  if (!toolCall || toolCall.type !== 'function' || !toolCall.function.arguments) {
     throw new Error('No tool use in response');
   }
 
-  return toolUse.input as T;
+  return JSON.parse(toolCall.function.arguments) as T;
 }

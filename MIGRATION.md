@@ -13,7 +13,7 @@ This guide walks you through migrating repofeed.ai from Hercules to a fully inde
 **After (Independent stack):**
 - Backend: Supabase (Postgres + Row Level Security + Storage)
 - Auth: Supabase Auth (Google, Microsoft, Apple, Email OTP)
-- AI: Direct Anthropic & OpenAI SDK calls
+- AI: OpenAI SDK only (text + images)
 - Deployment: Vercel (web) + iOS via Capacitor
 - Data: Your own Supabase instance
 
@@ -21,10 +21,9 @@ This guide walks you through migrating repofeed.ai from Hercules to a fully inde
 
 1. **Supabase Account**: Create a project at https://supabase.com
 2. **Vercel Account**: Sign up at https://vercel.com
-3. **Anthropic API Key**: Get from https://console.anthropic.com
-4. **OpenAI API Key**: Get from https://platform.openai.com
-5. **Resend Account** (for emails): Sign up at https://resend.com
-6. **Apple Developer Account** (for iOS): https://developer.apple.com
+3. **OpenAI API Key**: Get from https://platform.openai.com
+4. **Resend Account** (for emails): Sign up at https://resend.com
+5. **Apple Developer Account** (for iOS): https://developer.apple.com
 
 ## Step 1: Set Up Supabase
 
@@ -148,9 +147,9 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbG...
 
-# From AI provider dashboards
-ANTHROPIC_API_KEY=sk-ant-...
+# From OpenAI dashboard (text + images)
 OPENAI_API_KEY=sk-...
+OPENAI_TEXT_MODEL=gpt-5.1
 
 # From Resend dashboard
 RESEND_API_KEY=re_...
@@ -186,7 +185,6 @@ In Vercel Dashboard → Settings → Environment Variables, add:
 
 **Production only (secrets):**
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `ANTHROPIC_API_KEY`
 - `OPENAI_API_KEY`
 - `RESEND_API_KEY`
 
@@ -344,8 +342,7 @@ Before going live, verify:
 
 - Vercel Dashboard: Check for errors
 - Supabase Dashboard: Monitor database performance
-- Anthropic Dashboard: Track API usage and costs
-- OpenAI Dashboard: Track image generation usage
+- OpenAI Dashboard: Track text and image generation usage
 
 ### Backup
 
@@ -383,7 +380,7 @@ When you push to `main` branch:
 ### AI generation failing
 
 **Problem:** Jobs stuck or erroring
-- Check Anthropic/OpenAI API keys are set
+- Check `OPENAI_API_KEY` is set
 - Verify rate limits not exceeded
 - Check Vercel function logs for errors
 
@@ -404,13 +401,10 @@ When you push to `main` branch:
 - Hobby: Free (good for staging)
 - Pro: $20/month (recommended for production)
 
-**Anthropic:**
-- Claude Sonnet: ~$3-15 per 1M tokens
-- Estimate: $50-200/month depending on usage
-
 **OpenAI:**
-- DALL-E 3: $0.040-0.080 per image
-- Estimate: $20-100/month depending on usage
+- Text (`gpt-5.1` default, override with `OPENAI_TEXT_MODEL`): token usage varies by model
+- Images: per-image pricing
+- Estimate: $70-300/month depending on usage
 
 **Resend:**
 - Free: 3,000 emails/month
@@ -422,7 +416,6 @@ When you push to `main` branch:
 
 - **Supabase**: support@supabase.io or Discord
 - **Vercel**: support@vercel.com
-- **Anthropic**: support@anthropic.com
 - **OpenAI**: help.openai.com
 
 ---

@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { configJsonResponse, requiredEnv, requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
-import { getAnthropic } from '../../src/lib/ai/client.js';
+import { callTool } from '../../src/lib/ai/client.js';
 import { summary } from '../../src/lib/api/insights.js';
 import { z } from 'zod';
 
 function requireDeckEnv() {
   requireSupabaseEnv();
-  requiredEnv('ANTHROPIC_API_KEY');
+  requiredEnv('OPENAI_API_KEY');
 }
 
 const DECK_SYSTEM = `You write executive research summary decks. Given study insights, engagement data, and team comments, create 8-15 slides that tell the story of what was learned.
@@ -50,36 +50,6 @@ const DECK_TOOL = {
 const deckSchema = z.object({
   slides: z.array(z.any()),
 });
-
-async function callTool<T>(args: {
-  system: string;
-  user: string;
-  tool: { name: string; description: string; parameters: object };
-  schema: z.ZodType<T>;
-  maxTokens: number;
-}): Promise<T> {
-  const response = await getAnthropic().messages.create({
-    model: 'claude-sonnet-5-5',
-    max_tokens: args.maxTokens,
-    system: args.system,
-    messages: [{ role: 'user', content: args.user }],
-    tools: [
-      {
-        name: args.tool.name,
-        description: args.tool.description,
-        input_schema: args.tool.parameters,
-      },
-    ],
-    tool_choice: { type: 'tool', name: args.tool.name },
-  });
-
-  const toolUse = response.content.find((block) => block.type === 'tool_use');
-  if (!toolUse || toolUse.type !== 'tool_use') {
-    throw new Error('No tool call in AI response');
-  }
-
-  return args.schema.parse(toolUse.input);
-}
 
 export async function POST(req: Request) {
   try {
