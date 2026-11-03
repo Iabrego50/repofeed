@@ -20,7 +20,11 @@ describe("art storage URLs", () => {
     expect(publicObjectUrl(ORIGIN, ART_BUCKET, path)).toBe(
       "https://proj.supabase.co/storage/v1/object/public/art/reel-1/1700000000000.png",
     );
-    const painted = paintedArtFields({ origin: ORIGIN, storageId: path, caption: "Kitchen, weeknight" });
+    const painted = paintedArtFields({
+      origin: ORIGIN,
+      storageId: path,
+      caption: "Kitchen, weeknight",
+    });
     expect(painted.footage).toEqual({
       url: "https://proj.supabase.co/storage/v1/object/public/art/reel-1/1700000000000.png",
       storageId: path,
@@ -35,35 +39,82 @@ describe("art storage URLs", () => {
       bucket: "art",
       caption: "Kitchen, weeknight",
     });
-    expect(painted.footage.url).not.toMatch(/\/uploads\/|\/footage\/|\/generated\//);
+    expect(painted.footage.url).not.toMatch(
+      /\/uploads\/|\/footage\/|\/generated\//,
+    );
   });
 
   it("treats /object/public URLs to private buckets as unusable", () => {
     expect(
-      isPrivateBucketPublicUrl(`${ORIGIN}/storage/v1/object/public/uploads/art-reel.png`),
+      isPrivateBucketPublicUrl(
+        `${ORIGIN}/storage/v1/object/public/uploads/art-reel.png`,
+      ),
     ).toBe(true);
     expect(
-      isPrivateBucketPublicUrl(`${ORIGIN}/storage/v1/object/public/footage/clip.mp4`),
+      isPrivateBucketPublicUrl(
+        `${ORIGIN}/storage/v1/object/public/footage/clip.mp4`,
+      ),
     ).toBe(true);
     expect(
-      isPrivateBucketPublicUrl(`${ORIGIN}/storage/v1/object/public/generated/still.png`),
+      isPrivateBucketPublicUrl(
+        `${ORIGIN}/storage/v1/object/public/generated/still.png`,
+      ),
     ).toBe(true);
-    expect(isPrivateBucketPublicUrl(`${ORIGIN}/storage/v1/object/public/art/reel-1/1.png`)).toBe(false);
+    expect(
+      isPrivateBucketPublicUrl(
+        `${ORIGIN}/storage/v1/object/public/art/reel-1/1.png`,
+      ),
+    ).toBe(false);
     expect(isPrivateBucketPublicUrl("/footage/calendar.mp4")).toBe(false);
-    expect(parseStoragePublicUrl(`${ORIGIN}/storage/v1/object/public/uploads/art-1.png`)).toEqual({
+    expect(
+      parseStoragePublicUrl(
+        `${ORIGIN}/storage/v1/object/public/uploads/art-1.png`,
+      ),
+    ).toEqual({
       bucket: "uploads",
       path: "art-1.png",
     });
   });
 
+  it("rebuilds AI video URLs from the stored path", () => {
+    expect(
+      hydrateFootageMedia(
+        {
+          url: `${ORIGIN}/storage/v1/object/public/videos/reel/1.mp4`,
+          storageId: "reel/1.mp4",
+          bucket: "videos",
+          media: "video",
+          caption: "Kitchen",
+        },
+        ORIGIN,
+      ),
+    ).toEqual({
+      url: `${ORIGIN}/storage/v1/object/public/videos/reel/1.mp4`,
+      storageId: "reel/1.mp4",
+      bucket: "videos",
+      media: "video",
+      caption: "Kitchen",
+    });
+  });
+
   it("rebuilds art URLs from the stored path and leaves stock clips alone", () => {
-    expect(hydrateFootageMedia({ url: "/footage/calendar.mp4", caption: "stock" }, ORIGIN)).toEqual({
+    expect(
+      hydrateFootageMedia(
+        { url: "/footage/calendar.mp4", caption: "stock" },
+        ORIGIN,
+      ),
+    ).toEqual({
       url: "/footage/calendar.mp4",
       caption: "stock",
     });
     expect(
       hydrateFootageMedia(
-        { url: `${ORIGIN}/storage/v1/object/public/uploads/old.png`, storageId: "reel/1.png", bucket: "art", media: "image" },
+        {
+          url: `${ORIGIN}/storage/v1/object/public/uploads/old.png`,
+          storageId: "reel/1.png",
+          bucket: "art",
+          media: "image",
+        },
         ORIGIN,
       ),
     ).toEqual({
@@ -101,7 +152,9 @@ describe("art storage URLs", () => {
       created_at: "2026-11-02T00:00:00.000Z",
       updated_at: "2026-11-02T00:00:00.000Z",
     });
-    expect(reel.footage?.url).toBe(`${origin}/storage/v1/object/public/art/reel-1/1.png`);
+    expect(reel.footage?.url).toBe(
+      `${origin}/storage/v1/object/public/art/reel-1/1.png`,
+    );
     expect(reel.footage?.storageId).toBe("reel-1/1.png");
     expect(reel.footage?.bucket).toBe("art");
     expect(reel.footage?.url).not.toMatch(/\/uploads\//);

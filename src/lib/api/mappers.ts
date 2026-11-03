@@ -1,5 +1,5 @@
-import type { CommentKind, JobStatus, JobPhase } from '@/schema/validators';
-import { hydrateFootageMedia, publicStorageOrigin } from './storage-urls';
+import type { CommentKind, JobStatus, JobPhase } from "@/schema/validators";
+import { hydrateFootageMedia, publicStorageOrigin } from "./storage-urls";
 
 // Database row types (snake_case from Supabase)
 export interface DbReel {
@@ -13,7 +13,9 @@ export interface DbReel {
   scenes: any;
   finding_ids: any;
   source_names: any;
-  footage: any;
+  footage: unknown;
+  video?: unknown;
+  art?: unknown;
   warning: string | null;
   enabled: boolean;
   created_at: string;
@@ -110,9 +112,14 @@ export interface FeedReel {
   footage?: {
     url: string;
     caption: string;
-    media?: 'image';
+    media?: "image" | "video";
     storageId?: string;
     bucket?: string;
+  } | null;
+  video?: {
+    status?: string;
+    error?: string;
+    jobId?: string;
   } | null;
   warning: string | null;
   enabled: boolean;
@@ -131,7 +138,7 @@ export interface FeedReel {
 }
 
 export interface Scene {
-  type: 'hook' | 'line' | 'list' | 'stat' | 'quote' | 'cta';
+  type: "hook" | "line" | "list" | "stat" | "quote" | "cta";
   text?: string;
   kicker?: string;
   title?: string;
@@ -239,6 +246,7 @@ export function mapReel(row: DbReel): FeedReel {
     findingIds: parseJson(row.finding_ids),
     sourceNames: parseJson(row.source_names),
     footage: hydrateFootageMedia(parseJson(row.footage), publicStorageOrigin()),
+    video: parseJson(row.video),
     warning: row.warning,
     enabled: row.enabled,
     createdAt: row.created_at,
@@ -262,11 +270,13 @@ export function mapComment(row: DbComment): Comment {
     resolved: row.resolved,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    author: row.users ? {
-      name: row.users.name || undefined,
-      email: row.users.email || undefined,
-      avatar: row.users.avatar || undefined,
-    } : undefined,
+    author: row.users
+      ? {
+          name: row.users.name || undefined,
+          email: row.users.email || undefined,
+          avatar: row.users.avatar || undefined,
+        }
+      : undefined,
   };
 }
 
@@ -340,7 +350,7 @@ function parseJson(value: any): any {
   if (value === null || value === undefined) {
     return value;
   }
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     try {
       return JSON.parse(value);
     } catch {

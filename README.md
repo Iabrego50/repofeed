@@ -24,6 +24,13 @@ Names only — never commit secret values.
 - `OPENAI_TEXT_MODEL` (optional)
 - `OPENAI_IMAGE_MODEL` (optional)
 - `OPENAI_IMAGE_QUALITY` (optional)
+- `OPENAI_VIDEO_ENABLED` (optional; default on. Set `false` / `0` / `off` to kill AI video generation)
+- `OPENAI_VIDEO_MODEL` (optional; default `sora-2`)
+- `OPENAI_VIDEO_SECONDS` (optional; `4`, `8`, or `12`; default `4`)
+- `OPENAI_VIDEO_SIZE` (optional; default `720x1280`)
+- `OPENAI_VIDEO_CONCURRENCY` (optional; default `2`, max `4`)
+- `OPENAI_VIDEO_STUDY_CAP` (optional; overrides the per-study cap. Defaults: free 6, pro 12, team 24)
+- `OPENAI_VIDEO_BASE_URL` (optional; default `https://api.openai.com/v1`. Use only for a Videos-API-compatible proxy)
 - `RESEND_API_KEY`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
@@ -36,6 +43,30 @@ Names only — never commit secret values.
 - `STRIPE_PORTAL_CONFIGURATION` (optional; Customer Portal configuration id when the Stripe account is shared)
 
 If Stripe env vars are missing, checkout, portal and plan endpoints return HTTP 503 and the billing UI shows **Billing is coming soon**.
+
+### AI reel videos
+
+After a study is generated, each reel gets a short vertical AI background via OpenAI's Videos API (`POST /v1/videos`, Sora). The create call is cheap; rendering takes minutes, so `/api/videos/process` (and the daily `/api/generation/recover` cron) poll the job, download the MP4, and store it in the public `videos` Supabase bucket.
+
+While a job is queued/in progress, or if it fails, the reel plays a rotating stock clip so it is never blank. Existing AI videos are never regenerated. Apply `supabase/migrations/20261103043000_reel_ai_videos.sql` before enabling this in production.
+
+**Backfill existing reels** (also runs when an editor opens Review, and from the daily recover cron):
+
+```bash
+# One study (editor bearer token)
+curl -X POST "$SITE_URL/api/videos/backfill" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"studyId":"<study-id>"}'
+
+# Internal: all eligible reels, or the broken "Why people really leave" reel
+curl -X POST "$SITE_URL/api/videos/backfill" \
+  -H "x-generation-internal-secret: $GENERATION_INTERNAL_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"titleContains":"Why people really leave","limit":20}'
+```
+
+OpenAI shut the public Videos API down on 2026-09-24. Jobs then fail, stay on the stock fallback, and are recorded on `reels.video`. Use `OPENAI_VIDEO_ENABLED=false` to skip create calls.
 
 ## Stripe setup
 

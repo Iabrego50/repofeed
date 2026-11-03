@@ -1,23 +1,12 @@
 import { supabase } from "../supabase";
+import { STOCK_CLIPS } from "../reel/stock-clips";
 import { canCreateShareLink, effectiveRole } from "./access";
 import type { Role } from "@/schema";
 
-export const STOCK_CLIPS = [
-  { url: "/footage/receipts.mp4", label: "Budget review" },
-  { url: "/footage/mother-cooking.mp4", label: "Home visit" },
-  { url: "/footage/box-at-door.mp4", label: "Doorstep cam" },
-  { url: "/footage/calendar.mp4", label: "Planning session" },
-  { url: "/footage/family-dinner.mp4", label: "Dinner obs" },
-  { url: "/footage/wall-clock.mp4", label: "Cook-along" },
-  { url: "/footage/half-onion.mp4", label: "Prep cam" },
-  { url: "/footage/frustrated-phone.mp4", label: "Cancel flow" },
-  { url: "/footage/takeout-tv.mp4", label: "Evening obs" },
-  { url: "/footage/mushrooms.mp4", label: "Cook-along" },
-] as const;
+export { STOCK_CLIPS };
 
 export type FootageSource =
-  | { kind: "stock"; url: string }
-  | { kind: "upload"; clipId: string };
+  { kind: "stock"; url: string } | { kind: "upload"; clipId: string };
 
 export type ReelFootage = {
   caption: string;
@@ -33,7 +22,9 @@ export function normalizeFootageCaption(caption: string): string {
   return caption.trim().slice(0, 160);
 }
 
-export function validateFootage(footage: Exclude<ReelFootage, null>): Exclude<ReelFootage, null> {
+export function validateFootage(
+  footage: Exclude<ReelFootage, null>,
+): Exclude<ReelFootage, null> {
   if (footage.source.kind === "stock" && !isStockClip(footage.source.url)) {
     throw new Error("Only built-in stock clips can be used");
   }
@@ -45,7 +36,9 @@ export function validateFootage(footage: Exclude<ReelFootage, null>): Exclude<Re
 }
 
 async function requireEditor(workspaceId: string): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
   const { data: membership } = await supabase
@@ -61,7 +54,9 @@ async function requireEditor(workspaceId: string): Promise<string> {
     .eq("id", workspaceId)
     .maybeSingle();
 
-  const role = membership ? effectiveRole(membership.role as Role, workspace?.seat_overage) : null;
+  const role = membership
+    ? effectiveRole(membership.role as Role, workspace?.seat_overage)
+    : null;
   if (!role || !canCreateShareLink(role)) {
     throw new Error("Only workspace editors can do this");
   }
@@ -123,7 +118,10 @@ export async function saveUpload(args: {
   return data.id;
 }
 
-export async function setReelFootage(args: { reelId: string; footage: ReelFootage }) {
+export async function setReelFootage(args: {
+  reelId: string;
+  footage: ReelFootage;
+}) {
   const { data: reel } = await supabase
     .from("reels")
     .select("id, workspace_id")
@@ -144,7 +142,9 @@ export async function setReelFootage(args: { reelId: string; footage: ReelFootag
   return next;
 }
 
-export async function removeUpload(args: { clipId: string }): Promise<{ cleared: number }> {
+export async function removeUpload(args: {
+  clipId: string;
+}): Promise<{ cleared: number }> {
   const { data: clip } = await supabase
     .from("footage_clips")
     .select("id, workspace_id, storage_id")

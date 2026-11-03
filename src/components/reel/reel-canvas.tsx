@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils.ts";
 import { REEL_H, REEL_W } from "@/lib/reel/constants.ts";
-import { ReelPainter, ensureReelFonts, reelScript, type ReelData } from "@/lib/reel/painter.ts";
+import {
+  ReelPainter,
+  ensureReelFonts,
+  reelScript,
+  type ReelData,
+} from "@/lib/reel/painter.ts";
+import { stockClipForIndex } from "@/lib/api/reel-video.ts";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
 
 /**
@@ -48,11 +54,29 @@ export default function ReelCanvas({
     progressRef.current = onProgress;
   });
 
-  const reelKey = JSON.stringify([reel.scenes, reel.track, reel.trackIndex, reel.studyTitle, reel.footage?.url, reel.footage?.caption]);
+  const reelKey = JSON.stringify([
+    reel.scenes,
+    reel.track,
+    reel.trackIndex,
+    reel.studyTitle,
+    reel.footage?.url,
+    reel.footage?.caption,
+  ]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-  const isStill = reel.footage?.media === "image";
-  const footageUrl = isStill ? undefined : reel.footage?.url;
+  const [brokenByKey, setBrokenByKey] = useState<{
+    key: string;
+    url: string | null;
+  }>({ key: "", url: null });
+  const brokenUrl = brokenByKey.key === reelKey ? brokenByKey.url : null;
+  const fallbackClip = stockClipForIndex(reel.trackIndex).url;
+  const isStill =
+    reel.footage?.media === "image" && brokenUrl !== reel.footage.url;
+  const footageUrl = isStill
+    ? undefined
+    : brokenUrl
+      ? fallbackClip
+      : reel.footage?.url || (reel.footage == null ? fallbackClip : undefined);
   const stillUrl = isStill ? reel.footage?.url : undefined;
   // Neighbouring scenes only fetch enough for a still frame; the full clip downloads once it plays.
   const [hasPlayed, setHasPlayed] = useState(playing);
@@ -201,7 +225,10 @@ export default function ReelCanvas({
   return (
     <div
       ref={boxRef}
-      className={cn("relative flex items-center justify-center overflow-hidden", className)}
+      className={cn(
+        "relative flex items-center justify-center overflow-hidden",
+        className,
+      )}
     >
       {footageUrl && (
         // Hidden source for the canvas; frames are painted under the text.
@@ -214,10 +241,25 @@ export default function ReelCanvas({
           preload={hasPlayed ? "auto" : "metadata"}
           aria-hidden
           className="pointer-events-none absolute size-px opacity-0"
+          onError={() => {
+            if (reel.footage?.url && brokenUrl !== reel.footage.url) {
+              setBrokenByKey({ key: reelKey, url: reel.footage.url });
+            }
+          }}
         />
       )}
       {stillUrl && (
-        <img ref={imageRef} src={stillUrl} alt="" aria-hidden decoding="async" className="pointer-events-none absolute size-px opacity-0" />
+        <img
+          ref={imageRef}
+          src={stillUrl}
+          alt=""
+          aria-hidden
+          decoding="async"
+          className="pointer-events-none absolute size-px opacity-0"
+          onError={() => {
+            if (stillUrl) setBrokenByKey({ key: reelKey, url: stillUrl });
+          }}
+        />
       )}
       <canvas
         ref={canvasRef}
