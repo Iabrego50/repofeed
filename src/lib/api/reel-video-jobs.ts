@@ -1,6 +1,9 @@
 import { mapWithConcurrency } from "./async-jobs.js";
 import { publicObjectUrl, publicStorageOrigin } from "./storage-urls.js";
-import type { OpenAIVideoClient } from "../ai/videos.js";
+import {
+  OPENAI_VIDEOS_SHUTDOWN_MESSAGE,
+  type VideoProvider,
+} from "../ai/videos.js";
 import {
   VIDEO_BUCKET,
   VIDEO_PROCESS_BATCH,
@@ -19,12 +22,13 @@ import {
   skippedVideoState,
   startingVideoState,
   studyVideoCap,
+  videoAspectRatio,
   videoCaption,
   videoConcurrency,
   videoGenerationEnabled,
   videoModel,
+  videoResolution,
   videoSeconds,
-  videoSize,
   videoStoragePath,
   type ReelVideo,
   type ReelVideoRow,
@@ -102,7 +106,7 @@ export async function enqueueReelVideos(
     if (!videoGenerationEnabled(env)) {
       await store.updateReel(row.id, {
         footage: fallbackFootageFor(row),
-        video: skippedVideoState("OPENAI_VIDEO_ENABLED is off", now),
+        video: skippedVideoState("AI video generation is off", now, env),
         updated_at: nowIso(now),
       });
       skipped += 1;
@@ -122,7 +126,7 @@ export async function enqueueReelVideos(
     if (used >= cap) {
       await store.updateReel(row.id, {
         footage: fallbackFootageFor(row),
-        video: skippedVideoState(`Study video cap reached (${cap})`, now),
+        video: skippedVideoState(`Study video cap reached (${cap})`, now, env),
         updated_at: nowIso(now),
       });
       skipped += 1;
@@ -135,7 +139,7 @@ export async function enqueueReelVideos(
     );
     await store.updateReel(row.id, {
       footage: fallbackFootageFor(row),
-      video: queuedVideoState(now),
+      video: queuedVideoState(now, env),
       updated_at: nowIso(now),
     });
     queued += 1;
@@ -146,12 +150,15 @@ export async function enqueueReelVideos(
 
 async function startOne(
   store: ReelVideoStore,
-  openai: OpenAIVideoClient,
+  provider: VideoProvider,
   row: ReelVideoRow,
   env: NodeJS.ProcessEnv,
   now: number,
 ): Promise<"started" | "failed" | "skipped"> {
-  const started = startingVideoState(row.video, now);
+  const started = {
+    ...startingVideoState(row.video, now),
+    provider: provider.id,
+  };
   await store.updateReel(row.id, {
     footage: fallbackFootageFor(row),
     video: started,
@@ -160,12 +167,13 @@ async function startOne(
 
   const prompt = buildVideoPrompt(row);
   try {
-    const job = await openai.create(
+    const job = await provider.create(
       {
         prompt,
         model: videoModel(env),
         seconds: videoSeconds(env),
-        size: videoSize(env),
+        resolution: videoResolution(env),
+        aspectRatio: videoAspectRatio(env),
         imageUrl: referenceImageUrl(row),
       },
       env,
@@ -175,7 +183,11 @@ async function startOne(
       video: inProgressVideoState(
         started,
         job.id,
-        { model: job.model ?? videoModel(env), prompt },
+        {
+          model: job.model ?? videoModel(env),
+          prompt,
+          provider: provider.id,
+        },
         now,
       ),
       updated_at: nowIso(now),
@@ -199,7 +211,7 @@ async function startOne(
 
 async function pollOne(
   store: ReelVideoStore,
-  openai: OpenAIVideoClient,
+  provider: VideoProvider,
   row: ReelVideoRow,
   env: NodeJS.ProcessEnv,
   now: number,
@@ -207,8 +219,17 @@ async function pollOne(
   const jobId = row.video?.jobId;
   if (!jobId) return "failed";
 
+  if (row.video?.provider === "openai" && provider.id !== "openai") {
+    await store.updateReel(row.id, {
+      footage: fallbackFootageFor(row),
+      video: failedVideoState(row.video, OPENAI_VIDEOS_SHUTDOWN_MESSAGE, now),
+      updated_at: nowIso(now),
+    });
+    return "failed";
+  }
+
   try {
-    const job = await openai.retrieve(jobId, env);
+    const job = await provider.retrieve(jobId, env);
     if (job.status === "queued" || job.status === "in_progress") {
       await store.updateReel(row.id, {
         footage: fallbackFootageFor(row),
@@ -231,7 +252,7 @@ async function pollOne(
       return "failed";
     }
 
-    const bytes = await openai.download(jobId, env);
+    const bytes = await provider.download(jobId, env);
     const storageId = videoStoragePath(row.id, now);
     await store.uploadVideo(storageId, bytes);
     const origin = publicStorageOrigin(env);
@@ -275,7 +296,7 @@ async function pollOne(
 
 export async function processReelVideos(
   store: ReelVideoStore,
-  openai: OpenAIVideoClient,
+  provider: VideoProvider,
   args: {
     studyId?: string;
     env?: NodeJS.ProcessEnv;
@@ -314,7 +335,7 @@ export async function processReelVideos(
   const concurrency = videoConcurrency(env);
 
   const startResults = await mapWithConcurrency(toStart, concurrency, (row) =>
-    startOne(store, openai, row, env, now),
+    startOne(store, provider, row, env, now),
   );
   for (const item of startResults) {
     if (item.status !== "fulfilled") {
@@ -327,7 +348,7 @@ export async function processReelVideos(
   }
 
   const pollResults = await mapWithConcurrency(toPoll, concurrency, (row) =>
-    pollOne(store, openai, row, env, now),
+    pollOne(store, provider, row, env, now),
   );
   for (const item of pollResults) {
     if (item.status !== "fulfilled") {
@@ -357,10 +378,10 @@ export function composeReelVideoFields(
   if (!videoGenerationEnabled(env)) {
     return {
       footage,
-      video: skippedVideoState("OPENAI_VIDEO_ENABLED is off", now),
+      video: skippedVideoState("AI video generation is off", now, env),
     };
   }
-  return { footage, video: queuedVideoState(now) };
+  return { footage, video: queuedVideoState(now, env) };
 }
 
 export function reelAlreadyHasAiVideo(

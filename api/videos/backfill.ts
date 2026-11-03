@@ -21,7 +21,7 @@ export const maxDuration = 60;
 
 function requireVideoEnv() {
   requireSupabaseEnv();
-  requiredEnv("OPENAI_API_KEY");
+  requiredEnv("XAI_API_KEY");
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

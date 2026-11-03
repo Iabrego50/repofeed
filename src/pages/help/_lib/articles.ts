@@ -115,7 +115,7 @@ export const ARTICLES: HelpArticle[] = [
     bullets: [
       "Your own clips: upload MP4, MOV or WebM videos up to 60 MB. Clips are stored securely and everyone in the workspace can reuse them. You can delete a clip at any time.",
       'Stock clips: pick from the built-in library. You can add a short caption, like "Home visit, day 3". Stock is also the fallback while an AI video is rendering.',
-      "AI video: after generation, each scene gets a vertical AI background. Opening Review backfills any scene that still needs one. Use Create AI backdrops only if you still want a painted still.",
+      "AI video: after generation, each scene gets a short vertical Grok Imagine clip. Opening Review backfills any scene that still needs one. Use Create AI backdrops only if you still want a painted still.",
     ],
     tip: "AI videos are capped per study (free 6, pro 12, team 24) and never regenerated once they exist.",
   },

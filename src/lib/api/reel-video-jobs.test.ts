@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { RetryableHttpError } from "./async-jobs";
 import {
   enqueueReelVideos,
@@ -10,7 +10,7 @@ import {
   type ReelVideo,
   type ReelVideoRow,
 } from "./reel-video";
-import type { OpenAIVideoClient } from "../ai/videos";
+import type { VideoProvider } from "../ai/videos";
 
 function row(partial: Partial<ReelVideoRow> & { id: string }): ReelVideoRow {
   return {
@@ -65,10 +65,9 @@ function memoryStore(
   };
 }
 
-function openaiMock(
-  overrides: Partial<OpenAIVideoClient> = {},
-): OpenAIVideoClient {
+function providerMock(overrides: Partial<VideoProvider> = {}): VideoProvider {
   return {
+    id: "xai",
     create: async () => ({ id: "video_1", status: "queued" }),
     retrieve: async () => ({ id: "video_1", status: "completed" }),
     download: async () => new Uint8Array([1, 2, 3, 4]),
@@ -77,7 +76,7 @@ function openaiMock(
 }
 
 describe("reel video job lifecycle", () => {
-  it("enqueues a stock fallback and then completes an OpenAI video onto public storage", async () => {
+  it("enqueues a stock fallback and then completes an xAI video onto public storage", async () => {
     const store = memoryStore([row({ id: "reel-1" })]);
     const env = {
       OPENAI_VIDEO_ENABLED: "true",
@@ -92,18 +91,20 @@ describe("reel video job lifecycle", () => {
     expect(queued.queued).toBe(1);
     expect(store.rows[0].footage?.url).toBe("/footage/receipts.mp4");
     expect(store.rows[0].video?.status).toBe("queued");
+    expect(store.rows[0].video?.provider).toBe("xai");
 
-    const processed = await processReelVideos(store, openaiMock(), {
+    const processed = await processReelVideos(store, providerMock(), {
       studyId: "study-1",
       env,
       now: 1_700_000_000_100,
     });
     expect(processed.started).toBe(1);
     expect(store.rows[0].video?.status).toBe("in_progress");
+    expect(store.rows[0].video?.provider).toBe("xai");
     expect(store.rows[0].video?.jobId).toBe("video_1");
     expect(store.rows[0].footage?.url).toBe("/footage/receipts.mp4");
 
-    const finished = await processReelVideos(store, openaiMock(), {
+    const finished = await processReelVideos(store, providerMock(), {
       studyId: "study-1",
       env,
       now: 1_700_000_000_200,
@@ -156,13 +157,13 @@ describe("reel video job lifecycle", () => {
       }),
     ]);
     let createCalls = 0;
-    const openai = openaiMock({
+    const provider = providerMock({
       create: async () => {
         createCalls += 1;
         throw new RetryableHttpError(429, "rate limited", "0");
       },
     });
-    const first = await processReelVideos(store, openai, {
+    const first = await processReelVideos(store, provider, {
       studyId: "study-1",
       now: 10,
     });
@@ -239,33 +240,36 @@ describe("reel video job lifecycle", () => {
     expect(store.rows[1].video?.status).toBe("skipped");
     expect(store.rows[1].footage?.url).toMatch(/^\/footage\//);
   });
-});
 
-describe("OpenAI video client retries", () => {
-  it("retries 429 then returns the job", async () => {
-    const { createOpenAIVideo } = await import("../ai/videos");
-    let calls = 0;
-    const fetchImpl = vi.fn(async () => {
-      calls += 1;
-      if (calls < 2) {
-        return new Response(
-          JSON.stringify({ error: { message: "slow down" } }),
-          {
-            status: 429,
-            headers: { "retry-after": "0" },
-          },
-        );
-      }
-      return new Response(JSON.stringify({ id: "video_9", status: "queued" }), {
-        status: 200,
-      });
+  it("fails leftover OpenAI jobs so the next pass can start on xAI", async () => {
+    const store = memoryStore([
+      row({
+        id: "reel-1",
+        footage: {
+          url: "/footage/receipts.mp4",
+          source: { kind: "stock", url: "/footage/receipts.mp4" },
+        },
+        video: {
+          status: "in_progress",
+          provider: "openai",
+          jobId: "video_old",
+          attempts: 1,
+          updatedAt: "",
+        },
+      }),
+    ]);
+    const provider = providerMock({
+      retrieve: async () => {
+        throw new Error("should not poll OpenAI");
+      },
     });
-    const job = await createOpenAIVideo(
-      { prompt: "test" },
-      { OPENAI_API_KEY: "sk-test" },
-      fetchImpl as unknown as typeof fetch,
-    );
-    expect(job.id).toBe("video_9");
-    expect(calls).toBe(2);
+    const result = await processReelVideos(store, provider, {
+      studyId: "study-1",
+      now: 10,
+    });
+    expect(result.failed).toBe(1);
+    expect(store.rows[0].video?.status).toBe("failed");
+    expect(store.rows[0].video?.error).toMatch(/shut down on 2026-09-24/);
+    expect(store.rows[0].footage?.url).toBe("/footage/receipts.mp4");
   });
 });

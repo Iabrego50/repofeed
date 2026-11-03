@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { STOCK_CLIPS } from "../reel/stock-clips";
 import {
+  DEFAULT_VIDEO_MODEL,
+  DEFAULT_VIDEO_SECONDS,
   PLAN_VIDEO_CAPS,
   buildVideoPrompt,
   countsTowardCap,
@@ -14,6 +16,9 @@ import {
   stockClipForIndex,
   studyVideoCap,
   videoGenerationEnabled,
+  videoModel,
+  videoResolution,
+  videoSeconds,
 } from "./reel-video";
 
 describe("reel AI video policy", () => {
@@ -79,6 +84,7 @@ describe("reel AI video policy", () => {
       false,
     );
     expect(videoGenerationEnabled({ OPENAI_VIDEO_ENABLED: "0" })).toBe(false);
+    expect(videoGenerationEnabled({ VIDEO_ENABLED: "false" })).toBe(false);
     expect(studyVideoCap("free")).toBe(PLAN_VIDEO_CAPS.free);
     expect(studyVideoCap("pro")).toBe(PLAN_VIDEO_CAPS.pro);
     expect(studyVideoCap("team")).toBe(PLAN_VIDEO_CAPS.team);
@@ -86,6 +92,10 @@ describe("reel AI video policy", () => {
     expect(countsTowardCap({ footage: null, video: queuedVideoState() })).toBe(
       true,
     );
+    expect(queuedVideoState(0).provider).toBe("xai");
+    expect(videoModel({})).toBe(DEFAULT_VIDEO_MODEL);
+    expect(videoSeconds({})).toBe(DEFAULT_VIDEO_SECONDS);
+    expect(videoResolution({})).toBe("720p");
   });
 
   it("starts queued jobs and retries failed ones after backoff", () => {

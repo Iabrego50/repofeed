@@ -13,7 +13,7 @@ import {
   sendRouteError,
 } from "../_lib/respond.js";
 import { supabase } from "../_lib/supabase.js";
-import { defaultOpenAIVideoClient } from "../../src/lib/ai/videos.js";
+import { getVideoProvider } from "../../src/lib/ai/videos.js";
 import { processReelVideos } from "../../src/lib/api/reel-video-jobs.js";
 import { createReelVideoStore } from "../../src/lib/api/reel-video-store.js";
 
@@ -21,7 +21,7 @@ export const maxDuration = 120;
 
 function requireVideoEnv() {
   requireSupabaseEnv();
-  requiredEnv("OPENAI_API_KEY");
+  requiredEnv("XAI_API_KEY");
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const result = await processReelVideos(
       createReelVideoStore(supabase),
-      defaultOpenAIVideoClient(),
+      getVideoProvider(),
       { studyId },
     );
     return res.status(202).json({ accepted: true, ...result });

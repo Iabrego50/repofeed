@@ -32,8 +32,8 @@ vi.mock("./reel-video-jobs.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./reel-video-jobs")>();
   return {
     ...actual,
-    processReelVideos: (store: unknown, openai: unknown, args?: unknown) =>
-      bag.process(store, openai, args),
+    processReelVideos: (store: unknown, provider: unknown, args?: unknown) =>
+      bag.process(store, provider, args),
     enqueueReelVideos: vi.fn(async () => ({ queued: 1, skipped: 0 })),
   };
 });
@@ -77,6 +77,7 @@ const ENV_KEYS = [
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "OPENAI_API_KEY",
+  "XAI_API_KEY",
   "GENERATION_INTERNAL_SECRET",
 ] as const;
 const envSnapshot = Object.fromEntries(
@@ -87,6 +88,7 @@ function setApiEnv() {
   process.env.SUPABASE_URL = "https://example.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
   process.env.OPENAI_API_KEY = "sk-test";
+  process.env.XAI_API_KEY = "xai-test";
   process.env.GENERATION_INTERNAL_SECRET = "internal-secret";
 }
 

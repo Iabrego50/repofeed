@@ -2,9 +2,11 @@ import { STOCK_CLIPS } from "../reel/stock-clips.js";
 import { nextAttemptAtIso } from "./async-jobs.js";
 
 export const VIDEO_BUCKET = "videos";
-export const DEFAULT_VIDEO_MODEL = "sora-2";
-export const DEFAULT_VIDEO_SECONDS = "4";
+export const DEFAULT_VIDEO_MODEL = "grok-imagine-video-1.5-lite";
+export const DEFAULT_VIDEO_SECONDS = 5;
 export const DEFAULT_VIDEO_SIZE = "720x1280";
+export const DEFAULT_VIDEO_RESOLUTION = "720p";
+export const DEFAULT_VIDEO_ASPECT_RATIO = "9:16";
 export const DEFAULT_VIDEO_CONCURRENCY = 2;
 export const MAX_VIDEO_ATTEMPTS = 4;
 export const VIDEO_PROCESS_BATCH = 8;
@@ -20,9 +22,11 @@ export type VideoPlan = keyof typeof PLAN_VIDEO_CAPS;
 export type ReelVideoStatus =
   "queued" | "starting" | "in_progress" | "completed" | "failed" | "skipped";
 
+export type ReelVideoProvider = "xai" | "openai";
+
 export type ReelVideo = {
   status: ReelVideoStatus;
-  provider: "openai";
+  provider: ReelVideoProvider;
   jobId?: string;
   model?: string;
   prompt?: string;
@@ -75,34 +79,72 @@ export function envFlag(
   return defaultValue;
 }
 
+function firstEnv(env: NodeJS.ProcessEnv, ...names: string[]): string {
+  for (const name of names) {
+    const value = String(env[name] ?? "").trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+export function videoProviderName(
+  env: NodeJS.ProcessEnv = process.env,
+): ReelVideoProvider {
+  const raw = firstEnv(env, "VIDEO_PROVIDER").toLowerCase();
+  if (raw === "openai") return "openai";
+  return "xai";
+}
+
 export function videoGenerationEnabled(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
+  if (firstEnv(env, "VIDEO_ENABLED"))
+    return envFlag("VIDEO_ENABLED", true, env);
   return envFlag("OPENAI_VIDEO_ENABLED", true, env);
 }
 
 export function videoModel(env: NodeJS.ProcessEnv = process.env): string {
   return (
-    String(env.OPENAI_VIDEO_MODEL || DEFAULT_VIDEO_MODEL).trim() ||
-    DEFAULT_VIDEO_MODEL
+    firstEnv(env, "VIDEO_MODEL", "OPENAI_VIDEO_MODEL") || DEFAULT_VIDEO_MODEL
   );
 }
 
-export function videoSeconds(
-  env: NodeJS.ProcessEnv = process.env,
-): "4" | "8" | "12" {
-  const raw = String(env.OPENAI_VIDEO_SECONDS || DEFAULT_VIDEO_SECONDS).trim();
-  if (raw === "8" || raw === "12") return raw;
-  return "4";
+export function videoSeconds(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = firstEnv(env, "VIDEO_SECONDS", "OPENAI_VIDEO_SECONDS");
+  const n = Number(raw || DEFAULT_VIDEO_SECONDS);
+  if (Number.isFinite(n) && n >= 1 && n <= 15) return Math.round(n);
+  return DEFAULT_VIDEO_SECONDS;
 }
 
 export function videoSize(env: NodeJS.ProcessEnv = process.env): string {
-  const raw = String(env.OPENAI_VIDEO_SIZE || DEFAULT_VIDEO_SIZE).trim();
+  const raw = firstEnv(env, "VIDEO_SIZE", "OPENAI_VIDEO_SIZE");
   return raw || DEFAULT_VIDEO_SIZE;
 }
 
+export function videoResolution(
+  env: NodeJS.ProcessEnv = process.env,
+): "480p" | "720p" | "1080p" {
+  const raw =
+    firstEnv(env, "VIDEO_RESOLUTION") ||
+    videoSize(env) ||
+    DEFAULT_VIDEO_RESOLUTION;
+  if (/1080/.test(raw)) return "1080p";
+  if (/480/.test(raw)) return "480p";
+  return "720p";
+}
+
+export function videoAspectRatio(env: NodeJS.ProcessEnv = process.env): string {
+  const raw = firstEnv(env, "VIDEO_ASPECT_RATIO");
+  if (raw) return raw;
+  const size = videoSize(env);
+  if (size === "1280x720" || size === "1920x1080") return "16:9";
+  return DEFAULT_VIDEO_ASPECT_RATIO;
+}
+
 export function videoConcurrency(env: NodeJS.ProcessEnv = process.env): number {
-  const n = Number(env.OPENAI_VIDEO_CONCURRENCY);
+  const n = Number(
+    firstEnv(env, "VIDEO_CONCURRENCY", "OPENAI_VIDEO_CONCURRENCY"),
+  );
   if (Number.isFinite(n) && n >= 1) return Math.min(4, Math.floor(n));
   return DEFAULT_VIDEO_CONCURRENCY;
 }
@@ -111,8 +153,11 @@ export function studyVideoCap(
   plan: string | null | undefined,
   env: NodeJS.ProcessEnv = process.env,
 ): number {
-  const override = Number(env.OPENAI_VIDEO_STUDY_CAP);
-  if (Number.isFinite(override) && override >= 0) return Math.floor(override);
+  const raw = firstEnv(env, "VIDEO_STUDY_CAP", "OPENAI_VIDEO_STUDY_CAP");
+  if (raw) {
+    const override = Number(raw);
+    if (Number.isFinite(override) && override >= 0) return Math.floor(override);
+  }
   if (plan === "team") return PLAN_VIDEO_CAPS.team;
   if (plan === "pro") return PLAN_VIDEO_CAPS.pro;
   return PLAN_VIDEO_CAPS.free;
@@ -209,10 +254,13 @@ export function shouldPollJob(video: ReelVideo | null | undefined): boolean {
   );
 }
 
-export function queuedVideoState(now = Date.now()): ReelVideo {
+export function queuedVideoState(
+  now = Date.now(),
+  env: NodeJS.ProcessEnv = process.env,
+): ReelVideo {
   return {
     status: "queued",
-    provider: "openai",
+    provider: videoProviderName(env),
     attempts: 0,
     updatedAt: new Date(now).toISOString(),
   };
@@ -235,13 +283,18 @@ export function startingVideoState(
 export function inProgressVideoState(
   previous: ReelVideo,
   jobId: string,
-  extras: { model?: string; prompt?: string } = {},
+  extras: {
+    model?: string;
+    prompt?: string;
+    provider?: ReelVideoProvider;
+  } = {},
   now = Date.now(),
 ): ReelVideo {
   return {
     ...previous,
     status: "in_progress",
     jobId,
+    provider: extras.provider ?? previous.provider,
     model: extras.model ?? previous.model,
     prompt: extras.prompt ?? previous.prompt,
     updatedAt: new Date(now).toISOString(),
@@ -286,10 +339,14 @@ export function failedVideoState(
   };
 }
 
-export function skippedVideoState(reason: string, now = Date.now()): ReelVideo {
+export function skippedVideoState(
+  reason: string,
+  now = Date.now(),
+  env: NodeJS.ProcessEnv = process.env,
+): ReelVideo {
   return {
     status: "skipped",
-    provider: "openai",
+    provider: videoProviderName(env),
     attempts: 0,
     error: reason.slice(0, 500),
     updatedAt: new Date(now).toISOString(),
