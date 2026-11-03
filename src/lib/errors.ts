@@ -10,5 +10,4 @@ export function toastError(error: unknown): void {
   alert(getErrorMessage(error));
 }
 
-// Convex compatibility
 export const errorMessage = getErrorMessage;

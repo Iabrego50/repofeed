@@ -141,6 +141,31 @@ describe("stripe integration", () => {
     });
   });
 
+  it("subscription.created during a trial writes the paid plan", async () => {
+    fake().queue("workspaces", { data: { paid_plan: null, lapsed_plan: null, checkout_by: "u1" } });
+    fake().queue("users", { data: { trial_used_at: null } });
+    await handleStripeEvent({
+      type: "customer.subscription.created",
+      data: { object: { status: "trialing", metadata: { workspace_id: "ws1", plan: "pro" } } },
+    });
+    expect(fake().lastCall("workspaces", "update")?.payload).toEqual({
+      paid_plan: "pro",
+      lapsed_plan: null,
+    });
+  });
+
+  it("subscription.updated keeps a paid plan while active", async () => {
+    fake().queue("workspaces", { data: { paid_plan: "pro", lapsed_plan: null, checkout_by: null } });
+    await handleStripeEvent({
+      type: "customer.subscription.updated",
+      data: { object: { status: "active", metadata: { workspace_id: "ws1", plan: "team" } } },
+    });
+    expect(fake().lastCall("workspaces", "update")?.payload).toEqual({
+      paid_plan: "team",
+      lapsed_plan: null,
+    });
+  });
+
   it("invoice.payment_failed marks lapsed_plan", async () => {
     const retrieve = vi.fn().mockResolvedValue({ metadata: { workspace_id: "ws1", plan: "team" } });
     await handleStripeEvent(

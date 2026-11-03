@@ -1,4 +1,4 @@
-import { COMPANY_NAME, SUPPORT_EMAIL } from "@/lib/site.ts";
+import { COMPANY_NAME, GOVERNING_LAW, LEGAL_ADDRESS, LEGAL_ENTITY_NAME, SUPPORT_EMAIL } from "@/lib/site.ts";
 import LegalPage, { type LegalSection } from "./_components/legal-page.tsx";
 
 const SECTIONS: LegalSection[] = [
@@ -43,6 +43,13 @@ const SECTIONS: LegalSection[] = [
     ],
   },
   {
+    heading: "Analytics and cookies",
+    paragraphs: [
+      "We use first-party analytics from our hosting provider (Vercel Analytics and Speed Insights) to understand which pages load, how fast they are, and whether the app is working. These tools set a small amount of data in your browser so we can count visits and measure performance. We do not use them to advertise to you, and we do not sell that data.",
+      "The app also stores what it needs to run: your sign-in session, the workspace you last used, and whether you have seen the in-app tour. You can clear these by signing out and clearing site data in your browser.",
+    ],
+  },
+  {
     heading: "How long we keep it",
     paragraphs: [
       "We keep your content for as long as your workspace exists. When you delete a study, we remove its text, scenes and related activity. If you would like your account or workspace deleted, email us and we will remove it, except for records we must keep by law, such as invoices.",
@@ -63,6 +70,12 @@ const SECTIONS: LegalSection[] = [
   {
     heading: "Children",
     paragraphs: [`${COMPANY_NAME} is a work tool and isn't meant for anyone under 18.`],
+  },
+  {
+    heading: "Who we are",
+    paragraphs: [
+      `${LEGAL_ENTITY_NAME}, ${LEGAL_ADDRESS}, is the controller of personal information described on this page. These commitments are interpreted under the laws of ${GOVERNING_LAW}.`,
+    ],
   },
   {
     heading: "Changes and contact",

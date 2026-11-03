@@ -4,7 +4,25 @@ import { requiredEnv, requireSupabaseEnv, sendRouteError } from '../_lib/respond
 import { supabase } from '../_lib/supabase.js';
 import { handleStripeEvent } from '../../src/lib/billing/stripe-events.js';
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 let stripe: Stripe | undefined;
+
+async function readRawBody(req: VercelRequest): Promise<string | Buffer> {
+  if (Buffer.isBuffer(req.body)) return req.body;
+  if (typeof req.body === 'string') return req.body;
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk));
+  }
+  if (chunks.length) return Buffer.concat(chunks);
+  if (req.body != null) return JSON.stringify(req.body);
+  return '';
+}
 
 function getStripe(): Stripe {
   if (!stripe) {
@@ -42,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let event: Stripe.Event;
 
   try {
-    event = getStripe().webhooks.constructEvent(req.body, sig, requiredEnv('STRIPE_WEBHOOK_SECRET'));
+    event = getStripe().webhooks.constructEvent(await readRawBody(req), sig, requiredEnv('STRIPE_WEBHOOK_SECRET'));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'invalid signature';
     console.error('Webhook signature verification failed:', message);

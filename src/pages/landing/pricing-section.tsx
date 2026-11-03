@@ -2,32 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import { IntervalToggle } from "@/components/plan-grid.tsx";
-import type { Interval } from "@/lib/plans.ts";
-
-const PLANS = [
-  {
-    id: "free" as const,
-    name: "Free",
-    tagline: "For individuals getting started",
-    price: { month: 0, year: 0 },
-    features: ["1 study", "Unlimited viewers", "Basic support"],
-  },
-  {
-    id: "pro" as const,
-    name: "Pro",
-    tagline: "For power users",
-    price: { month: 29, year: 24 },
-    highlight: true,
-    features: ["Unlimited studies", "2 editors", "Priority support", "Custom branding"],
-  },
-  {
-    id: "team" as const,
-    name: "Team",
-    tagline: "For organizations",
-    price: { month: 99, year: 79 },
-    features: ["Everything in Pro", "Unlimited editors", "SSO", "Dedicated support"],
-  },
-];
+import { PLANS, formatPrice, type Interval } from "@/lib/plans.ts";
 
 /** Public pricing; every button leads to sign-up, upgrades happen in-app. */
 export default function PricingSection() {
@@ -57,7 +32,7 @@ export default function PricingSection() {
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`rounded-lg border p-6 ${plan.highlight ? 'border-primary shadow-lg' : 'border-border'}`}
+              className={`rounded-lg border p-6 ${plan.highlight ? "border-primary shadow-lg" : "border-border"}`}
             >
               {plan.highlight && (
                 <div className="mb-4 text-center text-xs font-semibold uppercase text-primary">
@@ -67,15 +42,19 @@ export default function PricingSection() {
               <h3 className="text-2xl font-bold">{plan.name}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
               <div className="mt-6 text-4xl font-bold">
-                ${interval === 'year' ? plan.price.year : plan.price.month}
-                <span className="text-base font-normal text-muted-foreground">
-                  /{interval === 'year' ? 'editor/month' : 'editor/month'}
-                </span>
+                {formatPrice(plan.price[interval])}
+                {plan.id !== "free" && (
+                  <span className="text-base font-normal text-muted-foreground">/{plan.unit}</span>
+                )}
               </div>
-              {interval === 'year' && plan.price.year < plan.price.month && (
+              {plan.id === "free" ? (
+                <p className="mt-1 text-sm text-muted-foreground">{plan.unit}</p>
+              ) : interval === "year" && plan.price.year < plan.price.month ? (
                 <p className="mt-1 text-sm text-primary">
-                  Save ${(plan.price.month - plan.price.year) * 12}/year
+                  Save ${((plan.price.month - plan.price.year) * 12).toFixed(0)}/year
                 </p>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">Billed monthly</p>
               )}
               <ul className="mt-6 space-y-3">
                 {plan.features.map((feature) => (

@@ -2,6 +2,10 @@ export interface AuthCallbackMessages {
   loading?: string;
   errorTitle?: string;
   missingState?: string;
+  codeVerifier?: string;
+  resendPrompt?: string;
+  resendButton?: string;
+  resendSent?: string;
   returnHome?: string;
   tryAgain?: string;
 }
@@ -13,6 +17,11 @@ export const authCallbackMessages = {
     errorTitle: "Something went wrong",
     missingState:
       "We couldn't find this sign-in request in this browser. Please reopen the original link in your browser (for example, Safari or Chrome), not inside another app, and sign in again.",
+    codeVerifier:
+      "This sign-in link was opened on a different device or browser than the one that requested it. Request a new link and open it on this device.",
+    resendPrompt: "Enter the same email and we'll send a fresh link.",
+    resendButton: "Email me a new link",
+    resendSent: "Check your email for a new sign-in link.",
     returnHome: "Return home",
     tryAgain: "Try again",
   },

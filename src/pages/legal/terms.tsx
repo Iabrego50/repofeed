@@ -1,4 +1,4 @@
-import { COMPANY_NAME, SUPPORT_EMAIL } from "@/lib/site.ts";
+import { COMPANY_NAME, GOVERNING_LAW, LEGAL_ADDRESS, LEGAL_ENTITY_NAME, SUPPORT_EMAIL } from "@/lib/site.ts";
 import LegalPage, { type LegalSection } from "./_components/legal-page.tsx";
 
 const SECTIONS: LegalSection[] = [
@@ -45,7 +45,7 @@ const SECTIONS: LegalSection[] = [
     bullets: [
       "Paid plans are billed in advance, monthly or yearly, plus applicable tax. Team plans are billed per editor seat, with a minimum of 2 seats.",
       "Each person can use one 14-day free trial. Unless you cancel before the trial ends, your plan starts and your card is charged.",
-      "You can cancel anytime from Plan and billing. Your plan stays active until the end of the period you have paid for. Except where the law requires, payments are not refunded.",
+      "You can cancel anytime from Plan and billing. Your plan stays active until the end of the period you have paid for. Except where the law requires, or as described in Help → Refunds, payments are not refunded.",
       "If a payment fails or a plan ends, the workspace moves to the Free plan's limits. Your studies are kept, but some features are paused until you restore a paid plan.",
       "We may change prices. We will give you at least 30 days' notice before a price change affects you.",
     ],
@@ -65,7 +65,7 @@ const SECTIONS: LegalSection[] = [
   {
     heading: "Governing law",
     paragraphs: [
-      "These terms are governed by the laws of the United States and of the state where our business is registered, without regard to conflict-of-law rules.",
+      `These terms are an agreement with ${LEGAL_ENTITY_NAME}, ${LEGAL_ADDRESS}. They are governed by the laws of the United States and of ${GOVERNING_LAW}, without regard to conflict-of-law rules.`,
     ],
   },
   {

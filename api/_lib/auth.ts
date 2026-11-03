@@ -138,6 +138,23 @@ export async function requireWorkspaceEditor(
   }
 }
 
+export async function requireWorkspaceOwner(
+  userId: string,
+  workspaceId: string,
+  client: ServerClient = supabase,
+): Promise<void> {
+  const { data, error } = await client
+    .from("workspace_members")
+    .select("role")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || data?.role !== "owner") {
+    throw new AuthError(403, "Forbidden");
+  }
+}
+
 export async function ensurePublicUser(
   user: User,
   client: ServerClient = supabase,

@@ -8,6 +8,8 @@ import Logo from "@/components/logo.tsx";
 import SiteFooter from "@/components/site-footer.tsx";
 import { resolveReturnTo } from "./return-to.ts";
 
+const googleEnabled = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === "true";
+
 export default function SignInPage() {
   const { signIn, signInWithOtp } = useAuth();
   const [params] = useSearchParams();
@@ -57,7 +59,9 @@ export default function SignInPage() {
         <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">Sign in</p>
         <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight">Sign in to repofeed.ai</h1>
         <p className="mt-3 text-muted-foreground">
-          Use Google or a magic link. After you sign in you'll land back where you left off.
+          {googleEnabled
+            ? "Use Google or a magic link. After you sign in you'll land back where you left off."
+            : "Use a magic link. After you sign in you'll land back where you left off."}
         </p>
         {sent ? (
           <p className="mt-8 rounded-2xl border border-border bg-card p-5 text-sm">
@@ -65,14 +69,18 @@ export default function SignInPage() {
           </p>
         ) : (
           <div className="mt-8 space-y-4">
-            <Button size="lg" className="h-12 w-full font-semibold" onClick={() => void onGoogle()} disabled={busy}>
-              Continue with Google
-            </Button>
-            <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              or email
-              <span className="h-px flex-1 bg-border" />
-            </div>
+            {googleEnabled && (
+              <>
+                <Button size="lg" className="h-12 w-full font-semibold" onClick={() => void onGoogle()} disabled={busy}>
+                  Continue with Google
+                </Button>
+                <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  or email
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
+            )}
             <form onSubmit={(e) => void onEmail(e)} className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="signin-email">Work email</Label>

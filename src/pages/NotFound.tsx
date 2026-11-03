@@ -20,6 +20,7 @@ export default function NotFound() {
         </Link>
       </header>
       <main className="relative m-auto max-w-md pb-24 text-center">
+        <meta name="robots" content="noindex" />
         <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">Error 404</p>
         <h1 className="mt-3 text-balance font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
           This scene doesn't exist.

@@ -16,6 +16,25 @@ function asPlan(value: unknown): Plan | undefined {
   return undefined;
 }
 
+const PAID_STATUSES = new Set(["active", "trialing"]);
+
+function subscriptionIdFromInvoice(invoice: Record<string, unknown>): string | undefined {
+  const direct = invoice.subscription;
+  if (typeof direct === "string" && direct) return direct;
+  if (direct && typeof direct === "object" && "id" in direct) {
+    const id = (direct as { id?: unknown }).id;
+    if (typeof id === "string" && id) return id;
+  }
+  const parent = invoice.parent as { subscription_details?: { subscription?: unknown } } | undefined;
+  const nested = parent?.subscription_details?.subscription;
+  if (typeof nested === "string" && nested) return nested;
+  if (nested && typeof nested === "object" && "id" in nested) {
+    const id = (nested as { id?: unknown }).id;
+    if (typeof id === "string" && id) return id;
+  }
+  return undefined;
+}
+
 export async function handleStripeEvent(
   event: StripeLikeEvent,
   stripe?: StripeSubscriptionLike,
@@ -37,7 +56,7 @@ export async function handleStripeEvent(
       const subscription = event.data.object;
       const metadata = (subscription.metadata ?? {}) as { workspace_id?: string; plan?: string };
       const plan = asPlan(metadata.plan);
-      if (metadata.workspace_id && plan && plan !== "free" && subscription.status === "active") {
+      if (metadata.workspace_id && plan && plan !== "free" && PAID_STATUSES.has(String(subscription.status))) {
         await syncPlanToDatabase(metadata.workspace_id, plan, client);
         return "ok";
       }
@@ -54,7 +73,7 @@ export async function handleStripeEvent(
     }
     case "invoice.payment_failed": {
       const invoice = event.data.object;
-      const subscriptionId = invoice.subscription as string | undefined;
+      const subscriptionId = subscriptionIdFromInvoice(invoice);
       if (subscriptionId && stripe) {
         const sub = await stripe.retrieve(subscriptionId);
         if (sub.metadata?.workspace_id) {
