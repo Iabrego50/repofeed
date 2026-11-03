@@ -1,5 +1,8 @@
+import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
+import type { Comment as FeedComment, Finding } from "@/lib/api/mappers.ts";
+import type { CommentKind } from "@/schema/validators.ts";
 import type { FeedReel } from "../_lib/types.ts";
 import Discussion from "./discussion.tsx";
 import Evidence from "./evidence.tsx";
@@ -12,17 +15,34 @@ export default function ReelPanel({
   onTab,
   onClose,
   className,
+  comments,
+  onAddComment,
+  findings,
+  discussionFooter,
 }: {
   reel: FeedReel;
   tab: PanelTab;
   onTab: (t: PanelTab) => void;
   onClose?: () => void;
   className?: string;
+  comments?: FeedComment[];
+  onAddComment?: (args: {
+    reelId: string;
+    kind: CommentKind;
+    body: string;
+    parentId?: string;
+  }) => void;
+  findings?: Finding[];
+  discussionFooter?: ReactNode;
 }) {
   return (
     <div className={cn("flex min-h-0 flex-col bg-card", className)}>
       <div className="flex items-center gap-2 border-b border-border px-3 pt-2">
-        <div role="tablist" aria-label="Scene details" className="flex flex-1 gap-1">
+        <div
+          role="tablist"
+          aria-label="Scene details"
+          className="flex flex-1 gap-1"
+        >
           {(["discussion", "evidence"] as const).map((t) => (
             <button
               key={t}
@@ -36,9 +56,12 @@ export default function ReelPanel({
               )}
             >
               {t}
-              {t === "discussion" && (reel.counts?.comments || reel.commentCount || 0) > 0 && (
-                <span className="ml-1.5 font-mono text-xs text-muted-foreground">{reel.counts?.comments || reel.commentCount || 0}</span>
-              )}
+              {t === "discussion" &&
+                (reel.counts?.comments || reel.commentCount || 0) > 0 && (
+                  <span className="ml-1.5 font-mono text-xs text-muted-foreground">
+                    {reel.counts?.comments || reel.commentCount || 0}
+                  </span>
+                )}
             </button>
           ))}
         </div>
@@ -55,9 +78,20 @@ export default function ReelPanel({
       </div>
       <div className="border-b border-border px-4 py-3">
         <p className="truncate font-display font-bold">{reel.title}</p>
-        <p className="truncate text-xs text-muted-foreground">{reel.track} · {reel.studyTitle}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {reel.track} · {reel.studyTitle}
+        </p>
       </div>
-      {tab === "discussion" ? <Discussion reelId={reel._id} /> : <Evidence reel={reel} />}
+      {tab === "discussion" ? (
+        <Discussion
+          reelId={reel._id}
+          comments={comments}
+          onAddComment={onAddComment}
+          footer={discussionFooter}
+        />
+      ) : (
+        <Evidence reel={reel} findings={findings} />
+      )}
     </div>
   );
 }
