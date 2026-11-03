@@ -51,3 +51,11 @@ export function requireStripeSecret(env: NodeJS.ProcessEnv = process.env): strin
   if (!value) throw new ServerNotConfiguredError("STRIPE_SECRET_KEY");
   return value;
 }
+
+/** Optional Customer Portal configuration id for a shared Stripe account. */
+export function resolveStripePortalConfiguration(
+  env: NodeJS.ProcessEnv = process.env,
+): string | undefined {
+  const value = String(env.STRIPE_PORTAL_CONFIGURATION ?? "").trim();
+  return value || undefined;
+}

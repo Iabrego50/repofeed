@@ -33,6 +33,7 @@ Names only — never commit secret values.
 - `STRIPE_PRICE_TEAM_YEARLY`
 - `STRIPE_PRICE_PRO` (legacy fallback if monthly/yearly ids are unset)
 - `STRIPE_PRICE_TEAM` (legacy fallback if monthly/yearly ids are unset)
+- `STRIPE_PORTAL_CONFIGURATION` (optional; Customer Portal configuration id when the Stripe account is shared)
 
 If Stripe env vars are missing, checkout, portal and plan endpoints return HTTP 503 and the billing UI shows **Billing is coming soon**.
 
@@ -48,7 +49,7 @@ If Stripe env vars are missing, checkout, portal and plan endpoints return HTTP 
    - `customer.subscription.deleted`
    - `invoice.payment_failed`
 5. Put the webhook signing secret in `STRIPE_WEBHOOK_SECRET`.
-6. Enable the Stripe Customer Portal (cancel, update card, switch plan) so **Manage subscription** works.
+6. Create a Customer Portal configuration for this app (the Stripe account may be shared). Put its id in `STRIPE_PORTAL_CONFIGURATION`. If unset, Stripe uses the account default.
 
 ## Supabase email templates (magic links across devices)
 

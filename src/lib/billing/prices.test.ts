@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveStripePriceId, stripePriceEnvNames } from "./prices";
+import { resolveStripePortalConfiguration, resolveStripePriceId, stripePriceEnvNames } from "./prices";
 
 describe("Stripe price env resolution", () => {
   it("prefers monthly/yearly ids and falls back to STRIPE_PRICE_PRO / TEAM", () => {
@@ -16,5 +16,11 @@ describe("Stripe price env resolution", () => {
     ).toBe("price_year");
     expect(resolveStripePriceId("pro", "year", { STRIPE_PRICE_PRO: "price_legacy" })).toBe("price_legacy");
     expect(resolveStripePriceId("team", "month", {})).toBeUndefined();
+  });
+
+  it("reads STRIPE_PORTAL_CONFIGURATION only when set", () => {
+    expect(resolveStripePortalConfiguration({})).toBeUndefined();
+    expect(resolveStripePortalConfiguration({ STRIPE_PORTAL_CONFIGURATION: "   " })).toBeUndefined();
+    expect(resolveStripePortalConfiguration({ STRIPE_PORTAL_CONFIGURATION: "bpc_repofeed" })).toBe("bpc_repofeed");
   });
 });
