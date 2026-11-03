@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Plan } from "@/schema";
 import { requiredEnv } from "../server-env.js";
 import { TRIAL_DAYS, teamSeats } from "./constants.js";
-import { requireStripePriceId, requireStripeSecret } from "./prices.js";
+import { requireStripePriceId, requireStripeSecret, resolveStripePortalConfiguration } from "./prices.js";
 export { syncPlanToDatabase } from "./sync-plan.js";
 
 let stripe: Stripe | undefined;
@@ -101,14 +101,12 @@ export async function createCheckoutSession(
     ],
     success_url: args.successUrl,
     cancel_url: args.cancelUrl,
-    subscription_data: {
-      trial_period_days: userData?.trial_used_at ? 0 : TRIAL_DAYS,
-      metadata: {
-        workspace_id: args.workspaceId,
-        plan: args.plan,
-        interval: args.interval,
-      },
-    },
+    subscription_data: checkoutSubscriptionData({
+      trialUsed: Boolean(userData?.trial_used_at),
+      workspaceId: args.workspaceId,
+      plan: args.plan,
+      interval: args.interval,
+    }),
     metadata: {
       workspace_id: args.workspaceId,
       user_id: args.userId,
@@ -137,11 +135,41 @@ export async function createPortalSession(
 ): Promise<{ url: string }> {
   const supabase = await resolveClient(client);
   const customerId = await getOrCreateCustomer(args.workspaceId, supabase);
-  const session = await getStripe().billingPortal.sessions.create({
-    customer: customerId,
-    return_url: args.returnUrl,
-  });
+  const session = await getStripe().billingPortal.sessions.create(
+    portalSessionParams({ customerId, returnUrl: args.returnUrl }),
+  );
   return { url: session.url };
+}
+
+export function checkoutSubscriptionData(args: {
+  trialUsed: boolean;
+  workspaceId: string;
+  plan: "pro" | "team";
+  interval: "month" | "year";
+}): {
+  metadata: { workspace_id: string; plan: string; interval: string };
+  trial_period_days?: number;
+} {
+  const metadata = {
+    workspace_id: args.workspaceId,
+    plan: args.plan,
+    interval: args.interval,
+  };
+  if (args.trialUsed) return { metadata };
+  return { trial_period_days: TRIAL_DAYS, metadata };
+}
+
+export function portalSessionParams(
+  args: { customerId: string; returnUrl: string },
+  env: NodeJS.ProcessEnv = process.env,
+): { customer: string; return_url: string; configuration?: string } {
+  const params: { customer: string; return_url: string; configuration?: string } = {
+    customer: args.customerId,
+    return_url: args.returnUrl,
+  };
+  const configuration = resolveStripePortalConfiguration(env);
+  if (configuration) params.configuration = configuration;
+  return params;
 }
 
 export async function getPlanFromStripe(customerId: string): Promise<Plan> {

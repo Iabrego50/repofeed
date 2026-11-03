@@ -32,6 +32,7 @@ import {
   countEditors,
   teamSeats,
 } from "./limits";
+import { checkoutSubscriptionData, portalSessionParams } from "./stripe";
 import { handleStripeEvent } from "./stripe-events";
 import { planSyncPayload } from "./sync-plan";
 
@@ -107,6 +108,50 @@ describe("stripe integration", () => {
   it("trial period is 14 days", () => {
     expect(TRIAL_DAYS).toBe(14);
     expect(() => assertPaid("free", FEATURE_PRO)).toThrow(/Pro/);
+  });
+
+  it("omits trial_period_days when the trial is already used", () => {
+    const used = checkoutSubscriptionData({
+      trialUsed: true,
+      workspaceId: "ws1",
+      plan: "pro",
+      interval: "month",
+    });
+    expect(used).toEqual({
+      metadata: { workspace_id: "ws1", plan: "pro", interval: "month" },
+    });
+    expect(used).not.toHaveProperty("trial_period_days");
+
+    expect(
+      checkoutSubscriptionData({
+        trialUsed: false,
+        workspaceId: "ws1",
+        plan: "team",
+        interval: "year",
+      }),
+    ).toEqual({
+      trial_period_days: TRIAL_DAYS,
+      metadata: { workspace_id: "ws1", plan: "team", interval: "year" },
+    });
+  });
+
+  it("passes portal configuration only when STRIPE_PORTAL_CONFIGURATION is set", () => {
+    expect(
+      portalSessionParams({ customerId: "cus_1", returnUrl: "https://repofeed.ai/billing" }, {}),
+    ).toEqual({
+      customer: "cus_1",
+      return_url: "https://repofeed.ai/billing",
+    });
+    expect(
+      portalSessionParams(
+        { customerId: "cus_1", returnUrl: "https://repofeed.ai/billing" },
+        { STRIPE_PORTAL_CONFIGURATION: "bpc_repofeed" },
+      ),
+    ).toEqual({
+      customer: "cus_1",
+      return_url: "https://repofeed.ai/billing",
+      configuration: "bpc_repofeed",
+    });
   });
 
   it("checkout.session.completed writes the paid plan", async () => {
