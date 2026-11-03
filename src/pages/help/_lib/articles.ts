@@ -1,4 +1,9 @@
-export type HelpCategory = "Getting started" | "Building a study" | "Sharing and feedback" | "Insights and decks" | "Workspace and billing";
+export type HelpCategory =
+  | "Getting started"
+  | "Building a study"
+  | "Sharing and feedback"
+  | "Insights and decks"
+  | "Workspace and billing";
 
 export type HelpArticle = {
   /** Stable id used in links like /help?article=flagged-scenes. */
@@ -12,14 +17,21 @@ export type HelpArticle = {
   tip?: string;
 };
 
-export const CATEGORIES: HelpCategory[] = ["Getting started", "Building a study", "Sharing and feedback", "Insights and decks", "Workspace and billing"];
+export const CATEGORIES: HelpCategory[] = [
+  "Getting started",
+  "Building a study",
+  "Sharing and feedback",
+  "Insights and decks",
+  "Workspace and billing",
+];
 
 export const ARTICLES: HelpArticle[] = [
   {
     id: "how-it-works",
     category: "Getting started",
     title: "How repofeed.ai works",
-    summary: "Turn research files into short scenes your team actually watches.",
+    summary:
+      "Turn research files into short scenes your team actually watches.",
     paragraphs: [
       "You add research files to a study, such as interview transcripts, survey exports or notes. AI reads them, picks out the strongest findings and writes 8 to 24 short scenes, each about one finding and 10 to 20 seconds long.",
       "Every quote and number is checked against your files before you publish. Once a study is published, its scenes appear in your workspace feed, where your team can watch, react and comment. You can also send a private link to people outside the workspace.",
@@ -45,16 +57,28 @@ export const ARTICLES: HelpArticle[] = [
     title: "Creating a study, step by step",
     summary: "From raw files to published scenes in four steps.",
     steps: [
-      { title: "Add your files", body: "Drop in PDF, Word, PowerPoint, Excel, text, CSV or subtitle files, up to 25 MB each. You can also paste text. Files are read in your browser and only the text is used." },
-      { title: "Check the details", body: "AI suggests a title, who the feed is for, and what they should walk away knowing. Edit anything, then choose Save and generate." },
-      { title: "Generate scenes", body: "AI reads your files, writes the scenes and checks every quote and number. It keeps running if you close the tab. If it stops partway, choose Resume where it stopped." },
-      { title: "Review and publish", body: "Preview each scene, edit wording, choose footage and decide which scenes to include. Then choose Publish to feed." },
+      {
+        title: "Add your files",
+        body: "Drop in PDF, Word, PowerPoint, Excel, text, CSV or subtitle files, up to 25 MB each. You can also paste text. Files are read in your browser and only the text is used.",
+      },
+      {
+        title: "Check the details",
+        body: "AI suggests a title, who the feed is for, and what they should walk away knowing. Edit anything, then choose Save and generate.",
+      },
+      {
+        title: "Generate scenes",
+        body: "AI reads your files, writes the scenes and checks every quote and number. It keeps running if you close the tab. If it stops partway, choose Resume where it stopped.",
+      },
+      {
+        title: "Review and publish",
+        body: "Preview each scene, edit wording, choose footage and decide which scenes to include. Then choose Publish to feed.",
+      },
     ],
   },
   {
     id: "flagged-scenes",
     category: "Building a study",
-    title: "What \"flagged by verification\" means",
+    title: 'What "flagged by verification" means',
     summary: "Why some scenes are held back, and how to fix them.",
     paragraphs: [
       "After writing the scenes, the app checks every quote word for word, and every number, against your files. If something can't be matched, the scene is flagged with a yellow warning that explains what didn't match.",
@@ -83,21 +107,26 @@ export const ARTICLES: HelpArticle[] = [
     id: "footage-backdrops",
     category: "Building a study",
     title: "Footage and AI backdrops",
-    summary: "Set scenes over your own video, stock clips or an AI-painted image.",
-    paragraphs: ["Each scene plays over a background. On the review step, every scene has a Footage button and an AI backdrop button."],
+    summary:
+      "Set scenes over your own video, stock clips or an AI-generated video.",
+    paragraphs: [
+      "Each scene plays over a background. New scenes automatically get a short AI video. Until that render finishes — or if it fails — a stock clip plays so the scene is never blank.",
+    ],
     bullets: [
       "Your own clips: upload MP4, MOV or WebM videos up to 60 MB. Clips are stored securely and everyone in the workspace can reuse them. You can delete a clip at any time.",
-      "Stock clips: pick from the built-in library. You can add a short caption, like \"Home visit, day 3\".",
-      "AI backdrops: AI paints an image that fits the scene's finding. Use Create AI backdrops to do every scene that's still using a stock clip, or the button on a single scene. Scenes keep their stock clip until the new backdrop is ready.",
+      'Stock clips: pick from the built-in library. You can add a short caption, like "Home visit, day 3". Stock is also the fallback while an AI video is rendering.',
+      "AI video: after generation, each scene gets a short vertical Grok Imagine clip. Opening Review backfills any scene that still needs one. Use Create AI backdrops only if you still want a painted still.",
     ],
-    tip: "Uploaded footage and AI backdrops are part of the Pro and Team plans.",
+    tip: "AI videos are capped per study (free 6, pro 12, team 24) and never regenerated once they exist.",
   },
   {
     id: "share-links",
     category: "Sharing and feedback",
     title: "Sharing a study with a private link",
     summary: "Let stakeholders watch without creating an account.",
-    paragraphs: ["Once a study is published, its review step shows a share link card. Copy the link and send it by email or chat."],
+    paragraphs: [
+      "Once a study is published, its review step shows a share link card. Copy the link and send it by email or chat.",
+    ],
     bullets: [
       "Anyone with the link can watch. No sign-up, password or app needed.",
       "Viewers are asked for their name only when they react or comment.",
@@ -184,7 +213,14 @@ export const ARTICLES: HelpArticle[] = [
 ];
 
 export function articleText(a: HelpArticle): string {
-  return [a.title, a.summary, ...(a.paragraphs ?? []), ...(a.bullets ?? []), ...(a.steps ?? []).flatMap((s) => [s.title, s.body]), a.tip ?? ""]
+  return [
+    a.title,
+    a.summary,
+    ...(a.paragraphs ?? []),
+    ...(a.bullets ?? []),
+    ...(a.steps ?? []).flatMap((s) => [s.title, s.body]),
+    a.tip ?? "",
+  ]
     .join(" ")
     .toLowerCase();
 }

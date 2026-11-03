@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
-import { AlertTriangle, Film, Loader2, Maximize2, Pencil, Send } from "lucide-react";
+import {
+  AlertTriangle,
+  Film,
+  Loader2,
+  Maximize2,
+  Pencil,
+  Send,
+} from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -14,7 +21,11 @@ import { cn } from "@/lib/utils.ts";
 import EditReelDialog from "./edit-reel-dialog.tsx";
 import FootageDialog from "./footage-dialog.tsx";
 import ShareLinkCard from "./share-link-card.tsx";
-import { ArtBadge, PaintReelButton, PaintStudyButton } from "./art-controls.tsx";
+import {
+  ArtBadge,
+  PaintReelButton,
+  PaintStudyButton,
+} from "./art-controls.tsx";
 import HelpHint from "@/components/help-hint.tsx";
 
 interface ReviewReel {
@@ -23,7 +34,8 @@ interface ReviewReel {
   track: string;
   trackIndex: number;
   scenes: any[];
-  footage?: { url: string; caption: string; media?: "image" } | null;
+  footage?: { url: string; caption: string; media?: "image" | "video" } | null;
+  video?: { status?: string; error?: string } | null;
   sourceNames: string[];
   enabled: boolean;
   warning?: string;
@@ -33,10 +45,19 @@ interface ReviewReel {
   };
 }
 
-function ReelCard({ reel, studyTitle, onPreview }: { reel: ReviewReel; studyTitle: string; onPreview: () => void }) {
+function ReelCard({
+  reel,
+  studyTitle,
+  onPreview,
+}: {
+  reel: ReviewReel;
+  studyTitle: string;
+  onPreview: () => void;
+}) {
   const queryClient = useQueryClient();
   const setEnabledMutation = useMutation({
-    mutationFn: (enabled: boolean) => api.studies.setReelEnabled({ reelId: reel._id, enabled }),
+    mutationFn: (enabled: boolean) =>
+      api.studies.setReelEnabled({ reelId: reel._id, enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studies", "reviewReels"] });
     },
@@ -45,10 +66,23 @@ function ReelCard({ reel, studyTitle, onPreview }: { reel: ReviewReel; studyTitl
   const [hover, setHover] = useState(false);
   const [editing, setEditing] = useState(false);
   const [pickingFootage, setPickingFootage] = useState(false);
-  const data = { title: reel.title, track: reel.track, trackIndex: reel.trackIndex, studyTitle, scenes: reel.scenes, footage: reel.footage };
+  const data = {
+    title: reel.title,
+    track: reel.track,
+    trackIndex: reel.trackIndex,
+    studyTitle,
+    scenes: reel.scenes,
+    footage: reel.footage,
+  };
 
   return (
-    <li className={cn("flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-opacity", reel.warning && "border-[#FFC23D]/60", !reel.enabled && "opacity-70")}>
+    <li
+      className={cn(
+        "flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-opacity",
+        reel.warning && "border-[#FFC23D]/60",
+        !reel.enabled && "opacity-70",
+      )}
+    >
       <button
         type="button"
         onClick={onPreview}
@@ -59,28 +93,52 @@ function ReelCard({ reel, studyTitle, onPreview }: { reel: ReviewReel; studyTitl
         className="group relative cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
         aria-label={`Preview ${reel.title} full screen`}
       >
-        <ReelCanvas reel={data} playing={hover} stillAt={1.2} className="aspect-[9/16] w-full" />
+        <ReelCanvas
+          reel={data}
+          playing={hover}
+          stillAt={1.2}
+          className="aspect-[9/16] w-full"
+        />
         <ArtBadge reel={reel} />
         <span className="absolute right-2 top-2 grid size-9 place-items-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
           <Maximize2 className="size-4" />
         </span>
       </button>
       <div className="flex flex-1 flex-col gap-3 p-4">
-        <p className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider" style={{ color: trackColor(reel.trackIndex) }}>
-          <span className="h-1 w-4 rounded-full" style={{ background: trackColor(reel.trackIndex) }} />
+        <p
+          className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider"
+          style={{ color: trackColor(reel.trackIndex) }}
+        >
+          <span
+            className="h-1 w-4 rounded-full"
+            style={{ background: trackColor(reel.trackIndex) }}
+          />
           <span className="truncate">{reel.track}</span>
         </p>
-        <h3 className="font-display text-lg font-bold leading-tight">{reel.title}</h3>
-        <p className="line-clamp-3 text-sm text-muted-foreground">{reelScript(reel.scenes)}</p>
-        <p className="truncate font-mono text-xs text-muted-foreground" title={reel.sourceNames.join(", ")}>
+        <h3 className="font-display text-lg font-bold leading-tight">
+          {reel.title}
+        </h3>
+        <p className="line-clamp-3 text-sm text-muted-foreground">
+          {reelScript(reel.scenes)}
+        </p>
+        <p
+          className="truncate font-mono text-xs text-muted-foreground"
+          title={reel.sourceNames.join(", ")}
+        >
           {reel.sourceNames.join(", ")}
         </p>
         {reel.warning && (
-          <div role="status" className="rounded-lg bg-[#FFC23D]/12 px-3 py-2 text-sm text-[#FFC23D]">
+          <div
+            role="status"
+            className="rounded-lg bg-[#FFC23D]/12 px-3 py-2 text-sm text-[#FFC23D]"
+          >
             <p className="flex items-start gap-2 font-medium">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" /> <span className="min-w-0 break-words">{reel.warning}</span>
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />{" "}
+              <span className="min-w-0 break-words">{reel.warning}</span>
             </p>
-            <p className="mt-1 pl-6 text-xs text-[#FFC23D]/80">Edit the scene to match your files, or include it anyway.</p>
+            <p className="mt-1 pl-6 text-xs text-[#FFC23D]/80">
+              Edit the scene to match your files, or include it anyway.
+            </p>
           </div>
         )}
         <div className="mt-auto flex flex-col gap-2 pt-1">
@@ -93,18 +151,35 @@ function ReelCard({ reel, studyTitle, onPreview }: { reel: ReviewReel; studyTitl
             {reel.enabled ? "Included" : "Excluded"}
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" className="h-11" onClick={() => setPickingFootage(true)} aria-label={`Footage for ${reel.title}`}>
+            <Button
+              variant="secondary"
+              className="h-11"
+              onClick={() => setPickingFootage(true)}
+              aria-label={`Footage for ${reel.title}`}
+            >
               <Film className="size-4" /> Footage
             </Button>
-            <Button variant="secondary" className="h-11" onClick={() => setEditing(true)}>
+            <Button
+              variant="secondary"
+              className="h-11"
+              onClick={() => setEditing(true)}
+            >
               <Pencil className="size-4" /> Edit
             </Button>
             <PaintReelButton reel={reel} />
           </div>
         </div>
       </div>
-      {editing && <EditReelDialog reel={reel} open={editing} onOpenChange={setEditing} />}
-      {pickingFootage && <FootageDialog reel={reel} open={pickingFootage} onOpenChange={setPickingFootage} />}
+      {editing && (
+        <EditReelDialog reel={reel} open={editing} onOpenChange={setEditing} />
+      )}
+      {pickingFootage && (
+        <FootageDialog
+          reel={reel}
+          open={pickingFootage}
+          onOpenChange={setPickingFootage}
+        />
+      )}
     </li>
   );
 }
@@ -120,6 +195,33 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
     queryKey: ["studies", "reviewReels", studyId],
     queryFn: () => api.studies.reviewReels({ studyId }),
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.videos
+      .backfill({ studyId })
+      .then(() => {
+        if (!cancelled)
+          queryClient.invalidateQueries({
+            queryKey: ["studies", "reviewReels", studyId],
+          });
+      })
+      .catch(() => undefined);
+    const timer = window.setInterval(() => {
+      void api.videos
+        .process({ studyId })
+        .then(() => {
+          queryClient.invalidateQueries({
+            queryKey: ["studies", "reviewReels", studyId],
+          });
+        })
+        .catch(() => undefined);
+    }, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [studyId, queryClient]);
 
   const publishMutation = useMutation({
     mutationFn: () => api.studies.publish({ studyId }),
@@ -139,7 +241,9 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
   if (reels === undefined) {
     return (
       <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[600px] w-full rounded-2xl" />)}
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-[600px] w-full rounded-2xl" />
+        ))}
       </div>
     );
   }
@@ -156,14 +260,23 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
           <div>
             <h3 className="font-display text-lg font-bold">Review & Publish</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {enabled.length} scene{enabled.length === 1 ? "" : "s"} ready to publish
+              {enabled.length} scene{enabled.length === 1 ? "" : "s"} ready to
+              publish
               {flagged.length > 0 && ` (${flagged.length} flagged)`}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <PaintStudyButton studyId={studyId} />
-            <Button onClick={() => publishMutation.mutate()} disabled={busy || enabled.length === 0} size="lg">
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            <Button
+              onClick={() => publishMutation.mutate()}
+              disabled={busy || enabled.length === 0}
+              size="lg"
+            >
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
               {isPublished ? "Update" : "Publish"}
             </Button>
           </div>
@@ -181,11 +294,19 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
 
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((reel: any) => (
-          <ReelCard key={reel.id} reel={reel} studyTitle={study.title} onPreview={() => setPreview(reel)} />
+          <ReelCard
+            key={reel.id}
+            reel={reel}
+            studyTitle={study.title}
+            onPreview={() => setPreview(reel)}
+          />
         ))}
       </ul>
 
-      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+      <Dialog
+        open={!!preview}
+        onOpenChange={(open) => !open && setPreview(null)}
+      >
         <DialogContent className="max-w-[min(90vw,calc(90vh*9/16))] p-0">
           <DialogTitle className="sr-only">{preview?.title}</DialogTitle>
           {preview && (

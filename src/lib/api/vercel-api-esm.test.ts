@@ -11,6 +11,8 @@ const API_ENTRIES = [
   "api/stripe/portal.ts",
   "api/billing/plan.ts",
   "api/art/paint.ts",
+  "api/videos/process.ts",
+  "api/videos/backfill.ts",
   "api/decks/generate.ts",
   "api/admin/ai-models.ts",
 ];

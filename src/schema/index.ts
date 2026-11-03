@@ -68,7 +68,7 @@ export interface Reel {
   title: string;
   text: string;
   scenes?: Scene[];
-  footage?: { url: string; caption: string; media?: "image" } | null;
+  footage?: { url: string; caption: string; media?: "image" | "video" } | null;
   video_url?: string;
   created_at: string;
   updated_at: string;

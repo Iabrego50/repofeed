@@ -97,6 +97,7 @@ Storage buckets are created automatically by the migration. They are:
 - `footage`: Video clips for reel backgrounds (private)
 - `generated`: Reserved private generated assets
 - `art`: AI reel backdrops (public; share pages load these without login)
+- `videos`: AI reel background videos (public; share pages load these without login)
 
 No additional configuration needed.
 

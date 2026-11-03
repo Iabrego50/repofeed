@@ -13,6 +13,10 @@ interface Reel {
     status: "pending" | "failed" | "completed";
     error?: string;
   };
+  video?: {
+    status?: string;
+    error?: string;
+  } | null;
   footage?: {
     url?: string;
     caption?: string;
@@ -21,6 +25,24 @@ interface Reel {
 }
 
 export function ArtBadge({ reel }: { reel: Reel }) {
+  if (
+    reel.video?.status === "queued" ||
+    reel.video?.status === "starting" ||
+    reel.video?.status === "in_progress"
+  ) {
+    return (
+      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
+        <Loader2 className="size-3 animate-spin" /> Generating video
+      </span>
+    );
+  }
+  if (reel.footage?.media === "video") {
+    return (
+      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
+        <Sparkles className="size-3 text-primary" /> AI video
+      </span>
+    );
+  }
   if (reel.art?.status === "pending") {
     return (
       <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
@@ -30,7 +52,10 @@ export function ArtBadge({ reel }: { reel: Reel }) {
   }
   if (reel.art?.status === "failed") {
     return (
-      <span title={reel.art.error} className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-[#FFC23D]">
+      <span
+        title={reel.art.error}
+        className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-[#FFC23D]"
+      >
         <AlertTriangle className="size-3" /> Backdrop failed
       </span>
     );
@@ -60,15 +85,25 @@ export function PaintReelButton({ reel }: { reel: Reel }) {
   const hasArt = reel.footage?.media === "image";
 
   return (
-    <Button 
-      variant="secondary" 
-      className="col-span-2 h-11" 
-      disabled={pending} 
-      onClick={() => paintMutation.mutate()} 
+    <Button
+      variant="secondary"
+      className="col-span-2 h-11"
+      disabled={pending}
+      onClick={() => paintMutation.mutate()}
       aria-label={`AI backdrop for ${reel.title}`}
     >
-      {pending ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-      {pending ? "Painting backdrop..." : hasArt ? "New AI backdrop" : reel.art?.status === "failed" ? "Try AI backdrop again" : "AI backdrop"}
+      {pending ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <Wand2 className="size-4" />
+      )}
+      {pending
+        ? "Painting backdrop..."
+        : hasArt
+          ? "New AI backdrop"
+          : reel.art?.status === "failed"
+            ? "Try AI backdrop again"
+            : "AI backdrop"}
     </Button>
   );
 }
@@ -91,9 +126,15 @@ export function PaintStudyButton({ studyId }: { studyId: string }) {
       disabled={paintMutation.isPending}
       onClick={() => paintMutation.mutate()}
     >
-      {paintMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+      {paintMutation.isPending ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <Wand2 className="size-4" />
+      )}
       {paintMutation.isPending ? "Painting..." : "AI backdrop all"}
-      <HelpHint title="AI backdrop">Generate AI backdrops for every scene at once.</HelpHint>
+      <HelpHint title="AI backdrop">
+        Generate AI backdrops for every scene at once.
+      </HelpHint>
     </Button>
   );
 }

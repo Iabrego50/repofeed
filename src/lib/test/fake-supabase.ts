@@ -140,6 +140,11 @@ export class FakeQuery {
     return this;
   }
 
+  ilike(column: string, value: string) {
+    this.filters.push({ method: "ilike", args: [column, value] });
+    return this;
+  }
+
   order(column: string, options?: { ascending?: boolean }) {
     this.filters.push({ method: "order", args: [column, options ?? {}] });
     return this;

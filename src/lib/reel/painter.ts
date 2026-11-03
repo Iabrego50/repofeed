@@ -23,8 +23,8 @@ export type ReelData = {
   trackIndex: number;
   studyTitle?: string;
   scenes: Scene[];
-  /** Optional backdrop drawn behind the text: a fieldwork clip, or an AI-painted still ("image"). */
-  footage?: { url: string; caption: string; media?: "image" } | null;
+  /** Optional backdrop drawn behind the text: a clip, an AI video ("video"), or an AI-painted still ("image"). */
+  footage?: { url: string; caption: string; media?: "image" | "video" } | null;
 };
 
 type Backdrop = HTMLVideoElement | HTMLImageElement;
@@ -242,11 +242,12 @@ export class ReelPainter {
     if (!footage || !this.videoReady()) return;
     const ctx = this.ctx;
     const isArt = footage.media === "image";
+    const isAiVideo = footage.media === "video";
     const secs = Math.floor(t);
     const code = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
     ctx.font = `700 28px ${FONT_MONO}`;
     const label = truncate(ctx, footage.caption.trim().toUpperCase(), 560);
-    const lead = isArt ? "AI BACKDROP" : "REC";
+    const lead = isArt ? "AI BACKDROP" : isAiVideo ? "AI VIDEO" : "REC";
     const tail = isArt ? "" : `  ${code}`;
     const text = label ? `${lead}  ${label}${tail}` : `${lead}${tail}`;
     const w = ctx.measureText(text).width + 92;

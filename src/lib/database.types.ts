@@ -732,6 +732,7 @@ export type Database = {
           enabled: boolean
           footage: Json | null
           art: Json | null
+          video: Json | null
           created_at: string
           updated_at: string
         }
@@ -750,6 +751,7 @@ export type Database = {
           enabled?: boolean
           footage?: Json | null
           art?: Json | null
+          video?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -768,6 +770,7 @@ export type Database = {
           enabled?: boolean
           footage?: Json | null
           art?: Json | null
+          video?: Json | null
           created_at?: string
           updated_at?: string
         }
