@@ -217,6 +217,49 @@ describe("RLS policies from supabase/migrations", () => {
     expect(rows.map((r) => r.name)).toEqual([GENERATED_PATH]);
   });
 
+  it("anon cannot execute membership SECURITY DEFINER helpers", async () => {
+    await asSuper();
+    await db.exec("set role anon");
+    await expect(db.query(`select public.is_workspace_member('${WS}')`)).rejects.toThrow(
+      /permission denied/i,
+    );
+    await expect(db.query(`select public.get_workspace_role('${WS}')`)).rejects.toThrow(
+      /permission denied/i,
+    );
+    await expect(db.query(`select public.can_edit_workspace('${WS}')`)).rejects.toThrow(
+      /permission denied/i,
+    );
+    await asSuper();
+  });
+
+  it("anon can still execute reel_visible_via_share for share links", async () => {
+    await asSuper();
+    await setAuth(null, { share_token: TOKEN });
+    await db.exec("set role anon");
+    const { rows } = await db.query<{ ok: boolean }>(
+      `select public.reel_visible_via_share('${STUDY}') as ok`,
+    );
+    expect(rows[0]?.ok).toBe(true);
+    await asSuper();
+  });
+
+  it("clients cannot read or write workspace_removals", async () => {
+    await asSuper();
+    await db.query(
+      `insert into public.workspace_removals (workspace_id, user_id) values ('${WS}', '${MEMBER}')`,
+    );
+    await setAuth(OWNER);
+    await asTester();
+    const { rows } = await db.query("select id from public.workspace_removals");
+    expect(rows).toHaveLength(0);
+    await expect(
+      db.query(
+        `insert into public.workspace_removals (workspace_id, user_id) values ('${WS}', '${STRANGER}')`,
+      ),
+    ).rejects.toThrow(/row-level security|violates/i);
+    await asSuper();
+  });
+
   it("the art bucket is public and anon cannot write to it", async () => {
     await asSuper();
     const { rows } = await db.query<{ id: string; public: boolean }>(

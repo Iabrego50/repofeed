@@ -82,6 +82,7 @@ const { sessionBag, mockUser, bag, emptyInsightSummary } = vi.hoisted(() => {
       signInWithOtp: async () => ({ data: {}, error: null }),
       signOut: async () => ({ error: null }),
       exchangeCodeForSession: async () => ({ data: { session: sessionBag.session }, error: null }),
+      verifyOtp: async () => ({ data: { session: sessionBag.session }, error: sessionBag.session ? null : { message: "No session found" } }),
     },
     from(table: string) {
       if (table === "workspace_members" && sessionBag.session) {
@@ -149,6 +150,7 @@ vi.mock("@/lib/api", () => ({
         }),
       },
       checkout: async () => ({ url: null }),
+      portal: async () => ({ url: "https://billing.stripe.com/p/session/test" }),
     },
     users: {
       current: async () => ({ onboardedAt: "2026-01-01T00:00:00.000Z" }),
@@ -311,7 +313,8 @@ describe("App routes", () => {
       "/signin": /Sign in to repofeed/i,
       "/login": /Sign in to repofeed/i,
       "/auth": /Sign in to repofeed/i,
-      "/auth/callback": /Signing you in|Something went wrong|No session found/i,
+      "/auth/callback": /Signing you in|Something went wrong|No session found|new link/i,
+      "/auth/confirm": /Signing you in|Something went wrong|No session found|new link/i,
       "/s/test-token": /isn't available|No scenes here yet/i,
       "/share/test-token": /isn't available|No scenes here yet/i,
       "/invite/test-token": /Sign in to repofeed|Invalid Invite|You're Invited/i,

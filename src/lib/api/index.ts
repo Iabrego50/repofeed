@@ -1,47 +1,18 @@
 import { supabase } from '../supabase';
-import * as billing from '../billing/stripe';
+import * as billingClient from '../billing/client';
 import * as studies from './studies';
 import * as feedApi from './feed-complete';
 import * as insights from './insights';
 
-// Billing API
+// Billing API — checkout/portal/plan run on Vercel, never the Stripe SDK.
 export const billingApi = {
   getPlan: async (args: { workspaceId: string }) => {
-    const { data } = await supabase
-      .from('workspaces')
-      .select('customer_id, paid_plan')
-      .eq('id', args.workspaceId)
-      .single();
-
-    if (!data) return { plan: 'free' };
-
-    if (data.customer_id) {
-      const plan = await billing.getPlanFromStripe(data.customer_id);
-      return { plan };
-    }
-
-    return { plan: data.paid_plan || 'free' };
+    return billingClient.getRemotePlan(args);
   },
 
-  checkout: async (args: {
-    workspaceId: string;
-    plan: 'pro' | 'team';
-    interval: 'month' | 'year';
-    successUrl: string;
-    cancelUrl: string;
-  }) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+  checkout: billingClient.checkout,
 
-    return billing.createCheckoutSession({
-      ...args,
-      userId: user.id,
-    });
-  },
-
-  portal: async (args: { workspaceId: string; returnUrl: string }) => {
-    return billing.createPortalSession(args);
-  },
+  portal: billingClient.portal,
 
   data: {
     usage: async (args: { workspaceId: string }) => {
@@ -81,25 +52,7 @@ export const billingApi = {
       };
     },
 
-    plan: async (args: { workspaceId: string }) => {
-      const { data } = await supabase
-        .from('workspaces')
-        .select('paid_plan, seat_variant, customer_id')
-        .eq('id', args.workspaceId)
-        .single();
-
-      let plan: string = 'free';
-      if (data?.customer_id) {
-        plan = await billing.getPlanFromStripe(data.customer_id);
-      } else if (data?.paid_plan) {
-        plan = data.paid_plan;
-      }
-
-      return {
-        plan,
-        variant: data?.seat_variant,
-      };
-    },
+    plan: billingClient.getRemotePlan,
   },
 };
 

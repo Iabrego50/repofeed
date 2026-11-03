@@ -26,6 +26,18 @@ export default defineConfig({
     ],
   },
   build: {
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
+          if (id.includes("node_modules/pptxgenjs") || id.includes("node_modules/jszip")) return "pptx";
+          if (id.includes("node_modules/xlsx") || id.includes("node_modules/mammoth")) return "office";
+          if (id.includes("node_modules/recharts")) return "charts";
+          if (id.includes("node_modules/motion")) return "motion";
+          if (id.includes("node_modules/@supabase")) return "supabase";
+        },
+      },
+    },
   },
 });

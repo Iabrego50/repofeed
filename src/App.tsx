@@ -7,13 +7,14 @@ import { DefaultProviders } from "./components/providers/default.tsx";
 import { AppErrorBoundary } from "./components/app-error-boundary.tsx";
 import AppLayout from "./components/app-layout.tsx";
 import PublicEntry from "./pages/landing/public-entry.tsx";
-import AuthCallback from "./pages/auth/Callback.tsx";
-import SignInPage from "./pages/auth/signin.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import DocumentMeta from "./components/document-meta.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
 import { signInPath } from "./app-paths.ts";
 
+const AuthCallback = lazy(() => import("./pages/auth/Callback.tsx"));
+const SignInPage = lazy(() => import("./pages/auth/signin.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Welcome = lazy(() => import("./pages/welcome/page.tsx"));
 const InvitePage = lazy(() => import("./pages/invite/page.tsx"));
 const SharePage = lazy(() => import("./pages/share/page.tsx"));
@@ -95,9 +96,11 @@ export default function App() {
     <AppErrorBoundary>
       <DefaultProviders>
         <BrowserRouter>
+          <DocumentMeta />
           <Suspense fallback={<FullScreenLoader />}>
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/confirm" element={<AuthCallback />} />
               <Route
                 path="/signin"
                 element={

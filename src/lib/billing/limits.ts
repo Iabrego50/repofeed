@@ -1,21 +1,16 @@
 import { supabase } from '../supabase';
 import type { Plan } from '@/schema';
 
-export const FREE_STUDY_LIMIT = 3;
-export const TRIAL_DAYS = 14;
-export const TEAM_MIN_SEATS = 2;
-export const FEATURE_PRO = "Share links";
-export const FEATURE_TEAM = "Adding more editors";
-
-export const EDITOR_LIMIT: Record<Plan, number> = {
-  free: 1,
-  pro: 1,
-  team: Number.POSITIVE_INFINITY,
-};
-
-export function teamSeats(editors: number): number {
-  return Math.max(TEAM_MIN_SEATS, editors);
-}
+export {
+  EDITOR_LIMIT,
+  FEATURE_PRO,
+  FEATURE_TEAM,
+  FREE_STUDY_LIMIT,
+  TEAM_MIN_SEATS,
+  TRIAL_DAYS,
+  teamSeats,
+} from "./constants.js";
+import { EDITOR_LIMIT, FEATURE_TEAM, FREE_STUDY_LIMIT } from "./constants.js";
 
 export async function countActiveStudies(workspaceId: string, cap: number = 100): Promise<number> {
   const { count } = await supabase

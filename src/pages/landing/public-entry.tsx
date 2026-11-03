@@ -3,7 +3,8 @@ import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery } from '@tanstack/react-query';
 import { api } from "@/lib/api/complete";
 import PublicShell from "@/components/public-shell.tsx";
-import Landing from "./page.tsx";
+
+const Landing = lazy(() => import("./page.tsx"));
 
 const HelpPage = lazy(() => import("@/pages/help/page.tsx"));
 
@@ -32,8 +33,18 @@ export default function PublicEntry({ loader }: { loader: React.ReactNode }) {
       </PublicShell>
     );
   }
-  if (!reelId) return <Landing />;
+  if (!reelId) {
+    return (
+      <Suspense fallback={loader}>
+        <Landing />
+      </Suspense>
+    );
+  }
   if (token === undefined) return <>{loader}</>;
   if (token) return <Navigate to={`/s/${token}?reel=${encodeURIComponent(reelId)}`} replace />;
-  return <Landing />;
+  return (
+    <Suspense fallback={loader}>
+      <Landing />
+    </Suspense>
+  );
 }

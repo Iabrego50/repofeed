@@ -1,0 +1,2 @@
+These HTML files are pasted into the Supabase Dashboard (Authentication → Email Templates).
+They are not sent by this repo at runtime. See README.md for the paste steps.

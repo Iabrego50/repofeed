@@ -1,4 +1,4 @@
-// Schema validators - matching original Convex validators but for TypeScript types
+// Shared TypeScript types for workspace, study and billing records.
 
 export type Role = 'owner' | 'editor' | 'member';
 export type InviteRole = 'editor' | 'member';

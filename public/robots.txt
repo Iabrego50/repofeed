@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /auth/callback
+Disallow: /auth/confirm
+Disallow: /billing
+Disallow: /settings
+Disallow: /welcome
+
+Sitemap: https://repofeed.ai/sitemap.xml

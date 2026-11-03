@@ -11,6 +11,7 @@ export const PUBLIC_APP_PATHS = [
   "/login",
   "/auth",
   "/auth/callback",
+  "/auth/confirm",
   "/s/test-token",
   "/share/test-token",
   "/invite/test-token",

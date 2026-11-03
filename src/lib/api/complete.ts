@@ -1,4 +1,3 @@
-// Complete Supabase API - replaces Convex
 import * as studiesModule from './studies-complete';
 import * as workspacesModule from './workspaces-complete';
 import * as feedModule from './feed-complete';
@@ -6,10 +5,9 @@ import * as generationModule from './generation-jobs';
 import * as shareModule from './share';
 import * as footageModule from './footage';
 import { supabase } from '../supabase';
-import * as billing from '../billing/stripe';
+import * as billingClient from '../billing/client';
 import { jsonAuthHeaders } from './bearer';
 
-// Export organized API object matching Convex structure
 export const api = {
   studies: {
     list: studiesModule.listStudies,
@@ -97,14 +95,8 @@ export const api = {
       },
       acceptInvite: workspacesModule.acceptInvite,
       createInvite: workspacesModule.createInvite,
-      checkout: async (args: { workspaceId: string; plan: 'pro' | 'team'; interval: 'month' | 'year'; successUrl: string; cancelUrl: string }) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-        return billing.createCheckoutSession({ ...args, userId: user.id });
-      },
-      portal: async (args: { workspaceId: string; returnUrl: string }) => {
-        return billing.createPortalSession(args);
-      },
+      checkout: billingClient.checkout,
+      portal: billingClient.portal,
     },
     data: {
       usage: async (args: { workspaceId: string }) => {

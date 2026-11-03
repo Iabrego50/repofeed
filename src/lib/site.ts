@@ -2,7 +2,21 @@
 export const SUPPORT_EMAIL = "support@repofeed.ai";
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 export const COMPANY_NAME = "repofeed.ai";
-export const LEGAL_LAST_UPDATED = "October 30, 2026";
+export const LEGAL_LAST_UPDATED = "November 3, 2026";
+
+/**
+ * TODO: replace LEGAL_ENTITY_NAME with the registered legal entity
+ * (for example, "Example Research, Inc.") before taking paid customers.
+ */
+export const LEGAL_ENTITY_NAME = "repofeed.ai";
+
+/**
+ * TODO: replace LEGAL_ADDRESS with the registered business address
+ * used on invoices and legal notices.
+ */
+export const LEGAL_ADDRESS = "repofeed.ai";
+
+export const GOVERNING_LAW = "the State of Ohio";
 
 /** Official public address. Used in email templates and share links. */
 export const SITE_URL = "https://repofeed.ai";

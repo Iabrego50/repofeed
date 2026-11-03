@@ -157,6 +157,22 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    id: "refunds",
+    category: "Workspace and billing",
+    title: "Refunds",
+    summary: "When we refund a charge, and how to ask.",
+    paragraphs: [
+      "Paid plans are billed in advance. You can cancel anytime from Plan and billing; the plan stays active through the period you have already paid for.",
+      "Except where the law requires a refund, payments are not refunded after a paid period has started. If we charged you by mistake, you never received access, or a charge looks wrong, email support and we will review it.",
+    ],
+    bullets: [
+      "Trials: cancel before the trial ends and you will not be charged.",
+      "Duplicate or incorrect charges: we refund these once we confirm them.",
+      "Required by law: we refund when consumer law in your location says we must.",
+    ],
+    tip: "Email support@repofeed.ai from the account that was charged and include the invoice date.",
+  },
+  {
     id: "contact",
     category: "Workspace and billing",
     title: "Contacting support",

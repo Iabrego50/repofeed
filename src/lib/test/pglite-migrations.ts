@@ -135,5 +135,7 @@ export async function applyMigrations(
     grant execute on all functions in schema auth to rls_tester;
     grant execute on all functions in schema storage to rls_tester, anon, authenticated, service_role;
     alter default privileges in schema public grant all on tables to rls_tester;
+    grant anon to rls_tester;
+    grant authenticated to rls_tester;
   `);
 }
