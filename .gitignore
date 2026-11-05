@@ -29,3 +29,6 @@ tsconfig.tsbuildinfo
 # Environment variables
 .env*
 !.env.example
+
+# TypeScript build info
+*.tsbuildinfo

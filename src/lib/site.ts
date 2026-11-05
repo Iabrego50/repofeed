@@ -4,17 +4,11 @@ export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 export const COMPANY_NAME = "repofeed.ai";
 export const LEGAL_LAST_UPDATED = "November 3, 2026";
 
-/**
- * TODO: replace LEGAL_ENTITY_NAME with the registered legal entity
- * (for example, "Example Research, Inc.") before taking paid customers.
- */
-export const LEGAL_ENTITY_NAME = "repofeed.ai";
+/** Registered legal entity that operates repofeed.ai. */
+export const LEGAL_ENTITY_NAME = "Abrego Solutions LLC";
 
-/**
- * TODO: replace LEGAL_ADDRESS with the registered business address
- * used on invoices and legal notices.
- */
-export const LEGAL_ADDRESS = "repofeed.ai";
+/** Jurisdiction shown on legal pages. No street address is published. */
+export const LEGAL_ADDRESS = "Ohio, USA";
 
 export const GOVERNING_LAW = "the State of Ohio";
 
