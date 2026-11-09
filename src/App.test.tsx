@@ -356,4 +356,13 @@ describe("App routes", () => {
     });
     expect(unmatched).toEqual([]);
   });
+
+  it("hides /admin/analytics from signed-out visitors as a 404", async () => {
+    renderAt("/admin/analytics");
+    await waitFor(() => {
+      expect(screen.getByText(/this scene doesn't exist/i)).toBeInTheDocument();
+    });
+    expect(unmatched).toEqual([]);
+    expect(document.body.textContent).not.toMatch(/Product analytics/i);
+  });
 });

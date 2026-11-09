@@ -92,6 +92,11 @@ const EXACT: Record<string, RouteMeta> = {
     description: "Choose a plan and manage your repofeed.ai subscription.",
     robots: "noindex",
   },
+  "/admin/analytics": {
+    title: "Page not found — repofeed.ai",
+    description: "This scene doesn't exist. The link may be old or mistyped.",
+    robots: "noindex,nofollow",
+  },
 };
 
 const PREFIX: Array<{ prefix: string; meta: RouteMeta }> = [

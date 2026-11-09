@@ -12,5 +12,6 @@ describe("per-route document meta", () => {
     expect(metaForPath("/").title).toMatch(/Research, as a feed/);
     expect(metaForPath("/this-is-missing")).toEqual(NOT_FOUND_META);
     expect(NOT_FOUND_META.robots).toBe("noindex");
+    expect(metaForPath("/admin/analytics").robots).toMatch(/noindex/);
   });
 });

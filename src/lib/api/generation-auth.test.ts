@@ -14,6 +14,7 @@ describe("generation API auth helpers", () => {
     expect(bearerToken({ headers: {} })).toBeUndefined();
     expect(new AuthError(401, "Unauthorized").status).toBe(401);
     expect(new AuthError(403, "Forbidden").status).toBe(403);
+    expect(new AuthError(404, "Not found").status).toBe(404);
   });
 
   it("accepts an internal generation secret with a timing-safe compare", () => {
