@@ -4,6 +4,7 @@ import { dispatchGenerationProcess } from '../_lib/generation-chain.js';
 import { requireSupabaseEnv, sendRouteError } from '../_lib/respond.js';
 import { supabase } from '../_lib/supabase.js';
 import { CHUNK_CHARS } from '../../src/lib/ai/client.js';
+import { trackServer } from '../../src/lib/analytics-server.js';
 
 const MAX_SOURCES_CHARS = 2_000_000;
 
@@ -142,6 +143,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
       console.error('Failed to dispatch first generation step; status polling will recover:', error);
     }
+
+    await trackServer(supabase, {
+      event: 'generate_started',
+      userId: user.id,
+      workspaceId: study.workspace_id,
+      properties: { studyId, sourceCount: sources.length, chunkCount: chunks.length },
+    });
 
     return res.json({ jobId: job.id, status: 'queued' });
   } catch (error) {

@@ -79,7 +79,17 @@ describe("Demo feed interactions", () => {
     expect(save).toHaveAttribute("aria-pressed", "true");
     expect(save).toHaveAccessibleName(/remove from saved/i);
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    const productCalls = fetchSpy.mock.calls.filter(
+      ([url]) => !String(url).includes("/analytics_events"),
+    );
+    expect(productCalls).toEqual([]);
+    expect(
+      fetchSpy.mock.calls.some(
+        ([url, init]) =>
+          String(url).includes("/analytics_events") &&
+          String((init as { body?: string })?.body).includes('"event":"heart"'),
+      ),
+    ).toBe(true);
     fetchSpy.mockRestore();
   });
 

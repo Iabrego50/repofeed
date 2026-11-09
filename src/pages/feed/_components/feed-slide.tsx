@@ -6,6 +6,7 @@ import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import type { FeedReel } from "../_lib/types";
 import type { PanelTab } from "./reel-panel";
 import SceneActions from "./scene-actions.tsx";
+import { track } from "@/lib/analytics";
 
 interface FeedSlideProps {
   reel: FeedReel;
@@ -32,6 +33,11 @@ export default function FeedSlide({
         : api.feed.save({ reelId: reel._id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
+      track("save", {
+        reelId: reel._id,
+        workspaceId: reel.workspaceId,
+        saved: !reel.saved,
+      });
       toast.success(reel.saved ? "Removed from saved" : "Saved");
     },
     onError: (err: unknown) => {
@@ -43,6 +49,10 @@ export default function FeedSlide({
     mutationFn: () => api.feed.react({ reelId: reel._id, kind: "true" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
+      track("heart", {
+        reelId: reel._id,
+        workspaceId: reel.workspaceId,
+      });
     },
     onError: (err: unknown) => {
       toast.error(err instanceof Error ? err.message : "Failed to react");

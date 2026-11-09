@@ -1,5 +1,3 @@
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 import { AuthProvider } from "@/lib/auth";
 import { WorkspaceProvider } from "@/lib/workspace";
 import { QueryClientProvider } from "./query-client.tsx";
@@ -14,8 +12,6 @@ export function DefaultProviders({ children }: { children: React.ReactNode }) {
           <TooltipProvider>
             <Toaster theme="dark" position="top-center" />
             {children}
-            <Analytics />
-            <SpeedInsights />
           </TooltipProvider>
         </WorkspaceProvider>
       </QueryClientProvider>

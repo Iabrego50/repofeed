@@ -21,6 +21,7 @@ import {
   toggleSave,
   type DemoInteractionState,
 } from "./_lib/demo-interactions.ts";
+import { track } from "@/lib/analytics";
 
 const REELS = buildDemoReels();
 
@@ -80,6 +81,16 @@ export default function DemoPage() {
   }, [startScene]);
 
   useEffect(() => {
+    track("feed_open", { demo: true });
+  }, []);
+
+  useEffect(() => {
+    if (onEnd || !active) return;
+    track("reel_open", { demo: true, reelId: active.id, index: activeIdx });
+    track("scene_view", { demo: true, reelId: active.id, index: activeIdx });
+  }, [active?.id, activeIdx, onEnd, active]);
+
+  useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     const onScroll = () =>
@@ -118,10 +129,16 @@ export default function DemoPage() {
   const openPanel = useCallback(
     (tab: PanelTab) => {
       dismissHints();
+      if (tab === "evidence") {
+        track("evidence_open", {
+          demo: true,
+          reelId: REELS[Math.min(activeIdx, REELS.length - 1)]?.id,
+        });
+      }
       if (isDesktop) setDesktopTab(tab);
       else setPanel(tab);
     },
-    [dismissHints, isDesktop],
+    [dismissHints, isDesktop, activeIdx],
   );
 
   const addComment = useCallback(
@@ -132,6 +149,7 @@ export default function DemoPage() {
       parentId?: string;
     }) => {
       setInteractions((s) => addLocalComment(s, args.reelId, args));
+      track("comment", { demo: true, reelId: args.reelId, kind: args.kind });
       setPosted(true);
       setNudgeOpen(true);
     },
@@ -201,8 +219,14 @@ export default function DemoPage() {
                   hearts={scene?.hearts ?? 0}
                   saved={scene?.saved ?? false}
                   commentCount={scene?.comments.length ?? 0}
-                  onHeart={() => setInteractions((s) => toggleHeart(s, r.id))}
-                  onSave={() => setInteractions((s) => toggleSave(s, r.id))}
+                  onHeart={() => {
+                    setInteractions((s) => toggleHeart(s, r.id));
+                    track("heart", { demo: true, reelId: r.id });
+                  }}
+                  onSave={() => {
+                    setInteractions((s) => toggleSave(s, r.id));
+                    track("save", { demo: true, reelId: r.id });
+                  }}
                   onOpenPanel={openPanel}
                   showHints={showHints && i === 0}
                   onDismissHints={dismissHints}

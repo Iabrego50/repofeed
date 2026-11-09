@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Plan } from "@/schema";
+import { trackServer } from "../analytics-server.js";
 import { markPlanLapsed, syncPlanToDatabase } from "./sync-plan.js";
 
 export type StripeLikeEvent = {
@@ -58,6 +59,13 @@ export async function handleStripeEvent(
       const plan = asPlan(metadata.plan);
       if (metadata.workspace_id && plan && plan !== "free" && PAID_STATUSES.has(String(subscription.status))) {
         await syncPlanToDatabase(metadata.workspace_id, plan, client);
+        if (event.type === "customer.subscription.created" && client) {
+          await trackServer(client, {
+            event: "subscription_started",
+            workspaceId: metadata.workspace_id,
+            properties: { plan, status: String(subscription.status) },
+          });
+        }
         return "ok";
       }
       return "ignored";

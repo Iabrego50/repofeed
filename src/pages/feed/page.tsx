@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, Clapperboard, Search } from "lucide-react";
 import { api } from "@/lib/api/complete";
 import { supabase } from "@/lib/supabase";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { cn } from "@/lib/utils.ts";
+import FeedTour from "@/components/feed-tour.tsx";
 import ReelFeed from "./_components/reel-feed.tsx";
 import FeedSearch from "./_components/feed-search.tsx";
 
@@ -17,7 +18,35 @@ const CHIP_ON = "border-transparent bg-white text-black hover:text-black";
 
 export default function FeedPage() {
   const { current, isEditor } = useWorkspace();
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
+  const replayTour = params.get("tour") === "1";
+
+  const { data: profile } = useQuery({
+    queryKey: ["users", "me"],
+    queryFn: () => api.users.current(),
+  });
+
+  const completeTour = useMutation({
+    mutationFn: async () => {
+      if (!profile?.onboardedAt) {
+        await api.users.update({ onboardedAt: new Date().toISOString() });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users", "me"] });
+      if (replayTour) {
+        setParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("tour");
+            return next;
+          },
+          { replace: true },
+        );
+      }
+    },
+  });
   const savedView = params.get("view") === "saved";
   const studyFilter = savedView ? undefined : (params.get("study") ?? undefined);
   
@@ -131,6 +160,11 @@ export default function FeedPage() {
 
   return (
     <>
+    <FeedTour
+      open={Boolean(replayTour || (profile && !profile.onboardedAt))}
+      isEditor={isEditor}
+      onDone={() => completeTour.mutate()}
+    />
     <FeedSearch
       workspaceId={current._id}
       onSelectReel={(reelId: string) => {

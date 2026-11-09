@@ -74,9 +74,9 @@ export function useFeedActions() {
         await api.feed.guestReact({ reelId, kind, token: mode.token, secret });
       }
     },
-    recordView: async (reelId: string, completed: boolean) => {
+    recordView: async (reelId: string, completed: boolean, sessionId?: string) => {
       if (mode.kind === "member") {
-        await api.feed.recordView({ reelId, completed });
+        await api.feed.recordView({ reelId, completed, sessionId });
       } else {
         const secret = await guestSecret();
         await api.feed.guestRecordView({
@@ -84,6 +84,7 @@ export function useFeedActions() {
           completed,
           token: mode.token,
           secret,
+          sessionId,
         });
       }
     },

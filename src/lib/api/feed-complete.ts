@@ -348,27 +348,20 @@ export async function getEvidence(args: { reelId: string }): Promise<Finding[]> 
   return (findings || []).map(mapFinding);
 }
 
-export async function recordView(args: { reelId: string; completed: boolean }) {
+export async function recordView(args: {
+  reelId: string;
+  completed: boolean;
+  sessionId?: string;
+}) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  
-  const { data: reel } = await supabase
-    .from('reels')
-    .select('study_id')
-    .eq('id', args.reelId)
-    .single();
-  
-  if (!reel) return;
-  
-  await supabase
-    .from('reel_views')
-    .upsert({
-      reel_id: args.reelId,
-      user_id: user.id,
-      study_id: reel.study_id,
-      completed: args.completed,
-      last_viewed_at: new Date().toISOString(),
-    });
+
+  const { error } = await supabase.rpc('record_reel_view', {
+    p_reel_id: args.reelId,
+    p_completed: args.completed,
+    p_session_id: args.sessionId ?? null,
+  });
+  if (error) throw error;
 }
 
 export async function guestReact(args: { reelId: string; kind: 'true' | 'surprised' | 'pushback'; token: string; secret: string }) {
@@ -399,41 +392,21 @@ export async function guestReact(args: { reelId: string; kind: 'true' | 'surpris
     });
 }
 
-export async function guestRecordView(args: { reelId: string; completed: boolean; token: string; secret: string }) {
-  const { data: links } = await supabase
-    .from('share_links')
-    .select('id, study_id')
-    .eq('token', args.token)
-    .single();
-  
-  if (!links) throw new Error('Share link not found');
-  
-  const { data: guest } = await supabase
-    .from('guests')
-    .select('id')
-    .eq('link_id', links.id)
-    .eq('secret', args.secret)
-    .single();
-  
-  if (!guest) throw new Error('Guest not found');
-  
-  const { data: reel } = await supabase
-    .from('reels')
-    .select('study_id')
-    .eq('id', args.reelId)
-    .single();
-  
-  if (!reel) return;
-  
-  await supabase
-    .from('guest_views')
-    .upsert({
-      reel_id: args.reelId,
-      guest_id: guest.id,
-      study_id: reel.study_id,
-      completed: args.completed,
-      last_viewed_at: new Date().toISOString(),
-    });
+export async function guestRecordView(args: {
+  reelId: string;
+  completed: boolean;
+  token: string;
+  secret: string;
+  sessionId?: string;
+}) {
+  const { error } = await supabase.rpc('record_guest_reel_view', {
+    p_reel_id: args.reelId,
+    p_completed: args.completed,
+    p_token: args.token,
+    p_secret: args.secret,
+    p_session_id: args.sessionId ?? null,
+  });
+  if (error) throw error;
 }
 
 export async function guestAddComment(args: { reelId: string; kind: 'note' | 'question' | 'action'; body: string; parentId?: string; token: string; secret: string }) {

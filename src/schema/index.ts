@@ -55,6 +55,13 @@ export interface User {
   token_identifier: string;
   onboarded_at?: string;
   trial_used_at?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  signup_referrer?: string;
+  landing_path?: string;
   created_at: string;
 }
 

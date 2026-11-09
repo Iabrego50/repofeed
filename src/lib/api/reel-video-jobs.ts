@@ -16,6 +16,7 @@ import {
   inProgressVideoState,
   isUserUpload,
   needsAiVideo,
+  occupiesVideoSlot,
   queuedVideoState,
   shouldPollJob,
   shouldStartJob,
@@ -328,13 +329,38 @@ export async function processReelVideos(
 
   const toStart = pending
     .filter((row) => shouldStartJob(row.video, now))
+    .sort((a, b) => a.track_index - b.track_index)
     .slice(0, limit);
   const toPoll = pending
     .filter((row) => shouldPollJob(row.video))
     .slice(0, limit);
   const concurrency = videoConcurrency(env);
+  const reservedByStudy = new Map<string, number>();
+  const allowed: typeof toStart = [];
+  for (const row of toStart) {
+    const studyRows = await store.listByStudy(row.study_id);
+    const used =
+      studyRows.filter(occupiesVideoSlot).length +
+      (reservedByStudy.get(row.study_id) ?? 0);
+    const plan = await store.workspacePlan(row.workspace_id);
+    const cap = studyVideoCap(plan, env);
+    if (used >= cap) {
+      await store.updateReel(row.id, {
+        footage: fallbackFootageFor(row),
+        video: skippedVideoState(`Study video cap reached (${cap})`, now, env),
+        updated_at: nowIso(now),
+      });
+      result.skipped += 1;
+      continue;
+    }
+    reservedByStudy.set(
+      row.study_id,
+      (reservedByStudy.get(row.study_id) ?? 0) + 1,
+    );
+    allowed.push(row);
+  }
 
-  const startResults = await mapWithConcurrency(toStart, concurrency, (row) =>
+  const startResults = await mapWithConcurrency(allowed, concurrency, (row) =>
     startOne(store, provider, row, env, now),
   );
   for (const item of startResults) {
@@ -367,6 +393,7 @@ export function composeReelVideoFields(
   trackIndex: number,
   now = Date.now(),
   env: NodeJS.ProcessEnv = process.env,
+  options: { withinCap?: boolean; cap?: number } = {},
 ): {
   footage: ReturnType<typeof fallbackFootageFor>;
   video: ReelVideo;
@@ -379,6 +406,13 @@ export function composeReelVideoFields(
     return {
       footage,
       video: skippedVideoState("AI video generation is off", now, env),
+    };
+  }
+  if (options.withinCap === false) {
+    const cap = options.cap ?? studyVideoCap(null, env);
+    return {
+      footage,
+      video: skippedVideoState(`Study video cap reached (${cap})`, now, env),
     };
   }
   return { footage, video: queuedVideoState(now, env) };

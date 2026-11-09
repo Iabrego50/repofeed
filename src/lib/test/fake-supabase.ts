@@ -266,6 +266,17 @@ export class FakeSupabase {
 
   readonly client = {
     from: (table: string) => new FakeQuery(table, this),
+    rpc: async (fn: string, args?: unknown) => {
+      this.calls.push({
+        table: fn,
+        op: "insert",
+        filters: [{ method: "rpc", args: [args] }],
+        payload: args,
+      });
+      const queued = this.take(`rpc:${fn}`);
+      if (queued) return queued;
+      return { data: { counted: true }, error: null, count: 1 };
+    },
     auth: {
       getUser: async (jwt?: string) => {
         if (typeof jwt === "string") {

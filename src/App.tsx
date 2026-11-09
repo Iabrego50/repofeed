@@ -5,6 +5,7 @@ import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useServiceWorker } from "@/hooks/use-service-worker.ts";
 import { DefaultProviders } from "./components/providers/default.tsx";
 import { AppErrorBoundary } from "./components/app-error-boundary.tsx";
+import SpaAnalytics from "./components/spa-analytics.tsx";
 import AppLayout from "./components/app-layout.tsx";
 import PublicEntry from "./pages/landing/public-entry.tsx";
 import DocumentMeta from "./components/document-meta.tsx";
@@ -97,6 +98,7 @@ export default function App() {
       <DefaultProviders>
         <BrowserRouter>
           <DocumentMeta />
+          <SpaAnalytics />
           <Suspense fallback={<FullScreenLoader />}>
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />

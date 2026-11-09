@@ -8,7 +8,6 @@ import Logo from "@/components/logo.tsx";
 import UserAvatar from "@/components/user-avatar.tsx";
 import OfflineBanner from "@/components/offline-banner.tsx";
 import PlanNotices from "@/components/plan-notices.tsx";
-import OnboardingTour from "@/components/onboarding-tour.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,7 +104,6 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      <OnboardingTour />
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border px-3 py-5 lg:flex">
         <NavLink to="/" className="cursor-pointer px-3 pb-6" aria-label="repofeed.ai home">
           <Logo />

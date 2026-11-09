@@ -6,6 +6,8 @@ import { FileText, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
+import { track } from "@/lib/analytics";
+import { useWorkspace } from "@/hooks/use-workspace.ts";
 
 interface Source {
   _id: string;
@@ -23,6 +25,7 @@ interface SourcesStepProps {
 
 export default function SourcesStep({ studyId, study, sources, onNext }: SourcesStepProps) {
   const queryClient = useQueryClient();
+  const { current } = useWorkspace();
   const [uploading, setUploading] = useState(false);
 
   const removeMutation = useMutation({
@@ -54,6 +57,13 @@ export default function SourcesStep({ studyId, study, sources, onNext }: Sources
       }
       
       queryClient.invalidateQueries({ queryKey: ["studies", "sources", studyId] });
+      if (sources.length === 0) {
+        track("first_upload", {
+          workspaceId: current?._id,
+          studyId,
+          kind: "file",
+        });
+      }
       toast.success("Sources uploaded");
       e.target.value = "";
     } catch (err: any) {

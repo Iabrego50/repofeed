@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/empty.tsx";
 import UserAvatar from "@/components/user-avatar.tsx";
 import { cn } from "@/lib/utils.ts";
+import { track } from "@/lib/analytics";
 
 type CommentWithReplies = Comment & { replies?: CommentWithReplies[] };
 
@@ -83,6 +84,7 @@ function Composer({
     mutationFn: () => api.feed.addComment({ reelId, kind, body, parentId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed", "comments", reelId] });
+      track("comment", { reelId, kind });
       setBody("");
       onDone?.();
       toast.success("Comment posted");

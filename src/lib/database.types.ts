@@ -9,6 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          id: string
+          created_at: string
+          event: string
+          user_id: string | null
+          workspace_id: string | null
+          anonymous_id: string | null
+          session_id: string | null
+          path: string | null
+          properties: Json
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          event: string
+          user_id?: string | null
+          workspace_id?: string | null
+          anonymous_id?: string | null
+          session_id?: string | null
+          path?: string | null
+          properties?: Json
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          event?: string
+          user_id?: string | null
+          workspace_id?: string | null
+          anonymous_id?: string | null
+          session_id?: string | null
+          path?: string | null
+          properties?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       comments: {
         Row: {
           id: string
@@ -422,6 +473,8 @@ export type Database = {
           view_count: number
           completed: boolean
           last_viewed_at: string
+          counted_on: string | null
+          last_session_id: string | null
           created_at: string
           updated_at: string
         }
@@ -433,6 +486,8 @@ export type Database = {
           view_count?: number
           completed?: boolean
           last_viewed_at: string
+          counted_on?: string | null
+          last_session_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -444,6 +499,8 @@ export type Database = {
           view_count?: number
           completed?: boolean
           last_viewed_at?: string
+          counted_on?: string | null
+          last_session_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -667,6 +724,8 @@ export type Database = {
           view_count: number
           completed: boolean
           last_viewed_at: string
+          counted_on: string | null
+          last_session_id: string | null
           created_at: string
           updated_at: string
         }
@@ -678,6 +737,8 @@ export type Database = {
           view_count?: number
           completed?: boolean
           last_viewed_at: string
+          counted_on?: string | null
+          last_session_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -689,6 +750,8 @@ export type Database = {
           view_count?: number
           completed?: boolean
           last_viewed_at?: string
+          counted_on?: string | null
+          last_session_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1063,6 +1126,13 @@ export type Database = {
           avatar: string | null
           onboarded_at: string | null
           trial_used_at: string | null
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
+          utm_term: string | null
+          utm_content: string | null
+          signup_referrer: string | null
+          landing_path: string | null
           created_at: string
           updated_at: string
         }
@@ -1074,6 +1144,13 @@ export type Database = {
           avatar?: string | null
           onboarded_at?: string | null
           trial_used_at?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_term?: string | null
+          utm_content?: string | null
+          signup_referrer?: string | null
+          landing_path?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1085,6 +1162,13 @@ export type Database = {
           avatar?: string | null
           onboarded_at?: string | null
           trial_used_at?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_term?: string | null
+          utm_content?: string | null
+          signup_referrer?: string | null
+          landing_path?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1312,6 +1396,24 @@ export type Database = {
           workspace_uuid: string
         }
         Returns: boolean
+      }
+      record_reel_view: {
+        Args: {
+          p_reel_id: string
+          p_completed?: boolean
+          p_session_id?: string | null
+        }
+        Returns: Json
+      }
+      record_guest_reel_view: {
+        Args: {
+          p_reel_id: string
+          p_completed?: boolean
+          p_token?: string | null
+          p_secret?: string | null
+          p_session_id?: string | null
+        }
+        Returns: Json
       }
     }
     Enums: {
