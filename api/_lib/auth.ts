@@ -7,9 +7,9 @@ export const GENERATION_INTERNAL_SECRET_HEADER = "x-generation-internal-secret";
 export const EDIT_ROLES = ["owner", "editor"] as const;
 
 export class AuthError extends Error {
-  readonly status: 401 | 403;
+  readonly status: 401 | 403 | 404;
 
-  constructor(status: 401 | 403, message: string) {
+  constructor(status: 401 | 403 | 404, message: string) {
     super(message);
     this.name = "AuthError";
     this.status = status;
@@ -20,7 +20,7 @@ export function isAuthError(error: unknown): error is AuthError {
   if (error instanceof AuthError) return true;
   if (!(error instanceof Error) || error.name !== "AuthError") return false;
   const status = (error as AuthError).status;
-  return status === 401 || status === 403;
+  return status === 401 || status === 403 || status === 404;
 }
 
 export type HeaderSource =
@@ -109,6 +109,34 @@ export async function requireUser(
     throw new AuthError(401, "Unauthorized");
   }
   return data.user;
+}
+
+const NOT_FOUND = () => new AuthError(404, "Not found");
+
+/**
+ * Product analytics admin. Unsigned and non-admin callers get 404 so the
+ * route does not advertise that it exists.
+ */
+export async function requireAdmin(
+  source: HeaderSource | undefined,
+  client: ServerClient = supabase,
+): Promise<User> {
+  let user: User;
+  try {
+    user = await requireUser(source, client);
+  } catch (error) {
+    if (isAuthError(error)) throw NOT_FOUND();
+    throw error;
+  }
+
+  const { data, error } = await client
+    .from("users")
+    .select("is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error || !data?.is_admin) throw NOT_FOUND();
+  return user;
 }
 
 export async function canEditWorkspace(

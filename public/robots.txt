@@ -5,5 +5,6 @@ Disallow: /auth/confirm
 Disallow: /billing
 Disallow: /settings
 Disallow: /welcome
+Disallow: /admin
 
 Sitemap: https://repofeed.ai/sitemap.xml

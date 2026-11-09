@@ -32,6 +32,7 @@ const BillingPage = lazy(() => import("./pages/billing/page.tsx"));
 const HelpPage = lazy(() => import("./pages/help/page.tsx"));
 const TermsPage = lazy(() => import("./pages/legal/terms.tsx"));
 const PrivacyPage = lazy(() => import("./pages/legal/privacy.tsx"));
+const AdminAnalyticsPage = lazy(() => import("./pages/admin/analytics.tsx"));
 
 function PageLoader() {
   return (
@@ -120,6 +121,7 @@ export default function App() {
               <Route path="/demo/insights" element={<DemoInsightsPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               <Route element={<Gate />}>
                 <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
                 <Route element={<RequireWorkspace />}>

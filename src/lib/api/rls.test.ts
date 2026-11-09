@@ -297,6 +297,18 @@ describe("RLS policies from supabase/migrations", () => {
     expect(rows[0]?.user_id).toBe(OWNER);
   });
 
+  it("clients cannot grant themselves is_admin", async () => {
+    await asSuper();
+    await setAuth(OWNER);
+    await asTester();
+    await db.query(`update public.users set is_admin = true where id = '${OWNER}'`);
+    await asSuper();
+    const { rows } = await db.query<{ is_admin: boolean }>(
+      `select is_admin from public.users where id = '${OWNER}'`,
+    );
+    expect(rows[0]?.is_admin).toBe(false);
+  });
+
   it("record_reel_view counts a viewer once per UTC day and keeps counters in sync", async () => {
     await asSuper();
     await setAuth(OWNER);

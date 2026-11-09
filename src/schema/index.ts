@@ -62,6 +62,7 @@ export interface User {
   utm_content?: string;
   signup_referrer?: string;
   landing_path?: string;
+  is_admin?: boolean;
   created_at: string;
 }
 

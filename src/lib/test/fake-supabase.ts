@@ -155,6 +155,11 @@ export class FakeQuery {
     return this;
   }
 
+  range(from: number, to: number) {
+    this.filters.push({ method: "range", args: [from, to] });
+    return this;
+  }
+
   single() {
     this.wantSingle = "single";
     return this;

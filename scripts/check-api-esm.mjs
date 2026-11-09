@@ -24,6 +24,7 @@ const API_ENTRIES = [
   "api/videos/backfill.ts",
   "api/decks/generate.ts",
   "api/admin/ai-models.ts",
+  "api/admin/analytics.ts",
 ];
 
 export function isTypeOnlyImport(statement) {

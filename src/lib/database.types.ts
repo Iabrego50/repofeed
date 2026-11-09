@@ -1133,6 +1133,7 @@ export type Database = {
           utm_content: string | null
           signup_referrer: string | null
           landing_path: string | null
+          is_admin: boolean
           created_at: string
           updated_at: string
         }
@@ -1151,6 +1152,7 @@ export type Database = {
           utm_content?: string | null
           signup_referrer?: string | null
           landing_path?: string | null
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -1169,6 +1171,7 @@ export type Database = {
           utm_content?: string | null
           signup_referrer?: string | null
           landing_path?: string | null
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
