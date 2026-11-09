@@ -190,6 +190,10 @@ vi.mock("@/lib/api/complete", () => ({
         createStudy: async () => ({ _id: "s1" }),
       },
     },
+    users: {
+      current: async () => ({ onboardedAt: "2026-01-01T00:00:00.000Z" }),
+      update: async () => undefined,
+    },
   },
 }));
 

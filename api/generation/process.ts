@@ -51,6 +51,12 @@ import { toScene, finalizeScenes } from "../../src/lib/ai/scenes.js";
 import type { Scene } from "../../src/schema/validators";
 import { toStepError } from "../../src/lib/errors/step-error.js";
 import { composeReelVideoFields } from "../../src/lib/api/reel-video-jobs.js";
+import {
+  countsTowardCap,
+  studyVideoCap,
+  type ReelVideoRow,
+} from "../../src/lib/api/reel-video.js";
+import { trackServer } from "../../src/lib/analytics-server.js";
 import { dispatchVideoProcess } from "../_lib/video-chain.js";
 
 export const maxDuration = 300;
@@ -458,6 +464,20 @@ async function processComposition(jobId: string, job: any, study: any) {
     .gte("created_at", job.created_at || new Date(0).toISOString());
   throwIfWriteError(existing.error, "existing reels");
 
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("paid_plan")
+    .eq("id", job.workspace_id)
+    .maybeSingle();
+  const videoCap = studyVideoCap(workspace?.paid_plan);
+  const { data: studyVideoRows } = await supabase
+    .from("reels")
+    .select("footage, video")
+    .eq("study_id", study.id);
+  let videosUsed = (studyVideoRows ?? []).filter((row) =>
+    countsTowardCap(row as Pick<ReelVideoRow, "footage" | "video">),
+  ).length;
+
   const existingRows = existing.data ?? [];
   const existingCount = existing.count ?? existingRows.length;
 
@@ -550,7 +570,13 @@ async function processComposition(jobId: string, job: any, study: any) {
         .filter((s): s is Scene => s !== null);
       const title = r.title.trim().split(/\s+/).slice(0, 6).join(" ");
       const finalScenes = finalizeScenes(scenes, title, sourceNames);
-      const videoFields = composeReelVideoFields(existingCount + idx);
+      const videoFields = composeReelVideoFields(
+        existingCount + idx,
+        Date.now(),
+        process.env,
+        { withinCap: videosUsed < videoCap, cap: videoCap },
+      );
+      if (videoFields.video.status === "queued") videosUsed += 1;
 
       return [
         {
@@ -619,6 +645,17 @@ async function processVerification(jobId: string, studyId: string) {
     phase: "done",
     locked_until: new Date(0).toISOString(),
   });
+  const { data: doneJob } = await supabase
+    .from("generation_jobs")
+    .select("started_by, workspace_id")
+    .eq("id", jobId)
+    .maybeSingle();
+  await trackServer(supabase, {
+    event: "generate_completed",
+    userId: doneJob?.started_by,
+    workspaceId: doneJob?.workspace_id,
+    properties: { studyId },
+  });
   await kickVideoProcess(studyId);
 }
 
@@ -635,7 +672,21 @@ async function failJob(jobId: string, error: string, errorDetail?: string) {
     .in("status", ["queued", "running"]);
   if (fail.error)
     console.error("Failed to mark generation job failed:", fail.error);
-  await restoreStudyAfterGeneration(jobId);
+  const { data: failedJob } = await supabase
+    .from("generation_jobs")
+    .select("started_by, workspace_id, study_id")
+    .eq("id", jobId)
+    .maybeSingle();
+  await trackServer(supabase, {
+    event: "generate_failed",
+    userId: failedJob?.started_by,
+    workspaceId: failedJob?.workspace_id,
+    properties: {
+      studyId: failedJob?.study_id,
+      error: error.slice(0, 200),
+    },
+  });
+  if (failedJob?.study_id) await restoreStudyStatus(failedJob.study_id);
 }
 
 async function restoreStudyAfterGeneration(jobId: string) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RetryableHttpError } from "./async-jobs";
 import {
+  composeReelVideoFields,
   enqueueReelVideos,
   processReelVideos,
   type ReelVideoStore,
@@ -210,6 +211,35 @@ describe("reel video job lifecycle", () => {
     expect(store.rows[0].footage?.url).toMatch(/^\/footage\//);
     expect(store.rows[0].video?.status).toBe("queued");
     expect(store.rows[1].video).toBeNull();
+  });
+
+  it("skips compose when the study is already at the video cap", () => {
+    const queued = composeReelVideoFields(0, 1, {}, { withinCap: true, cap: 6 });
+    expect(queued.video.status).toBe("queued");
+    const skipped = composeReelVideoFields(6, 1, {}, { withinCap: false, cap: 6 });
+    expect(skipped.video.status).toBe("skipped");
+    expect(skipped.video.error).toMatch(/cap reached \(6\)/);
+    expect(skipped.footage?.url).toMatch(/^\/footage\//);
+  });
+
+  it("does not start more videos than the plan cap during process", async () => {
+    const store = memoryStore(
+      [
+        row({ id: "r1", video: queuedVideoState(0), track_index: 0 }),
+        row({ id: "r2", video: queuedVideoState(0), track_index: 1 }),
+        row({ id: "r3", video: queuedVideoState(0), track_index: 2 }),
+      ],
+      "free",
+    );
+    const result = await processReelVideos(store, providerMock(), {
+      studyId: "study-1",
+      env: { VIDEO_STUDY_CAP: "2", VIDEO_ENABLED: "true" },
+      now: 20,
+    });
+    expect(result.started).toBe(2);
+    expect(result.skipped).toBe(1);
+    expect(store.rows.filter((r) => r.video?.status === "starting" || r.video?.status === "in_progress")).toHaveLength(2);
+    expect(store.rows[2].video?.status).toBe("skipped");
   });
 
   it("respects the per-study cap", async () => {

@@ -260,6 +260,67 @@ describe("RLS policies from supabase/migrations", () => {
     await asSuper();
   });
 
+  it("clients can insert analytics events but cannot read them", async () => {
+    await asSuper();
+    await setAuth(null);
+    await asTester();
+    // INSERT ... RETURNING needs a SELECT policy; this table is insert-only.
+    await db.query(
+      `insert into public.analytics_events (event, anonymous_id, session_id, path, properties)
+       values ('heart', 'anon-1', 'sess-1', '/demo', '{"demo":true}'::jsonb)`,
+    );
+    const visible = await db.query("select event from public.analytics_events");
+    expect(visible.rows).toHaveLength(0);
+
+    await asSuper();
+    const { rows } = await db.query<{ event: string; user_id: string | null }>(
+      "select event, user_id from public.analytics_events where event = 'heart'",
+    );
+    expect(rows).toEqual([{ event: "heart", user_id: null }]);
+  });
+
+  it("authenticated analytics inserts stamp user_id from auth.uid()", async () => {
+    await asSuper();
+    await setAuth(OWNER);
+    await asTester();
+    await db.query(
+      `insert into public.analytics_events (event, user_id)
+       values ('signup', '${MEMBER}')`,
+    );
+    const leaked = await db.query("select event from public.analytics_events");
+    expect(leaked.rows).toHaveLength(0);
+
+    await asSuper();
+    const { rows } = await db.query<{ user_id: string }>(
+      "select user_id from public.analytics_events where event = 'signup'",
+    );
+    expect(rows[0]?.user_id).toBe(OWNER);
+  });
+
+  it("record_reel_view counts a viewer once per UTC day and keeps counters in sync", async () => {
+    await asSuper();
+    await setAuth(OWNER);
+    await asTester();
+    const first = await db.query<{ counted: boolean }>(
+      `select (public.record_reel_view('${REEL}', false, 'sess-1')->>'counted')::boolean as counted`,
+    );
+    expect(first.rows[0]?.counted).toBe(true);
+    const second = await db.query<{ counted: boolean }>(
+      `select (public.record_reel_view('${REEL}', true, 'sess-1')->>'counted')::boolean as counted`,
+    );
+    expect(second.rows[0]?.counted).toBe(false);
+
+    await asSuper();
+    const views = await db.query<{ view_count: number; completed: boolean }>(
+      `select view_count, completed from public.reel_views where reel_id = '${REEL}' and user_id = '${OWNER}'`,
+    );
+    expect(views.rows[0]).toEqual({ view_count: 1, completed: true });
+    const counters = await db.query<{ views: number; viewers: number; completions: number }>(
+      `select views, viewers, completions from public.reel_counters where reel_id = '${REEL}'`,
+    );
+    expect(counters.rows[0]).toEqual({ views: 1, viewers: 1, completions: 1 });
+  });
+
   it("the art bucket is public and anon cannot write to it", async () => {
     await asSuper();
     const { rows } = await db.query<{ id: string; public: boolean }>(

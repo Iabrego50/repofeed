@@ -12,6 +12,7 @@ import {
   type AuthCallbackMessages,
 } from "./callback-messages.ts";
 import { resolveReturnTo } from "./return-to.ts";
+import { completeSignup } from "@/lib/analytics";
 
 const OTP_TYPES = new Set<EmailOtpType>([
   "signup",
@@ -101,17 +102,14 @@ export default function AuthCallback({
           return;
         }
 
-        const { error: upsertError } = await client.from("users").upsert(
-          {
-            id: data.session.user.id,
-            email: data.session.user.email,
-            name: data.session.user.user_metadata?.name,
-            avatar: data.session.user.user_metadata?.avatar_url,
-            token_identifier: data.session.user.id,
-          },
-          { onConflict: "id" },
-        );
-        if (upsertError) console.error("Failed to create user:", upsertError);
+        try {
+          await completeSignup({
+            client,
+            user: data.session.user,
+          });
+        } catch (upsertError) {
+          console.error("Failed to create user:", upsertError);
+        }
 
         if (!cancelled) navigate(returnTo, { replace: true });
       } catch (err) {

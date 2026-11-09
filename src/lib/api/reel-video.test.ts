@@ -6,6 +6,7 @@ import {
   PLAN_VIDEO_CAPS,
   buildVideoPrompt,
   countsTowardCap,
+  occupiesVideoSlot,
   failedVideoState,
   fallbackFootageFor,
   hasAiVideo,
@@ -92,6 +93,15 @@ describe("reel AI video policy", () => {
     expect(countsTowardCap({ footage: null, video: queuedVideoState() })).toBe(
       true,
     );
+    expect(occupiesVideoSlot({ footage: null, video: queuedVideoState() })).toBe(
+      false,
+    );
+    expect(
+      occupiesVideoSlot({
+        footage: null,
+        video: { ...queuedVideoState(), status: "starting" },
+      }),
+    ).toBe(true);
     expect(queuedVideoState(0).provider).toBe("xai");
     expect(videoModel({})).toBe(DEFAULT_VIDEO_MODEL);
     expect(videoSeconds({})).toBe(DEFAULT_VIDEO_SECONDS);

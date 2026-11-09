@@ -153,7 +153,29 @@ export const api = {
         ...data,
         _id: data.id,
         _creationTime: new Date(data.created_at).getTime(),
+        onboardedAt: data.onboarded_at,
       };
+    },
+    update: async (args: { name?: string; email?: string; onboardedAt?: string }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const updates: {
+        name?: string;
+        email?: string;
+        onboarded_at?: string;
+      } = {};
+      if (args.name !== undefined) updates.name = args.name;
+      if (args.email !== undefined) updates.email = args.email;
+      if (args.onboardedAt !== undefined) updates.onboarded_at = args.onboardedAt;
+
+      const { error } = await supabase
+        .from("users")
+        .update(updates)
+        .eq("id", user.id);
+      if (error) throw error;
     },
   },
   share: {

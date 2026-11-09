@@ -3,7 +3,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import ExportDialog from "@/components/reel/export-dialog.tsx";
 import type { ReelData } from "@/lib/reel/painter.ts";
+import { getSessionId, track } from "@/lib/analytics";
 import type { FeedReel } from "../_lib/types.ts";
+import { useFeedActions } from "../_lib/use-feed-data.ts";
+import { useFeedMode } from "../_lib/feed-mode.ts";
 import { useFeedOrder } from "../_lib/use-feed-order.ts";
 import CaughtUp from "./caught-up.tsx";
 import FeedSlide from "./feed-slide.tsx";
@@ -42,6 +45,10 @@ export default function ReelFeed({
   resetKey?: string;
 }) {
   const { ordered: reels, fresh } = useFeedOrder(rawReels, resetKey);
+  const mode = useFeedMode();
+  const { recordView } = useFeedActions();
+  const feedOpenSent = useRef(false);
+  const openedReels = useRef(new Set<string>());
   // On a first visit everything is unwatched, so a "New" badge on every scene would be noise.
   const showBadges = reels !== undefined && fresh.size < reels.length;
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -113,8 +120,47 @@ export default function ReelFeed({
   }, [activeIdx, scrollTo]);
 
   const activeReel = reels?.[Math.min(activeIdx, (reels?.length ?? 1) - 1)];
+  const onCaughtUp = Boolean(reels && activeIdx >= reels.length);
+
+  const quietRecordView = useCallback(
+    (reelId: string, completed: boolean) => {
+      if (mode.kind === "share" && !mode.secret) return;
+      void recordView(reelId, completed, getSessionId()).catch(() => undefined);
+    },
+    [mode, recordView],
+  );
+
+  useEffect(() => {
+    if (!reels || reels.length === 0 || feedOpenSent.current) return;
+    feedOpenSent.current = true;
+    track("feed_open", { workspaceId: reels[0]?.workspaceId });
+  }, [reels]);
+
+  useEffect(() => {
+    if (!activeReel || onCaughtUp) return;
+    quietRecordView(activeReel._id, false);
+    if (!openedReels.current.has(activeReel._id)) {
+      openedReels.current.add(activeReel._id);
+      track("reel_open", {
+        reelId: activeReel._id,
+        workspaceId: activeReel.workspaceId,
+      });
+    }
+    track("scene_view", {
+      reelId: activeReel._id,
+      workspaceId: activeReel.workspaceId,
+    });
+    // recordView identity changes every render; key off the visible reel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeReel?._id, onCaughtUp]);
 
   const openPanel = (tab: PanelTab) => {
+    if (tab === "evidence" && activeReel) {
+      track("evidence_open", {
+        reelId: activeReel._id,
+        workspaceId: activeReel.workspaceId,
+      });
+    }
     if (isDesktop) setDesktopTab(tab);
     else setPanel(tab);
   };
@@ -143,7 +189,10 @@ export default function ReelFeed({
                     reel={r}
                     active={i === activeIdx}
                     isNew={showBadges && fresh.has(r._id) && !r.seen}
-                    onEnded={() => scrollTo(i + 1)}
+                    onEnded={() => {
+                      quietRecordView(r._id, true);
+                      scrollTo(i + 1);
+                    }}
                     onOpenPanel={openPanel}
                     onExport={() => setExporting({
                       title: r.title,

@@ -234,6 +234,15 @@ export function countsTowardCap(
   );
 }
 
+/** Slots already generating or done. Queued extras can still be skipped. */
+export function occupiesVideoSlot(
+  row: Pick<ReelVideoRow, "footage" | "video">,
+): boolean {
+  if (hasAiVideo(row.footage, row.video)) return true;
+  const status = row.video?.status;
+  return status === "starting" || status === "in_progress";
+}
+
 export function shouldStartJob(
   video: ReelVideo | null | undefined,
   now = Date.now(),

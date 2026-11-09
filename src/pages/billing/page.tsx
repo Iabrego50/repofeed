@@ -11,6 +11,7 @@ import PlanGrid from "@/components/plan-grid";
 import ConfirmChangeDialog from "./_components/confirm-change-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { track } from "@/lib/analytics";
 
 export default function BillingPage() {
   const navigate = useNavigate();
@@ -76,6 +77,11 @@ export default function BillingPage() {
     if (!confirmPlan) return;
 
     setCheckoutLoading(true);
+    track("checkout_started", {
+      workspaceId: current._id,
+      plan: confirmPlan.plan,
+      interval: confirmPlan.interval,
+    });
     try {
       const { url } = await api.billing.checkout({
         workspaceId: current._id,

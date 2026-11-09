@@ -3,7 +3,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
-vi.mock("@vercel/analytics/react", () => ({ Analytics: () => null }));
+vi.mock("@vercel/analytics", () => ({ track: () => undefined, inject: () => undefined }));
+vi.mock("@vercel/analytics/react", () => ({ Analytics: () => null, track: () => undefined }));
 vi.mock("@vercel/speed-insights/react", () => ({ SpeedInsights: () => null }));
 
 if (typeof window.matchMedia !== "function") {

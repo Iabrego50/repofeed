@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { track } from '../analytics';
 import { assertStudySlot } from '../billing/limits';
 import { canSeeStudy, effectiveRole } from './access';
 import { verifyScenes, buildSourceIndex } from '../reel/verify';
@@ -229,6 +230,10 @@ export async function addSource(args: {
     throw new Error('Study sources are too large (1 million characters max)');
   }
 
+  const { count: priorSources } = await supabase
+    .from('sources')
+    .select('id', { count: 'exact', head: true });
+
   const { data, error } = await supabase
     .from('sources')
     .insert({
@@ -244,6 +249,13 @@ export async function addSource(args: {
     .single();
 
   if (error) throw error;
+  if ((priorSources ?? 0) === 0) {
+    track('first_upload', {
+      workspaceId: study.workspace_id,
+      studyId: args.studyId,
+      kind: args.kind,
+    });
+  }
   return data.id;
 }
 
