@@ -9,6 +9,7 @@ import {
 } from "@/lib/reel/painter.ts";
 import { stockClipForIndex } from "@/lib/api/reel-video.ts";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
+import { shouldAttachReelFootage } from "./footage-preload.ts";
 
 /**
  * Most a "cover" fit may trim from each edge, in reel units. Text sits 96 in from the sides,
@@ -28,6 +29,12 @@ type Props = {
   onProgress?: (t: number, total: number) => void;
   /** "cover" fills the box (phones); "contain" letterboxes. */
   fit?: "cover" | "contain";
+  /**
+   * Hidden footage video preload. `none` skips the network request until the
+   * clip actually plays (landing hero). Neighbours keep the default so they
+   * can decode a still frame.
+   */
+  preload?: "none" | "metadata" | "auto";
   className?: string;
 };
 
@@ -40,6 +47,7 @@ export default function ReelCanvas({
   onEnded,
   onProgress,
   fit = "contain",
+  preload: preloadProp,
   className,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -72,6 +80,7 @@ export default function ReelCanvas({
   const fallbackClip = stockClipForIndex(reel.trackIndex).url;
   const isStill =
     reel.footage?.media === "image" && brokenUrl !== reel.footage.url;
+  const videoPreload = preloadProp ?? (playing ? "auto" : "metadata");
   const footageUrl = isStill
     ? undefined
     : brokenUrl
@@ -81,6 +90,7 @@ export default function ReelCanvas({
   // Neighbouring scenes only fetch enough for a still frame; the full clip downloads once it plays.
   const [hasPlayed, setHasPlayed] = useState(playing);
   if (playing && !hasPlayed) setHasPlayed(true);
+  const loadFootage = shouldAttachReelFootage(hasPlayed, videoPreload);
 
   // Size the canvas backing store to the box × DPR, preserving the 9:16 transform.
   useEffect(() => {
@@ -230,7 +240,7 @@ export default function ReelCanvas({
         className,
       )}
     >
-      {footageUrl && (
+      {footageUrl && loadFootage && (
         // Hidden source for the canvas; frames are painted under the text.
         <video
           ref={videoRef}
@@ -238,7 +248,7 @@ export default function ReelCanvas({
           muted
           loop
           playsInline
-          preload={hasPlayed ? "auto" : "metadata"}
+          preload={hasPlayed ? "auto" : videoPreload}
           aria-hidden
           className="pointer-events-none absolute size-px opacity-0"
           onError={() => {

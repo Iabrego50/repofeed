@@ -5,7 +5,19 @@ const bag = vi.hoisted(() => ({
   client: null as null | {
     auth: {
       getSession: () => Promise<unknown>;
-      onAuthStateChange: () => { data: { subscription: { unsubscribe: () => void } } };
+      onAuthStateChange: () => {
+        data: { subscription: { unsubscribe: () => void } };
+      };
+    };
+    from?: (table: string) => {
+      select: (columns: string) => {
+        eq: (
+          column: string,
+          value: string,
+        ) => {
+          single: () => Promise<unknown>;
+        };
+      };
     };
   },
 }));
@@ -32,7 +44,9 @@ describe("AuthProvider", () => {
         <Probe />
       </AuthProvider>,
     );
-    await waitFor(() => expect(screen.getByText("signed-out")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("signed-out")).toBeInTheDocument(),
+    );
   });
 
   it("renders children when getSession fails", async () => {
@@ -41,7 +55,9 @@ describe("AuthProvider", () => {
         getSession: async () => {
           throw new Error("network down");
         },
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe: () => undefined } },
+        }),
       },
     };
     render(
@@ -49,7 +65,52 @@ describe("AuthProvider", () => {
         <Probe />
       </AuthProvider>,
     );
-    await waitFor(() => expect(screen.getByText("signed-out")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("signed-out")).toBeInTheDocument(),
+    );
+  });
+
+  it("unblocks routing after getSession even if the profile query is still pending", async () => {
+    let finishProfile: (value: { data: unknown }) => void = () => undefined;
+    const profileQuery = new Promise<{ data: unknown }>((resolve) => {
+      finishProfile = resolve;
+    });
+    bag.client = {
+      auth: {
+        getSession: async () => ({
+          data: {
+            session: { user: { id: "user-1", email: "founder@example.com" } },
+          },
+          error: null,
+        }),
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe: () => undefined } },
+        }),
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => profileQuery,
+          }),
+        }),
+      }),
+    };
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByText("signed-in")).toBeInTheDocument(),
+    );
+    finishProfile({
+      data: {
+        id: "user-1",
+        email: "founder@example.com",
+        name: "Founder",
+        avatar: null,
+      },
+    });
   });
 
   it("shows a readable fallback when useAuth has no provider", () => {
@@ -59,6 +120,8 @@ describe("AuthProvider", () => {
       </AppErrorBoundary>,
     );
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    expect(screen.getByText(/useAuth must be used within an AuthProvider/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/useAuth must be used within an AuthProvider/),
+    ).toBeInTheDocument();
   });
 });

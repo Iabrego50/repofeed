@@ -129,9 +129,13 @@ type ReelRow = {
   study_id: string;
   workspace_id: string;
   created_at: string;
-  footage: ReelFootageLike;
+  footage?: ReelFootageLike | null;
   video: ReelVideo | null;
 };
+
+/** Video status/provider/timing only — skip the bulky footage JSON. */
+export const ADMIN_ANALYTICS_REEL_COLUMNS =
+  "id, study_id, workspace_id, created_at, video";
 
 type JobRow = {
   id: string;
@@ -199,9 +203,14 @@ export function isInternalAccount(user: {
   is_admin?: boolean | null;
   email?: string | null;
 }): boolean {
-  if (user.is_admin) return true;
   const email = user.email?.trim().toLowerCase() ?? "";
   return email.endsWith(`@${INTERNAL_EMAIL_DOMAIN}`);
+}
+
+function reelHasAiVideo(reel: Pick<ReelRow, "footage" | "video">): boolean {
+  if (hasAiVideo(reel.footage ?? null, reel.video)) return true;
+  // Footage JSON is not fetched for analytics; a completed job still counts.
+  return reel.video?.status === "completed";
 }
 
 function inRange(iso: string | null | undefined, start: Date | null, now: Date): boolean {
@@ -313,7 +322,7 @@ export function buildAdminAnalytics(
   );
   const studiesInRange = studies.filter((study) => inRange(study.created_at, start, now));
   const reelsInRange = reels.filter((reel) => inRange(reel.created_at, start, now));
-  const videosGenerated = reelsInRange.filter((reel) => hasAiVideo(reel.footage, reel.video)).length;
+  const videosGenerated = reelsInRange.filter(reelHasAiVideo).length;
 
   const activeFrom = (since: Date) => {
     const ids = new Set<string>();
@@ -469,7 +478,7 @@ export function buildAdminAnalytics(
         : "free";
     const wsStudies = studies.filter((study) => study.workspace_id === workspace.id);
     const wsReels = reels.filter((reel) => reel.workspace_id === workspace.id);
-    const videos = wsReels.filter((reel) => hasAiVideo(reel.footage, reel.video)).length;
+    const videos = wsReels.filter(reelHasAiVideo).length;
     const studyCount = Math.max(wsStudies.length, 1);
     return {
       workspaceId: workspace.id,
@@ -621,7 +630,7 @@ export async function loadAdminAnalytics(
     ),
     selectAll<MemberRow>(client, "workspace_members", "workspace_id, user_id"),
     selectAll<StudyRow>(client, "studies", "id, workspace_id, created_at"),
-    selectAll<ReelRow>(client, "reels", "id, study_id, workspace_id, created_at, footage, video"),
+    selectAll<ReelRow>(client, "reels", ADMIN_ANALYTICS_REEL_COLUMNS),
     selectAll<JobRow>(
       client,
       "generation_jobs",

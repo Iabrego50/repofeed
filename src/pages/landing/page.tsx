@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
 import { SignInButton } from "@/components/ui/signin.tsx";
@@ -112,6 +113,55 @@ function DeckPreview() {
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
+/**
+ * Paint the phone mock immediately (text on canvas) and wait until the page
+ * is idle before fetching the 6MB hero clip. First paint is no longer gated
+ * on that download.
+ */
+function HeroReel() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [play, setPlay] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    let idleId = 0;
+    let timeoutId = 0;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        const start = () => setPlay(true);
+        const idle = window as Window & {
+          requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+          cancelIdleCallback?: (id: number) => void;
+        };
+        if (typeof idle.requestIdleCallback === "function") {
+          idleId = idle.requestIdleCallback(start, { timeout: 1800 });
+        } else {
+          timeoutId = window.setTimeout(start, 400);
+        }
+      },
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      const idle = window as Window & { cancelIdleCallback?: (id: number) => void };
+      if (idleId && typeof idle.cancelIdleCallback === "function") idle.cancelIdleCallback(idleId);
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, []);
+  return (
+    <div ref={ref}>
+      <ReelCanvas
+        reel={PREVIEW}
+        playing={play}
+        preload="none"
+        className="aspect-[9/16] w-full rounded-[22px]"
+      />
+    </div>
+  );
+}
+
 export default function Landing() {
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background">
@@ -180,7 +230,7 @@ export default function Landing() {
             aria-label="Open the full demo feed"
             className="group relative block cursor-pointer rounded-[28px] border border-border bg-card p-2 shadow-[0_40px_120px_-30px_rgba(47,155,255,0.45)] transition-transform hover:-translate-y-1"
           >
-            <ReelCanvas reel={PREVIEW} playing className="aspect-[9/16] w-full rounded-[22px]" />
+            <HeroReel />
             <span className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
               <Play className="size-4" /> Scroll the full feed
             </span>

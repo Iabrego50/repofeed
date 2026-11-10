@@ -35,10 +35,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) {
+    if (authLoading) return;
+    if (!user) {
+      setWorkspaces([]);
+      setCurrent(null);
       setLoading(false);
       return;
     }
+
+    let cancelled = false;
+    const userId = user.id;
+    setLoading(true);
 
     async function loadWorkspaces() {
       const { data, error } = await supabase
@@ -59,7 +66,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             created_at
           )
         `)
-        .eq('user_id', user!.id);
+        .eq('user_id', userId);
+
+      if (cancelled) return;
 
       if (error) {
         console.error('Error loading workspaces:', error);
@@ -83,16 +92,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       })) || [];
 
       setWorkspaces(ws);
-      
-      // Set first workspace as current if none selected
-      if (ws.length > 0 && !current) {
-        setCurrent(ws[0]);
-      }
-      
+      setCurrent((prev) => {
+        if (prev && ws.some((workspace: Workspace) => workspace.id === prev.id)) return prev;
+        return ws[0] ?? null;
+      });
       setLoading(false);
     }
 
-    loadWorkspaces();
+    void loadWorkspaces();
+    return () => {
+      cancelled = true;
+    };
   }, [user, authLoading]);
 
   const isEditor = current?.role === 'owner' || current?.role === 'editor';
