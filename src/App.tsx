@@ -1,18 +1,25 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useServiceWorker } from "@/hooks/use-service-worker.ts";
 import { DefaultProviders } from "./components/providers/default.tsx";
 import { AppErrorBoundary } from "./components/app-error-boundary.tsx";
 import SpaAnalytics from "./components/spa-analytics.tsx";
-import AppLayout from "./components/app-layout.tsx";
 import PublicEntry from "./pages/landing/public-entry.tsx";
 import DocumentMeta from "./components/document-meta.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
 import { signInPath } from "./app-paths.ts";
 
+const AppLayout = lazy(() => import("./components/app-layout.tsx"));
 const AuthCallback = lazy(() => import("./pages/auth/Callback.tsx"));
 const SignInPage = lazy(() => import("./pages/auth/signin.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
@@ -87,7 +94,12 @@ function Gate() {
     if (location.pathname === "/" || location.pathname === "/help") {
       return <PublicEntry loader={<FullScreenLoader />} />;
     }
-    return <Navigate to={signInPath(`${location.pathname}${location.search}`)} replace />;
+    return (
+      <Navigate
+        to={signInPath(`${location.pathname}${location.search}`)}
+        replace
+      />
+    );
   }
   return <Outlet />;
 }
@@ -112,7 +124,10 @@ export default function App() {
                   </GuestOnly>
                 }
               />
-              <Route path="/login" element={<Navigate to="/signin" replace />} />
+              <Route
+                path="/login"
+                element={<Navigate to="/signin" replace />}
+              />
               <Route path="/auth" element={<Navigate to="/signin" replace />} />
               <Route path="/invite/:token" element={<InvitePage />} />
               <Route path="/s/:token" element={<SharePage />} />
@@ -123,11 +138,21 @@ export default function App() {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               <Route element={<Gate />}>
-                <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
+                <Route
+                  path="/welcome"
+                  element={
+                    <div className="h-dvh overflow-y-auto">
+                      <Welcome />
+                    </div>
+                  }
+                />
                 <Route element={<RequireWorkspace />}>
                   <Route path="/insights/deck" element={<DeckPage />} />
                   <Route path="/feed" element={<Navigate to="/" replace />} />
-                  <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                  <Route
+                    path="/dashboard"
+                    element={<Navigate to="/" replace />}
+                  />
                   <Route element={<AppLayout />}>
                     <Route element={<ShellOutlet />}>
                       <Route path="/" element={<FeedPage />} />

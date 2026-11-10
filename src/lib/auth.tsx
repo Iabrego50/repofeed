@@ -58,11 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       setSession(next);
       setUser(next?.user ?? null);
+      // Unblock routing as soon as the session is known. Waiting on the
+      // profile query stacked a full-screen spinner on top of workspace load.
+      setLoading(false);
       if (next?.user) {
         void loadProfile(next.user.id);
       } else {
         setProfile(null);
-        setLoading(false);
       }
     };
 
@@ -92,7 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function loadProfile(userId: string) {
     const client = getBrowserSupabase();
     if (!client) {
-      setLoading(false);
       return;
     }
     try {
@@ -112,8 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.warn('[auth] loadProfile failed', error);
-    } finally {
-      setLoading(false);
     }
   }
 

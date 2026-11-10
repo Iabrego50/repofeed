@@ -29,12 +29,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
+        // Only split libraries that belong on first load. Named chunks for
+        // lazy-only vendors get statically imported from index.html by
+        // Rolldown, so every route would preload hundreds of KB it never runs.
         manualChunks(id) {
           if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
-          if (id.includes("node_modules/pptxgenjs") || id.includes("node_modules/jszip")) return "pptx";
-          if (id.includes("node_modules/xlsx") || id.includes("node_modules/mammoth")) return "office";
-          if (id.includes("node_modules/recharts")) return "charts";
-          if (id.includes("node_modules/motion")) return "motion";
+          if (
+            id.includes("node_modules/xlsx") ||
+            id.includes("node_modules/mammoth")
+          )
+            return "office";
           if (id.includes("node_modules/@supabase")) return "supabase";
         },
       },
