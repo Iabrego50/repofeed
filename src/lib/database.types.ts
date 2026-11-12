@@ -790,6 +790,7 @@ export type Database = {
           title: string
           scenes: Json
           finding_ids: Json
+          topics: string[]
           source_names: Json
           warning: string | null
           enabled: boolean
@@ -809,6 +810,7 @@ export type Database = {
           title: string
           scenes: Json
           finding_ids?: Json
+          topics?: string[]
           source_names?: Json
           warning?: string | null
           enabled?: boolean
@@ -828,6 +830,7 @@ export type Database = {
           title?: string
           scenes?: Json
           finding_ids?: Json
+          topics?: string[]
           source_names?: Json
           warning?: string | null
           enabled?: boolean
@@ -1117,6 +1120,45 @@ export type Database = {
           }
         ]
       }
+      ad_spend: {
+        Row: {
+          id: string
+          created_at: string
+          created_by: string | null
+          period_start: string
+          period_end: string
+          source: string
+          medium: string | null
+          campaign: string
+          amount_cents: number
+          note: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          created_by?: string | null
+          period_start: string
+          period_end: string
+          source: string
+          medium?: string | null
+          campaign: string
+          amount_cents: number
+          note?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          created_by?: string | null
+          period_start?: string
+          period_end?: string
+          source?: string
+          medium?: string | null
+          campaign?: string
+          amount_cents?: number
+          note?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           id: string
@@ -1133,6 +1175,8 @@ export type Database = {
           utm_content: string | null
           signup_referrer: string | null
           landing_path: string | null
+          click_id: string | null
+          click_id_type: string | null
           is_admin: boolean
           created_at: string
           updated_at: string
@@ -1152,6 +1196,8 @@ export type Database = {
           utm_content?: string | null
           signup_referrer?: string | null
           landing_path?: string | null
+          click_id?: string | null
+          click_id_type?: string | null
           is_admin?: boolean
           created_at?: string
           updated_at?: string
@@ -1171,6 +1217,8 @@ export type Database = {
           utm_content?: string | null
           signup_referrer?: string | null
           landing_path?: string | null
+          click_id?: string | null
+          click_id_type?: string | null
           is_admin?: boolean
           created_at?: string
           updated_at?: string

@@ -110,7 +110,7 @@ export const ARTICLES: HelpArticle[] = [
     summary:
       "Set scenes over your own video, stock clips or an AI-generated video.",
     paragraphs: [
-      "Each scene plays over a background. New scenes automatically get a short AI video. Until that render finishes — or if it fails — a stock clip plays so the scene is never blank.",
+      "Each scene plays over a background. New scenes automatically get a short AI video. Until that render finishes, or if it fails, a stock clip plays so the scene is never blank.",
     ],
     bullets: [
       "Your own clips: upload MP4, MOV or WebM videos up to 60 MB. Clips are stored securely and everyone in the workspace can reuse them. You can delete a clip at any time.",
@@ -167,7 +167,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Readout slide decks",
     summary: "A presentation of your findings, written for you.",
     paragraphs: [
-      "From Insights, choose Slide deck. AI reads what your studies found and writes a short readout: the outcomes, the evidence behind them and recommended next steps. It usually takes under a minute.",
+      "Choose Readout deck in the sidebar, or Create readout deck on a published study or in Insights, then Generate deck. AI reads what your studies found and writes a short readout: the outcomes, the evidence behind them and recommended next steps. It usually takes under a minute.",
       "Present it full screen in the browser, or download it as PowerPoint. Every headline, chart and quote is editable text. When new research comes in, make a fresh version.",
     ],
     tip: "Readout decks are part of the Pro and Team plans.",

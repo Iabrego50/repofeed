@@ -50,7 +50,7 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="font-display text-xl font-bold">Invite people</h2>
+      <h2 className="text-xl font-bold">Invite people</h2>
       <p className="mt-1 text-sm text-muted-foreground">Anyone with the link can join until it expires or runs out of uses.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
         <div className="space-y-2">
@@ -103,8 +103,8 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
         ) : (
           invites.map((inv: any) => (
             <li key={inv._id} className="flex flex-col gap-2 rounded-xl border border-border p-3 sm:flex-row sm:items-center">
-              <Input readOnly value={inviteUrl(inv.token)} className="h-10 min-w-0 flex-1 font-mono text-xs" aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
-              <span className="font-mono text-xs text-muted-foreground">
+              <Input readOnly value={inviteUrl(inv.token)} className="h-10 min-w-0 flex-1 text-xs" aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
+              <span className="text-xs text-muted-foreground">
                 {inv.role} · expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })} · {inv.uses}{inv.maxUses !== null ? ` of ${inv.maxUses}` : ""} joined
               </span>
               <div className="flex gap-1">
@@ -136,7 +136,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="font-display text-xl font-bold">Members {members && <span className="font-mono text-sm text-muted-foreground">{members.length}</span>}</h2>
+      <h2 className="text-xl font-bold">Members {members && <span className="text-sm text-muted-foreground">{members.length}</span>}</h2>
       <ul className="mt-4 divide-y divide-border">
         {members === undefined
           ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="my-2 h-12 w-full" />)
@@ -148,7 +148,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
                     <p className="truncate font-medium">{m.name}{m.isMe && <span className="text-muted-foreground"> (you)</span>}</p>
                     {m.email && <p className="truncate text-xs text-muted-foreground">{m.email}</p>}
                   </div>
-                  <span className="font-mono text-xs uppercase text-muted-foreground">{m.role}</span>
+                  <span className="text-xs text-muted-foreground">{m.role}</span>
                   {(isOwner || m.isMe) && (
                     <Button 
                       variant="ghost" 

@@ -3,7 +3,12 @@ import { getBrowserSupabase } from "./supabase";
 
 export const ANALYTICS_EVENTS = [
   "session_start",
+  "landing_view",
+  "cta_click",
+  "demo_open",
   "signup",
+  "onboarding_completed",
+  "search",
   "first_upload",
   "generate_started",
   "generate_completed",
@@ -34,7 +39,46 @@ export type Attribution = {
   utm_content: string | null;
   signup_referrer: string | null;
   landing_path: string | null;
+  /** Ad-platform click id (gclid, fbclid, li_fat_id, msclkid…), kept for offline conversion uploads. */
+  click_id?: string | null;
+  click_id_type?: string | null;
 };
+
+/** Click-id parameters the ad platforms append to a landing URL, in priority order. */
+export const CLICK_ID_PARAMS = ["gclid", "gbraid", "wbraid", "msclkid", "li_fat_id", "fbclid", "ttclid", "twclid"] as const;
+
+export function readClickId(params: URLSearchParams): { click_id: string; click_id_type: string } | null {
+  for (const key of CLICK_ID_PARAMS) {
+    const value = params.get(key)?.trim();
+    if (value) return { click_id: value.slice(0, 300), click_id_type: key };
+  }
+  return null;
+}
+
+/**
+ * Where this visit came from: the campaign tags on the current URL if it has any,
+ * otherwise the first-touch tags we stored earlier. Sent with session and funnel
+ * events so paid traffic can be followed from click to checkout.
+ */
+export function sessionAttribution(search = typeof window !== "undefined" ? window.location.search : ""): Record<string, string> {
+  const params = new URLSearchParams(search);
+  const out: Record<string, string> = {};
+  for (const key of UTM_KEYS) {
+    const value = params.get(key)?.trim();
+    if (value) out[key] = value.slice(0, 200);
+  }
+  const click = readClickId(params);
+  if (click) out.click_id_type = click.click_id_type;
+  if (Object.keys(out).length > 0) return out;
+  const stored = readStoredAttribution();
+  if (!stored) return out;
+  for (const key of UTM_KEYS) {
+    const value = stored[key];
+    if (value) out[key] = value;
+  }
+  if (stored.click_id_type) out.click_id_type = stored.click_id_type;
+  return out;
+}
 
 export const ATTRIBUTION_STORAGE_KEY = "repofeed.attribution";
 export const ANONYMOUS_ID_KEY = "repofeed.anonymous_id";
@@ -47,6 +91,9 @@ const UTM_KEYS = [
   "utm_term",
   "utm_content",
 ] as const;
+
+/** Funnel steps we want to slice by campaign in the growth dashboard. */
+const ATTRIBUTED_EVENTS = new Set<AnalyticsEvent>(["landing_view", "cta_click", "demo_open", "checkout_started"]);
 
 let sessionStartSent = false;
 
@@ -144,6 +191,8 @@ export function captureFirstTouchAttribution(
     utm_content: readParam(params, "utm_content"),
     signup_referrer: signupReferrer,
     landing_path: landingPath.slice(0, 500) || "/",
+    click_id: readClickId(params)?.click_id ?? null,
+    click_id_type: readClickId(params)?.click_id_type ?? null,
   };
   storageSet(
     window.localStorage,
@@ -167,6 +216,8 @@ export function readStoredAttribution(): Attribution | null {
       utm_content: parsed.utm_content ?? null,
       signup_referrer: parsed.signup_referrer ?? null,
       landing_path: parsed.landing_path ?? null,
+      click_id: parsed.click_id ?? null,
+      click_id_type: parsed.click_id_type ?? null,
     };
   } catch {
     return null;
@@ -185,6 +236,9 @@ export function attributionColumns(
     utm_content: attribution.utm_content,
     signup_referrer: attribution.signup_referrer,
     landing_path: attribution.landing_path,
+    ...(attribution.click_id
+      ? { click_id: attribution.click_id, click_id_type: attribution.click_id_type ?? null }
+      : {}),
   };
 }
 
@@ -217,7 +271,12 @@ export async function completeSignup(args: {
 
   const columns = attributionColumns(readStoredAttribution());
   if (columns && isNew) {
-    await users.update(columns).eq("id", args.user.id);
+    const result = await users.update(columns).eq("id", args.user.id);
+    // Older databases don't have the click-id columns yet; keep the campaign tags regardless.
+    if (result?.error && "click_id" in columns) {
+      const { click_id: _id, click_id_type: _type, ...utmOnly } = columns;
+      await users.update(utmOnly).eq("id", args.user.id);
+    }
   }
 
   if (isNew) {
@@ -274,7 +333,8 @@ export async function trackAsync(
     await ensureSessionStart();
   }
 
-  const { workspaceId, path, ...rest } = props;
+  const { workspaceId, path, ...given } = props;
+  const rest: AnalyticsProps = ATTRIBUTED_EVENTS.has(event) ? { ...sessionAttribution(), ...given } : given;
   const anonymousId = getAnonymousId();
   const sessionId = getSessionId();
   const resolvedPath = path ?? currentPath();
@@ -316,7 +376,7 @@ async function ensureSessionStart(): Promise<void> {
   }
   sessionStartSent = true;
   storageSet(window.sessionStorage, "repofeed.session_start_sent", "1");
-  await trackAsync("session_start");
+  await trackAsync("session_start", sessionAttribution());
 }
 
 export function startAnalyticsSession(): void {

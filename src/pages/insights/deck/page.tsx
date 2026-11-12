@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { jsonAuthHeaders } from "@/lib/api/bearer";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Expand, Presentation, RotateCcw, Sparkles } from "lucide-react";
@@ -18,34 +19,55 @@ import Slide from "./_components/slide.tsx";
 import { SLIDE_H, SLIDE_W, isLegacyDeck, type Deck } from "./_lib/deck.ts";
 import { useElementSize } from "./_lib/use-element-size.ts";
 
+/** Database rows are snake_case; the slides and the PowerPoint export read camelCase. */
+function toDeck(row: Record<string, unknown>): Deck {
+  const stats = (row.stats ?? {}) as Partial<Deck["stats"]>;
+  return {
+    ...row,
+    id: String(row.id),
+    _id: String(row.id),
+    _creationTime: row.created_at ? Date.parse(String(row.created_at)) : Date.now(),
+    scopeLabel: String(row.scope_label ?? "Research readout"),
+    slides: Array.isArray(row.slides) ? (row.slides as Deck["slides"]) : [],
+    reels: Array.isArray(row.reels) ? (row.reels as Deck["reels"]) : [],
+    stats: {
+      reached: stats.reached ?? 0,
+      memberCount: stats.memberCount ?? 0,
+      guestsReached: stats.guestsReached ?? 0,
+      completionRate: stats.completionRate ?? 0,
+      openItems: stats.openItems ?? 0,
+      totalViews: stats.totalViews ?? 0,
+      reactions: { true: 0, surprised: 0, pushback: 0, ...(stats.reactions ?? {}) },
+    },
+  };
+}
+
 export default function DeckPage() {
   const { current, isEditor } = useWorkspace();
   const [params] = useSearchParams();
   const studyId = params.get("study") ?? undefined;
   
+  const queryClient = useQueryClient();
+  const deckKey = ['decks', 'latest', current?._id, studyId];
   const { data: deck } = useQuery({
-    queryKey: ['decks', 'latest', current?._id, studyId],
+    queryKey: deckKey,
     queryFn: async (): Promise<Deck | null> => {
       if (!current?._id) return null;
-      
       const { supabase } = await import('@/lib/supabase');
       const query = supabase
         .from('decks')
         .select('*')
         .eq('workspace_id', current._id)
+        // A deck made from Insights for "all studies" is stored under the scope "all".
+        .eq('scope', studyId ?? 'all')
         .order('created_at', { ascending: false })
         .limit(1);
-      
-      if (studyId) {
-        query.eq('scope', studyId);
-      }
-      
       const { data } = await query.maybeSingle();
-      return data as Deck | null;
+      return data ? toDeck(data as Record<string, unknown>) : null;
     },
     enabled: !!(current && isEditor),
   });
-  
+
   const [busy, setBusy] = useState(false);
   const backTo = studyId ? `/insights?study=${studyId}` : "/insights";
 
@@ -55,16 +77,15 @@ export default function DeckPage() {
     try {
       const response = await fetch('/api/decks/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // The route checks who is asking; without the token it always answered "not authenticated".
+        headers: await jsonAuthHeaders(),
         body: JSON.stringify({ workspaceId: current._id, studyId }),
       });
-      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate deck');
+        const error = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(error?.error || "Couldn't create the deck. Try again.");
       }
-      
-      window.location.reload();
+      await queryClient.invalidateQueries({ queryKey: ['decks'] });
     } catch (err) {
       toast.error(getErrorMessage(err, "Couldn't create the deck. Try again."));
     } finally {
@@ -76,7 +97,7 @@ export default function DeckPage() {
   if (!isEditor) return <PermissionDenied what="create slide decks" />;
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="dark flex h-dvh flex-col bg-background">
       {deck === undefined ? (
         <div className="flex flex-1 items-center justify-center p-6"><Skeleton className="aspect-video w-full max-w-5xl rounded-2xl" /></div>
       ) : busy ? (
@@ -87,11 +108,11 @@ export default function DeckPage() {
           <Empty className="m-auto max-w-md">
             <EmptyHeader>
               <EmptyMedia variant="icon"><Presentation /></EmptyMedia>
-              <EmptyTitle>Turn these insights into a deck</EmptyTitle>
-              <EmptyDescription>AI reads what your studies found, then writes a short readout of the outcomes, with evidence and recommendations you can present or download.</EmptyDescription>
+              <EmptyTitle>Turn {studyId ? "this study" : "your published studies"} into a readout deck</EmptyTitle>
+              <EmptyDescription>You get a short deck of findings, each backed by a quote or a figure from your scenes, plus recommendations. Present it here or download it as an editable PowerPoint file.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button className="h-11" onClick={() => void run()}><Sparkles className="size-4" /> Create deck</Button>
+              <Button className="h-11" onClick={() => void run()}><Sparkles className="size-4" /> Generate deck</Button>
             </EmptyContent>
           </Empty>
         </div>
@@ -116,7 +137,7 @@ function TopBar({ backTo, children }: { backTo: string; children?: React.ReactNo
 
 const STEPS = ["Reading the study findings", "Checking figures and quotes", "Writing the story", "Laying out the slides"];
 
-function Generating({ backTo }: { backTo: string }) {
+export function Generating({ backTo }: { backTo: string }) {
   const [step, setStep] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 4500);
@@ -145,7 +166,7 @@ function Generating({ backTo }: { backTo: string }) {
   );
 }
 
-function Presenter({ deck, backTo, onRegenerate }: { deck: Deck; backTo: string; onRegenerate: () => void }) {
+export function Presenter({ deck, backTo, onRegenerate, extra }: { deck: Deck; backTo: string; onRegenerate: () => void; extra?: React.ReactNode }) {
   const [params] = useSearchParams();
   // `?slide=N` (1-based) opens a specific slide, handy for sharing a link to one point.
   const [index, setIndex] = useState(() => Math.max(0, Math.min(deck.slides.length - 1, Number(params.get("slide") ?? 1) - 1 || 0)));
@@ -192,12 +213,13 @@ function Presenter({ deck, backTo, onRegenerate }: { deck: Deck; backTo: string;
     <div ref={rootRef} className="flex min-h-0 flex-1 flex-col bg-background">
       <TopBar backTo={backTo}>
         <Button variant="ghost" className="h-10 px-2 sm:px-3" onClick={onRegenerate} aria-label="Create a new version">
-          <RotateCcw className="size-4" /> <span className="hidden sm:inline">New version</span>
+          <RotateCcw className="size-4" /> <span className="hidden sm:inline">Generate again</span>
         </Button>
         <Button variant="secondary" className="h-10" onClick={() => void download()} disabled={downloading}>
           {downloading ? <Spinner /> : <Download className="size-4" />} <span className="hidden sm:inline">PowerPoint</span><span className="sm:hidden">.pptx</span>
         </Button>
         <Button className="hidden h-10 sm:inline-flex" onClick={fullscreen}><Expand className="size-4" /> Present</Button>
+        {extra}
       </TopBar>
 
       {isLegacyDeck(deck) && (

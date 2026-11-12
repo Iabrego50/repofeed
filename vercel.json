@@ -20,6 +20,12 @@
     },
     "api/videos/backfill.ts": {
       "maxDuration": 60
+    },
+    "api/insights/ask.ts": {
+      "maxDuration": 60
+    },
+    "api/insights/topics.ts": {
+      "maxDuration": 90
     }
   },
   "crons": [
@@ -36,7 +42,9 @@
     { "source": "/auth/callback", "destination": "/index.html" },
     { "source": "/auth/confirm", "destination": "/index.html" },
     { "source": "/demo", "destination": "/index.html" },
+    { "source": "/for/:slug", "destination": "/index.html" },
     { "source": "/demo/insights", "destination": "/index.html" },
+    { "source": "/demo/deck", "destination": "/index.html" },
     { "source": "/terms", "destination": "/index.html" },
     { "source": "/privacy", "destination": "/index.html" },
     { "source": "/help", "destination": "/index.html" },
@@ -46,6 +54,7 @@
     { "source": "/studies", "destination": "/index.html" },
     { "source": "/studies/new", "destination": "/index.html" },
     { "source": "/studies/:studyId", "destination": "/index.html" },
+    { "source": "/explore", "destination": "/index.html" },
     { "source": "/insights", "destination": "/index.html" },
     { "source": "/insights/deck", "destination": "/index.html" },
     { "source": "/settings", "destination": "/index.html" },

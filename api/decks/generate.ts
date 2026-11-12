@@ -4,52 +4,15 @@ import { supabase } from '../_lib/supabase.js';
 import { callTool } from '../../src/lib/ai/client.js';
 import { summary } from '../../src/lib/api/insights.js';
 import { z } from 'zod';
+import { DECK_SYSTEM, DECK_TOOL, collectEvidence, evidencePrompt, sanitizeDeck } from '../../src/lib/api/deck-build.js';
+
+const deckSchema = z.object({ slides: z.array(z.any()) });
+
 
 function requireDeckEnv() {
   requireSupabaseEnv();
   requiredEnv('OPENAI_API_KEY');
 }
-
-const DECK_SYSTEM = `You write executive research summary decks. Given study insights, engagement data, and team comments, create 8-15 slides that tell the story of what was learned.
-
-Slide types:
-- title: Opens the deck
-- summary: Key insights at a glance (3-5 bullets)
-- finding: One major insight with supporting evidence
-- figures: Quantitative highlights (2-4 stats)
-- voices: What participants said (2-3 quotes)
-- reactions: What the team thought (engagement overview)
-- next_steps: Recommended actions (3-5 items)
-- closing: Wrap-up message
-
-Keep text concise. Each finding should be one clear point. Use stats and quotes as evidence.
-Call the save_deck tool.`;
-
-const DECK_TOOL = {
-  name: "save_deck",
-  description: "Save the presentation deck",
-  parameters: {
-    type: "object",
-    properties: {
-      slides: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            type: { type: "string" },
-            title: { type: "string" },
-            content: { type: "object" },
-          },
-        },
-      },
-    },
-    required: ["slides"],
-  },
-};
-
-const deckSchema = z.object({
-  slides: z.array(z.any()),
-});
 
 export async function POST(req: Request) {
   try {
@@ -84,80 +47,92 @@ export async function POST(req: Request) {
 
     const insightsSummary = await summary({ workspaceId, studyId }, supabase);
 
-    // Get studies in scope
+    // Studies in scope
     let studiesQuery = supabase
       .from('studies')
-      .select('title, audience, goal')
+      .select('id, title, audience, goal')
       .eq('workspace_id', workspaceId)
       .eq('status', 'published');
-
-    if (studyId) {
-      studiesQuery = studiesQuery.eq('id', studyId);
+    if (studyId) studiesQuery = studiesQuery.eq('id', studyId);
+    const { data: studies } = await studiesQuery.limit(10);
+    if (!studies?.length) {
+      return new Response(JSON.stringify({ error: 'Publish a study first. The deck is written from published scenes.' }), { status: 400 });
     }
 
-    const { data: studies } = await studiesQuery.limit(10);
+    // The deck is written from the scenes themselves, so it reports what the study found.
+    const { data: reels } = await supabase
+      .from('reels')
+      .select('title, track, scenes, study_id, position')
+      .in('study_id', studies.map((s) => s.id))
+      .eq('enabled', true)
+      .order('position', { ascending: true })
+      .limit(40);
+    const evidence = collectEvidence(reels ?? []);
+    if (!evidence.reels.length) {
+      return new Response(JSON.stringify({ error: 'There are no scenes to build a deck from yet.' }), { status: 400 });
+    }
 
-    // Build prompt
-    const studyContext = (studies || []).map(s => 
-      `${s.title} (audience: ${s.audience}${s.goal ? `; goal: ${s.goal}` : ""})`
-    ).join('\n');
+    const scopeLabel = studyId ? studies[0].title : 'All studies';
+    const reactionTotal = insightsSummary.reactions.true + insightsSummary.reactions.surprised + insightsSummary.reactions.pushback;
+    const userPrompt = `Readout for: ${scopeLabel}
+Audience: ${studies[0].audience || 'the product team'}
+${studies.map((s) => `Study: ${s.title}${s.goal ? ` (goal: ${s.goal})` : ''}`).join('\n')}
 
-    const userPrompt = `Workspace: ${workspaceId}
-Scope: ${studyId ? studies?.[0]?.title || 'Study' : 'All published studies'}
-Target audience: ${studies?.[0]?.audience || 'the team'}
+Team response so far: ${insightsSummary.reached} people watched. Reactions: ${insightsSummary.reactions.true} rings true, ${insightsSummary.reactions.surprised} surprised, ${insightsSummary.reactions.pushback} push back. ${insightsSummary.openItems} open questions or actions.
+${insightsSummary.rows
+  .filter((r) => r.pushbackCount > 0)
+  .slice(0, 5)
+  .map((r) => `Pushback on "${r.title}": ${r.pushbackCount}`)
+  .join('\n')}
 
-Studies:
-${studyContext}
+Published scenes:
+${evidencePrompt(evidence)}`;
 
-Key metrics:
-- ${insightsSummary.reached} people reached (${insightsSummary.guestsReached} guests)
-- ${insightsSummary.totalViews} total views
-- ${Math.round(insightsSummary.completionRate * 100)}% completion rate
-- ${insightsSummary.reactions.true} reactions
-
-Top scenes:
-${insightsSummary.rows.slice(0, 10).map(r => 
-  `- ${r.title} (${r.track}): ${r.viewers} viewers, ${Math.round(r.completionRate * 100)}% completion`
-).join('\n')}
-
-Create a compelling executive summary deck.`;
-
-    // Generate deck with AI
-    const deck = await callTool({
+    const raw = await callTool({
       system: DECK_SYSTEM,
       user: userPrompt,
       tool: DECK_TOOL,
       schema: deckSchema,
       maxTokens: 4000,
     });
+    const slides = sanitizeDeck(raw, evidence, { scopeLabel, hasReactions: reactionTotal > 0 });
 
-    // Save deck to database
     const { data: savedDeck, error: saveError } = await supabase
       .from('decks')
       .insert({
         workspace_id: workspaceId,
         scope: studyId || 'all',
         created_by: user.id,
-        scope_label: studyId ? studies?.[0]?.title || 'Study' : 'All studies',
-        slides: deck.slides,
+        scope_label: scopeLabel,
+        slides,
         stats: {
           reached: insightsSummary.reached,
-          totalViews: insightsSummary.totalViews,
+          memberCount: insightsSummary.memberCount,
+          guestsReached: insightsSummary.guestsReached,
           completionRate: insightsSummary.completionRate,
+          openItems: insightsSummary.openItems,
+          totalViews: insightsSummary.totalViews,
+          reactions: insightsSummary.reactions,
         },
-        reels: [],
+        // Per-scene numbers power the "team response" line under each finding.
+        reels: insightsSummary.rows.map((r) => ({
+          id: r.reelId,
+          title: r.title,
+          viewers: r.viewers,
+          completionRate: r.completionRate,
+          trueCount: r.trueCount,
+          surprisedCount: r.surprisedCount,
+          pushbackCount: r.pushbackCount,
+        })),
       })
       .select('id')
       .single();
 
     if (saveError) throw saveError;
 
-    return new Response(JSON.stringify({ 
-      deckId: savedDeck.id,
-      slides: deck.slides,
-    }), { 
+    return new Response(JSON.stringify({ deckId: savedDeck.id, slides }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (error) {

@@ -57,8 +57,8 @@ function buildCommentTree(comments: Comment[]): CommentWithReplies[] {
 
 const KINDS: Array<{ key: CommentKind; label: string; cls: string }> = [
   { key: "note", label: "Note", cls: "bg-secondary text-foreground" },
-  { key: "question", label: "Question", cls: "bg-[#B98CFF]/15 text-[#B98CFF]" },
-  { key: "action", label: "Action", cls: "bg-[#FF8C8C]/15 text-[#FF8C8C]" },
+  { key: "question", label: "Question", cls: "bg-chart-3/15 text-chart-3" },
+  { key: "action", label: "Action", cls: "bg-destructive/15 text-destructive" },
 ];
 const kindMeta = (k: CommentKind) => KINDS.find((x) => x.key === k) ?? KINDS[0];
 
@@ -325,9 +325,9 @@ export default function Discussion({
             <EmptyMedia variant="icon">
               <MessageSquare />
             </EmptyMedia>
-            <EmptyTitle>No comments yet</EmptyTitle>
+            <EmptyTitle>Nobody has said anything yet</EmptyTitle>
             <EmptyDescription>
-              Be the first to share your thoughts
+              Does this match what you’ve seen? Leave a note, ask a question, or log an action.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

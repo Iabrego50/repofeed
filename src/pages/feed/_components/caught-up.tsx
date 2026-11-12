@@ -12,7 +12,7 @@ export default function CaughtUp({ total, watchedNew, onRestart }: { total: numb
         <CheckCheck className="size-8" strokeWidth={2.5} />
       </span>
       <div>
-        <h2 className="font-display text-3xl font-extrabold">All caught up</h2>
+        <h2 className="text-3xl font-bold">All caught up</h2>
         <p className="mt-2 max-w-xs text-sm text-white/70">
           {watchedNew > 0 && watchedNew < total
             ? `That's all ${total} scenes, including ${watchedNew} new. New scenes will show up first next time.`

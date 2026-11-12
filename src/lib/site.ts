@@ -2,7 +2,7 @@
 export const SUPPORT_EMAIL = "support@repofeed.ai";
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 export const COMPANY_NAME = "repofeed.ai";
-export const LEGAL_LAST_UPDATED = "November 3, 2026";
+export const LEGAL_LAST_UPDATED = "November 9, 2026";
 
 /**
  * TODO: replace LEGAL_ENTITY_NAME with the registered legal entity

@@ -17,9 +17,9 @@ const PLAN_LABEL = {
 
 function Banner({ icon, children, actions }: { icon: React.ReactNode; children: React.ReactNode; actions?: React.ReactNode }) {
   return (
-    <div role="status" className="flex flex-col gap-3 border-b border-[#FFC23D]/40 bg-[#FFC23D]/10 px-4 py-3 text-sm sm:flex-row sm:items-center">
+    <div role="status" className="flex flex-col gap-3 border-b border-warning/30 bg-mark/40 px-4 py-3 text-sm sm:flex-row sm:items-center">
       <span className="flex flex-1 items-start gap-2">
-        <span className="mt-0.5 shrink-0 text-[#FFC23D]">{icon}</span>
+        <span className="mt-0.5 shrink-0 text-warning">{icon}</span>
         <span>{children}</span>
       </span>
       {actions && <div className="flex shrink-0 gap-2">{actions}</div>}

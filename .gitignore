@@ -14,6 +14,7 @@ node_modules
 *.local
 .eslintcache
 tsconfig.tsbuildinfo
+tsconfig*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*

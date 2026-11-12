@@ -222,13 +222,37 @@ function resolutionFromArgs(args: CreateVideoArgs): "480p" | "720p" | "1080p" {
   return "720p";
 }
 
+/** The model xAI's API reference documents. Used once if the configured model is rejected. */
+export const XAI_FALLBACK_VIDEO_MODEL = "grok-imagine-video-1.5";
+
+function isModelRejected(error: unknown): boolean {
+  if (!(error instanceof RetryableHttpError)) return false;
+  return [400, 403, 404, 422].includes(error.status) && /model/i.test(error.message);
+}
+
 export async function createXaiVideo(
   args: CreateVideoArgs,
   env: NodeJS.ProcessEnv = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<VideoJob> {
+  const model = args.model || DEFAULT_VIDEO_MODEL;
+  try {
+    return await createXaiVideoWith(model, args, env, fetchImpl);
+  } catch (error) {
+    if (model === XAI_FALLBACK_VIDEO_MODEL || !isModelRejected(error)) throw error;
+    console.warn(`[video] xAI rejected model ${model}; retrying with ${XAI_FALLBACK_VIDEO_MODEL}`);
+    return createXaiVideoWith(XAI_FALLBACK_VIDEO_MODEL, args, env, fetchImpl);
+  }
+}
+
+async function createXaiVideoWith(
+  model: string,
+  args: CreateVideoArgs,
+  env: NodeJS.ProcessEnv,
+  fetchImpl: typeof fetch,
+): Promise<VideoJob> {
   const body: Record<string, unknown> = {
-    model: args.model || DEFAULT_VIDEO_MODEL,
+    model,
     prompt: args.prompt,
     duration: durationSeconds(args),
     aspect_ratio: args.aspectRatio || DEFAULT_VIDEO_ASPECT_RATIO,

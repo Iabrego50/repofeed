@@ -25,6 +25,9 @@ const API_ENTRIES = [
   "api/decks/generate.ts",
   "api/admin/ai-models.ts",
   "api/admin/analytics.ts",
+  "api/admin/ad-spend.ts",
+  "api/insights/ask.ts",
+  "api/insights/topics.ts",
 ];
 
 export function isTypeOnlyImport(statement) {

@@ -7,7 +7,7 @@ export default function OfflineBanner() {
   return (
     <div
       role="status"
-      className="flex items-center justify-center gap-2 bg-[#FFC23D] px-3 py-2 text-sm font-medium text-primary-foreground"
+      className="flex items-center justify-center gap-2 bg-mark px-3 py-2 text-sm font-medium text-mark-foreground"
     >
       <WifiOff className="size-4" />
       You're offline. Scenes and comments will update when you reconnect.

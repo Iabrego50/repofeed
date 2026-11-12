@@ -22,6 +22,7 @@ export type DemoReel = ReelData & {
   key: string;
   sources: string[];
   quotes: number;
+  topics: string[];
   findings: Finding[];
 };
 
@@ -46,6 +47,7 @@ export function buildDemoReels(): DemoReel[] {
       footage: r.footage,
       sources,
       quotes: r.findings.length,
+      topics: r.topics,
       findings: r.findings.map((f, fi) => ({
         _id: `${id}-f-${fi}`,
         id: `${id}-f-${fi}`,
@@ -151,6 +153,7 @@ export function toFeedReel(reel: DemoReel, scene: DemoSceneState): FeedReel {
     trackIndex: reel.trackIndex,
     title: reel.title,
     scenes: reel.scenes,
+    topics: reel.topics,
     sourceNames: reel.sources,
     footage: reel.footage,
     warning: null,

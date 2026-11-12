@@ -75,6 +75,11 @@ export function shouldRetryToolCall(err: unknown): boolean {
 
 export function isAbortError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
+  // openai 7.x reports aborts with name "Error", so check the class and the cause too.
+  if (err instanceof OpenAI.APIUserAbortError || err instanceof OpenAI.APIConnectionTimeoutError) return true;
+  const ctor = String((err as { constructor?: { name?: string } }).constructor?.name ?? '');
+  if (ctor === 'APIUserAbortError' || ctor === 'APIConnectionTimeoutError') return true;
+  if (String((err as { cause?: { name?: string } }).cause?.name ?? '') === 'AbortError') return true;
   const name = String((err as { name?: string }).name ?? '');
   return (
     name === 'AbortError' ||

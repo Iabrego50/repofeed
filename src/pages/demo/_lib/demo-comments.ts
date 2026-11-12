@@ -61,7 +61,7 @@ export const DEMO_SEEDED_COMMENTS: Record<string, Comment[]> = {
       author: "Priya Shah",
       hoursAgo: 25,
       parentId: "c0-2",
-      body: "Everyone. I split out the first-month cohort — price is still the top reason.",
+      body: "Everyone. I split out the first-month cohort and price is still the top reason.",
     }),
     comment({
       id: "c0-3",
@@ -105,7 +105,7 @@ export const DEMO_SEEDED_COMMENTS: Record<string, Comment[]> = {
       kind: "note",
       author: "Jon Hale",
       hoursAgo: 40,
-      body: "46% forgot to skip. That's not a memory problem — Wednesday midnight is a terrible deadline.",
+      body: "46% forgot to skip. That's not a memory problem. Wednesday midnight is a terrible deadline.",
     }),
     comment({
       id: "c2-2",
@@ -139,7 +139,7 @@ export const DEMO_SEEDED_COMMENTS: Record<string, Comment[]> = {
       kind: "question",
       author: "Jon Hale",
       hoursAgo: 14,
-      body: "41% would have paused — do we know how many actually tried to find pause and gave up?",
+      body: "41% would have paused. Do we know how many actually tried to find pause and gave up?",
     }),
     comment({
       id: "c3-2r",
@@ -226,7 +226,7 @@ export const DEMO_SEEDED_COMMENTS: Record<string, Comment[]> = {
       kind: "question",
       author: "Alex Ortiz",
       hoursAgo: 13,
-      body: "Could we ship split produce — half an onion, one avocado — without looking cheap?",
+      body: "Could we ship split produce (half an onion, one avocado) without looking cheap?",
     }),
     comment({
       id: "c6-3",

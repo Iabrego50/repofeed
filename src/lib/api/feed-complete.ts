@@ -2,7 +2,8 @@ import { supabase } from '../supabase';
 import { mapReel, mapComment, mapFinding, type FeedReel, type Comment, type Finding } from './mappers';
 import type { CommentKind } from '@/schema/validators';
 
-export async function listReels(args: { workspaceId: string; studyId?: string }): Promise<FeedReel[]> {
+/** `limit` defaults to the feed's 100; Explore asks for the whole library. */
+export async function listReels(args: { workspaceId: string; studyId?: string; limit?: number }): Promise<FeedReel[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -22,7 +23,7 @@ export async function listReels(args: { workspaceId: string; studyId?: string })
     .eq('workspace_id', args.workspaceId)
     .eq('enabled', true)
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(Math.min(args.limit ?? 100, 2000));
 
   if (args.studyId) {
     query = query.eq('study_id', args.studyId);

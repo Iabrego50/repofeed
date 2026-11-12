@@ -1,6 +1,6 @@
 import { useSearchParams, useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileSearch, LifeBuoy } from "lucide-react";
+import { ArrowLeft, FileSearch, LifeBuoy, Presentation } from "lucide-react";
 import { api } from "@/lib/api/complete";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -59,8 +59,15 @@ function StudyBody({ studyId }: { studyId: string }) {
     <>
       <div className="flex items-center justify-between gap-4">
         <PageHeader title={study.title} />
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <StatusBadge status={study.status} />
+          {study.status === "published" && (
+            <Button asChild variant="outline" className="h-9">
+              <Link to={`/insights/deck?study=${study._id}`}>
+                <Presentation className="size-4" /> <span className="hidden sm:inline">Create readout deck</span><span className="sm:hidden">Deck</span>
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
       <p className="text-sm text-muted-foreground">{study.audience}</p>

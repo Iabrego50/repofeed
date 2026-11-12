@@ -166,8 +166,8 @@ export default function ReelFeed({
   };
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="relative flex min-w-0 flex-1 flex-col items-center bg-[#04070E]">
+    <div className="dark flex h-full min-h-0">
+      <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
         {toolbar}
 
         {reels === undefined ? (
@@ -179,7 +179,7 @@ export default function ReelFeed({
         ) : (
           <div
             ref={scrollerRef}
-            className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-none lg:max-w-[calc(100dvh*9/16+5rem)]"
+            className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-none "
             aria-label="Scene feed. Use arrow keys or J and K to move."
           >
             {reels.map((r, i) => (

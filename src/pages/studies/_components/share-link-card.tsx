@@ -26,7 +26,7 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
       toast.success(shareLink?.enabled ? "Share link disabled" : "Share link enabled");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to toggle share link");
+      toast.error(err.message || "The share link didn’t change. Try again.");
     },
   });
 
@@ -37,7 +37,7 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
       toast.success("Share link regenerated");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to regenerate link");
+      toast.error(err.message || "A new link wasn’t created. Try again.");
     },
   });
 
@@ -50,7 +50,7 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
       await navigator.clipboard.writeText(`${SHAREABLE_ORIGIN}/share/${shareLink.token}`);
       toast.success("Link copied to clipboard");
     } catch {
-      toast.error("Failed to copy link");
+      toast.error("Copying was blocked. Select the link and copy it by hand.");
     } finally {
       setCopying(false);
     }
@@ -67,10 +67,10 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
     : null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div data-tour="share-link" className="rounded-2xl border border-border bg-card p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-display text-lg font-bold">Share link</h3>
+          <h3 className="text-lg font-bold">Share link</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Anyone with the link can watch your published scenes
           </p>
@@ -91,7 +91,7 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
             type="text"
             readOnly
             value={shareUrl}
-            className="h-11 flex-1 rounded-lg border border-border bg-muted px-3 font-mono text-sm"
+            className="h-11 flex-1 rounded-lg border border-border bg-muted px-3 text-sm"
             onFocus={(e) => e.currentTarget.select()}
           />
           <Button

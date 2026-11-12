@@ -60,7 +60,7 @@ export default function HelpPage() {
             if (!list.length) return null;
             return (
               <section key={cat} aria-label={cat}>
-                <h2 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">{cat}</h2>
+                <h2 className="text-sm font-medium text-muted-foreground">{cat}</h2>
                 <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
                   {list.map((a) => (
                     <AccordionItem key={a.id} value={a.id} id={`help-${a.id}`} className="border-border px-4 sm:px-5">
@@ -68,7 +68,7 @@ export default function HelpPage() {
                         <span className="flex min-w-0 items-start gap-3 text-left">
                           <CircleHelp className="mt-0.5 size-4 shrink-0 text-primary" />
                           <span className="min-w-0">
-                            <span className="block font-display text-base font-bold">{a.title}</span>
+                            <span className="block text-base font-bold">{a.title}</span>
                             <span className="mt-0.5 block text-sm font-normal text-muted-foreground">{a.summary}</span>
                           </span>
                         </span>

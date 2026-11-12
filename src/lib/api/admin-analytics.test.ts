@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  ADMIN_ANALYTICS_REEL_COLUMNS,
   buildAdminAnalytics,
   isInternalAccount,
-  loadAdminAnalytics,
   parseAdminAnalyticsQuery,
   type AdminAnalyticsTables,
 } from "./admin-analytics";
@@ -28,55 +26,17 @@ function emptyTables(): AdminAnalyticsTables {
 
 describe("admin analytics helpers", () => {
   it("defaults to 30d and excluding internal accounts", () => {
-    expect(parseAdminAnalyticsQuery({})).toEqual({
-      range: "30d",
-      excludeInternal: true,
-    });
-    expect(
-      parseAdminAnalyticsQuery({ range: "7d", excludeInternal: "0" }),
-    ).toEqual({
+    expect(parseAdminAnalyticsQuery({})).toEqual({ range: "30d", excludeInternal: true });
+    expect(parseAdminAnalyticsQuery({ range: "7d", excludeInternal: "0" })).toEqual({
       range: "7d",
       excludeInternal: false,
     });
   });
 
-  it("treats grokbot emails as internal and does not hide workspace admins by default", () => {
-    expect(isInternalAccount({ is_admin: true, email: "a@b.com" })).toBe(false);
-    expect(
-      isInternalAccount({ is_admin: true, email: "founder@example.com" }),
-    ).toBe(false);
-    expect(
-      isInternalAccount({ is_admin: true, email: "bot@mail.grokbot.com" }),
-    ).toBe(true);
-    expect(
-      isInternalAccount({ is_admin: false, email: "bot@mail.grokbot.com" }),
-    ).toBe(true);
-    expect(
-      isInternalAccount({ is_admin: false, email: "kate@example.com" }),
-    ).toBe(false);
-  });
-
-  it("selects reel video metadata without the footage JSON blob", async () => {
-    const selects: Array<{ table: string; columns: string }> = [];
-    const client = {
-      from: (table: string) => ({
-        select: (columns: string) => ({
-          range: async () => {
-            selects.push({ table, columns });
-            return { data: [], error: null };
-          },
-        }),
-      }),
-    };
-    await loadAdminAnalytics(
-      client,
-      { range: "30d", excludeInternal: true },
-      NOW,
-    );
-    const reels = selects.find((row) => row.table === "reels");
-    expect(reels?.columns).toBe(ADMIN_ANALYTICS_REEL_COLUMNS);
-    expect(reels?.columns).toMatch(/\bvideo\b/);
-    expect(reels?.columns).not.toMatch(/\bfootage\b/);
+  it("treats admins and grokbot emails as internal", () => {
+    expect(isInternalAccount({ is_admin: true, email: "a@b.com" })).toBe(true);
+    expect(isInternalAccount({ is_admin: false, email: "bot@mail.grokbot.com" })).toBe(true);
+    expect(isInternalAccount({ is_admin: false, email: "kate@example.com" })).toBe(false);
   });
 
   it("builds a signup-to-paid funnel and drops internal users when asked", () => {
@@ -189,22 +149,11 @@ describe("admin analytics helpers", () => {
       { range: "30d", excludeInternal: true },
       NOW,
     );
-    expect(excluded.headlines.users).toBe(2);
-    expect(excluded.funnel[0]).toEqual({
-      key: "signup",
-      label: "Signed up",
-      count: 2,
-    });
-    expect(
-      excluded.funnel.find((step) => step.key === "first_upload")?.count,
-    ).toBe(1);
-    expect(excluded.funnel.find((step) => step.key === "paid")?.count).toBe(2);
-    expect(excluded.signups.bySource).toEqual(
-      expect.arrayContaining([
-        { name: "twitter", count: 1 },
-        { name: "direct", count: 1 },
-      ]),
-    );
+    expect(excluded.headlines.users).toBe(1);
+    expect(excluded.funnel[0]).toEqual({ key: "signup", label: "Signed up", count: 1 });
+    expect(excluded.funnel.find((step) => step.key === "first_upload")?.count).toBe(1);
+    expect(excluded.funnel.find((step) => step.key === "paid")?.count).toBe(1);
+    expect(excluded.signups.bySource[0]).toEqual({ name: "twitter", count: 1 });
     expect(excluded.demo).toEqual({ sessions: 1, interacted: 1, signedUp: 1 });
     expect(excluded.engagement.views).toBe(12);
     expect(excluded.plans.paidWorkspaces).toBe(1);

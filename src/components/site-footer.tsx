@@ -16,13 +16,13 @@ const LINK_CLASS = "cursor-pointer text-sm text-muted-foreground transition-colo
 /** Public footer with legal links and the support contact. */
 export default function SiteFooter() {
   return (
-    <footer className="relative border-t border-border">
+    <footer className="border-t border-border bg-background">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 md:flex-row md:items-start md:justify-between">
         <div className="max-w-xs">
           <Link to="/" aria-label={`${COMPANY_NAME} home`} className="inline-block cursor-pointer">
             <Logo />
           </Link>
-          <p className="mt-3 text-sm text-muted-foreground">Research, as a feed. Short, cited scenes your team actually watches.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Research findings as short, cited scenes your team will watch.</p>
         </div>
         <nav aria-label="Footer" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6">
           {LINKS.map((l) => (
@@ -36,7 +36,7 @@ export default function SiteFooter() {
         </nav>
       </div>
       <p className="mx-auto max-w-6xl px-5 pb-8 text-xs text-muted-foreground">
-        © {new Date().getFullYear()} {COMPANY_NAME}. All rights reserved.
+        © {new Date().getFullYear()} {COMPANY_NAME}
       </p>
     </footer>
   );

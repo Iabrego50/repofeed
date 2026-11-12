@@ -4,6 +4,8 @@ import { assertStudySlot } from '../billing/limits';
 import { canSeeStudy, effectiveRole } from './access';
 import { verifyScenes, buildSourceIndex } from '../reel/verify';
 import { isFirstPublish } from './email-notify';
+import { mapReel, type DbReel } from './mappers';
+import { cleanTopics } from '../research-search';
 import type { Plan, Role, StudyStatus } from '@/schema';
 import type { Scene } from '@/schema/validators';
 
@@ -322,7 +324,9 @@ export async function getReviewReels(args: { studyId: string }) {
     .order('position');
 
   if (error) throw error;
-  return data || [];
+  // The review list reads camelCase fields (_id, trackIndex, sourceNames). Returning raw rows
+  // left those undefined, and `sourceNames.join` threw as soon as a study had scenes.
+  return (data || []).map((row) => ({ ...mapReel(row as DbReel), art: (row as { art?: unknown }).art ?? null }));
 }
 
 // Set reel enabled
@@ -643,7 +647,7 @@ export async function regenerateShareLink(args: { studyId: string }) {
 }
 
 // Update reel scenes
-export async function updateReelScenes(args: { reelId: string; title?: string; scenes: Scene[] }) {
+export async function updateReelScenes(args: { reelId: string; title?: string; scenes: Scene[]; topics?: string[] }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -677,6 +681,7 @@ export async function updateReelScenes(args: { reelId: string; title?: string; s
     scenes: ReturnType<typeof JSON.parse>;
     updated_at: string;
     title?: string;
+    topics?: string[];
     warning: string | null;
     enabled?: boolean;
   } = {
@@ -685,6 +690,7 @@ export async function updateReelScenes(args: { reelId: string; title?: string; s
     warning,
   };
   if (args.title !== undefined) updates.title = args.title;
+  if (args.topics !== undefined) updates.topics = cleanTopics(args.topics);
   if (warning) updates.enabled = false;
 
   const { error } = await supabase

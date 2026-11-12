@@ -48,6 +48,7 @@ import {
   composeUserPrompt,
 } from "../../src/lib/ai/prompts.js";
 import { toScene, finalizeScenes } from "../../src/lib/ai/scenes.js";
+import { cleanTopics } from "../../src/lib/research-search.js";
 import type { Scene } from "../../src/schema/validators";
 import { toStepError } from "../../src/lib/errors/step-error.js";
 import { composeReelVideoFields } from "../../src/lib/api/reel-video-jobs.js";
@@ -587,6 +588,7 @@ async function processComposition(jobId: string, job: any, study: any) {
           title,
           scenes: JSON.parse(JSON.stringify(finalScenes)),
           finding_ids: findingIds,
+          topics: cleanTopics(r.topics),
           source_names: sourceNames,
           position: existingCount + idx,
           footage: videoFields.footage,

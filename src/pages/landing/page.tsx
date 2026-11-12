@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
-import { Link } from "react-router-dom";
-import { SignInButton } from "@/components/ui/signin.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import { useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Check, FileSearch, Heart, MessageCircle, Play, X } from "lucide-react";
 import Logo from "@/components/logo.tsx";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
+import SiteFooter from "@/components/site-footer.tsx";
 import type { ReelData } from "@/lib/reel/painter.ts";
-import { ArrowRight, CheckCircle2, Clapperboard, FileText, Link2, Lock, MessageSquareText, PencilLine, Play, Presentation, Quote, Sparkles } from "lucide-react";
+import { track } from "@/lib/analytics";
+import { CtaLink, HeroSignup } from "./_components/cta.tsx";
+import Faq from "./_components/faq.tsx";
 import PricingSection from "./pricing-section.tsx";
 import PrivacySection from "./privacy-section.tsx";
-import SiteFooter from "@/components/site-footer.tsx";
+import { variantFor } from "./variants.ts";
 
 const PREVIEW: ReelData = {
   title: "Help that became homework",
@@ -25,370 +26,281 @@ const PREVIEW: ReelData = {
   footage: { url: "/footage/mother-cooking.mp4", caption: "Home visit · P07 · Day 3" },
 };
 
-const POINTS = [
-  { icon: Lock, title: "Files stay with you", body: "Research files are read in your browser and never uploaded. Only the text inside is used." },
-  { icon: Quote, title: "Every scene is cited", body: "Quotes are checked word-for-word and numbers against your files before anything ships." },
-  { icon: MessageSquareText, title: "Stakeholders talk back", body: "Rings true, surprised me, push back. Questions and action items, threaded on each scene." },
-  { icon: CheckCircle2, title: "Proof it was watched", body: "See who you reached, what they finished and where the pushback is." },
-];
-
 const STEPS = [
-  { icon: FileText, title: "Drop in your research", body: "Interviews, surveys, diary notes. We read every file and pull out the findings that matter." },
-  { icon: Sparkles, title: "Scenes write themselves", body: "One point per scene, 10 to 20 seconds long: a hook, the quote, the number, the takeaway." },
-  { icon: Clapperboard, title: "Your footage or stock", body: "Set scenes over your own clips, pick from the stock library, or let AI paint a backdrop that fits." },
+  {
+    title: "Drop in what you already have",
+    body: "Interview transcripts, survey exports, diary notes, the deck from last quarter. PDF, Word, PowerPoint, Excel, CSV and plain text all work.",
+  },
+  {
+    title: "Review the scenes it drafts",
+    body: "Each finding becomes a scene of ten to twenty seconds: the hook, the quote, the number, the takeaway. Edit the wording, swap the footage, or switch a scene off.",
+  },
+  {
+    title: "Send one private link",
+    body: "Your team opens it on a phone or laptop and starts scrolling. Nobody creates an account, and nobody needs training.",
+  },
 ];
 
-const BEFORE_AFTER = [
-  { before: "A 40-page report nobody opens", after: "Scenes your team scrolls on their own" },
-  { before: "Findings shared once, then forgotten", after: "Insights that keep showing up in the feed" },
-  { before: "Silence after the readout", after: "Reactions, questions and action items on every scene" },
-  { before: "No idea who actually read it", after: "See who watched, what they finished and where they pushed back" },
+const COMPARE: Array<{ topic: string; usual: string; ours: string }> = [
+  { topic: "Getting research in", usual: "Import it, then tag and code it by hand", ours: "Upload the files. Scenes are drafted for you to review." },
+  { topic: "Who can use it", usual: "Researchers. Everyone else needs a seat and a walkthrough.", ours: "Anyone with the link. Watching needs no account." },
+  { topic: "How findings travel", usual: "Someone has to remember to go and search", ours: "New scenes land in the feed, unwatched ones first" },
+  { topic: "Proof behind a claim", usual: "A tag that links to a highlight", ours: "The quote, checked word for word, one tap from the scene" },
+  { topic: "Knowing it landed", usual: "Page views, if anything", ours: "Who watched, who finished, and where they pushed back" },
+  { topic: "What you pay for", usual: "Often a seat for every reader, or a sales call", ours: "Editors only. Viewers are free." },
 ];
 
-const NO_LIST = ["No tagging.", "No taxonomy.", "No training.", "No accounts for viewers."];
-
-const VIEWER_FLOW = ["Get the private link", "Tap it", "Scroll the feed"];
-
-const EASY = [
-  { title: "Upload, done", body: "Drop in raw files. We find the findings, write the scenes and check every quote. Nothing to code or tag by hand." },
-  { title: "Organized by study", body: "Every project lives in its own study, so your whole research history stays in one place." },
-  { title: "Nothing to learn", body: "If your team can scroll a phone, they can use it. Viewers open a private link and start watching." },
-];
-
-const DECK_POINTS = [
-  { icon: Sparkles, title: "Written from your findings", body: "Headlines, key numbers, real quotes and recommendations, all pulled from your study and checked against your files." },
-  { icon: PencilLine, title: "Fully editable", body: "Download as PowerPoint. Every headline, chart and quote is real, editable text, so you can reword, restyle or add your own slides." },
-  { icon: Presentation, title: "Ready to present", body: "Present full screen in one click, or make a fresh version whenever new research comes in." },
-];
-
-const DECK_BARS = [72, 48, 88, 36];
-
-/** Static mock of a readout slide with an "editing" cursor, so visitors see what they get. */
-function DeckPreview() {
+function Nav({ variant }: { variant: string }) {
+  const link = "hidden min-h-10 cursor-pointer items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:text-foreground sm:flex";
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.5, ease }}
-      className="relative"
-    >
-      <div className="absolute -bottom-4 -right-3 left-6 top-6 rounded-2xl border border-border bg-card/60" aria-hidden />
-      <div className="relative aspect-video overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-[0_30px_90px_-30px_rgba(47,155,255,0.45)] sm:p-7">
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary sm:text-xs">Key finding</p>
-        <p className="-mx-1.5 mt-2 w-fit max-w-[85%] rounded-md px-1.5 py-0.5 font-display text-lg font-extrabold leading-tight ring-2 ring-primary sm:text-2xl">
-          7 of 10 cancel when it feels like homework
-          <motion.span
-            aria-hidden
-            animate={{ opacity: [1, 0, 1] }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="ml-1 inline-block h-5 w-0.5 translate-y-1 bg-primary sm:h-6"
-          />
-        </p>
-        <div className="mt-4 grid grid-cols-[1.2fr_1fr] gap-4 sm:mt-6">
-          <div className="flex h-20 items-end gap-2 sm:h-28">
-            {DECK_BARS.map((h, i) => (
-              <motion.div
-                key={i}
-                initial={{ height: 0 }}
-                whileInView={{ height: `${h}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 + i * 0.08, ease }}
-                className={i === 2 ? "flex-1 rounded-t-md bg-primary" : "flex-1 rounded-t-md bg-primary/30"}
-              />
-            ))}
-          </div>
-          <div className="rounded-xl border border-border bg-background/50 p-3">
-            <Quote className="size-4 text-primary" />
-            <p className="mt-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">{"\u201C"}It started feeling like homework.{"\u201D"}</p>
-          </div>
-        </div>
+    <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-5 py-2.5">
+        <Link to="/" aria-label="repofeed.ai home" className="cursor-pointer">
+          <Logo />
+        </Link>
+        <nav aria-label="Site" className="flex items-center gap-1">
+          <Link to="/demo" className={link}>Demo</Link>
+          <a href="#pricing" className={link}>Pricing</a>
+          <Link to="/help" className={link}>Help</Link>
+          <Link to="/signin" className="flex min-h-10 cursor-pointer items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+            Sign in
+          </Link>
+          <CtaLink location="nav" variant={variant} className="h-9 px-4 text-sm">Start free</CtaLink>
+        </nav>
       </div>
-      <span className="absolute -top-3 right-4 flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-        <PencilLine className="size-3" /> Editable .pptx
-      </span>
-    </motion.div>
+    </header>
   );
 }
 
-const ease = [0.22, 1, 0.36, 1] as const;
-
-/**
- * Paint the phone mock immediately (text on canvas) and wait until the page
- * is idle before fetching the 6MB hero clip. First paint is no longer gated
- * on that download.
- */
-function HeroReel() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [play, setPlay] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    let idleId = 0;
-    let timeoutId = 0;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        const start = () => setPlay(true);
-        const idle = window as Window & {
-          requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-          cancelIdleCallback?: (id: number) => void;
-        };
-        if (typeof idle.requestIdleCallback === "function") {
-          idleId = idle.requestIdleCallback(start, { timeout: 1800 });
-        } else {
-          timeoutId = window.setTimeout(start, 400);
-        }
-      },
-      { threshold: 0.2 },
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      const idle = window as Window & { cancelIdleCallback?: (id: number) => void };
-      if (idleId && typeof idle.cancelIdleCallback === "function") idle.cancelIdleCallback(idleId);
-      if (timeoutId) window.clearTimeout(timeoutId);
-    };
-  }, []);
+/** The product, running: a real scene in a phone, with the conversation it starts beside it. */
+function HeroDevice() {
   return (
-    <div ref={ref}>
-      <ReelCanvas
-        reel={PREVIEW}
-        playing={play}
-        preload="none"
-        className="aspect-[9/16] w-full rounded-[22px]"
-      />
+    <div className="relative mx-auto w-full max-w-[320px] lg:mr-6">
+      <Link
+        to="/demo"
+        onClick={() => track("demo_open", { location: "hero_device" })}
+        aria-label="Open the full demo feed"
+        className="dark group relative block cursor-pointer overflow-hidden rounded-[2rem] border-[6px] border-[#10151f] shadow-lift"
+      >
+        <ReelCanvas reel={PREVIEW} playing className="aspect-[9/16] w-full" />
+        <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/75 to-transparent p-4 pt-16 text-white">
+          <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-black">
+            <Play className="size-3.5 fill-current" /> Watch the demo feed
+          </span>
+          <span className="flex flex-col items-center gap-3 pb-1 text-[11px] font-medium">
+            <span className="flex flex-col items-center gap-0.5"><Heart className="size-5" />24</span>
+            <span className="flex flex-col items-center gap-0.5"><MessageCircle className="size-5" />6</span>
+            <FileSearch className="size-5" />
+          </span>
+        </span>
+      </Link>
+      <figure className="absolute -left-32 top-[52%] hidden w-60 rounded-xl border border-border bg-card p-4 shadow-lift lg:block">
+        <figcaption className="flex items-center gap-2 text-sm">
+          <span className="grid size-7 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JH</span>
+          <span className="font-medium">Jon, Product</span>
+          <span className="ml-auto rounded bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">Question</span>
+        </figcaption>
+        <p className="mt-2 text-sm text-muted-foreground">Was this only people who cancelled after the intro rate, or everyone?</p>
+      </figure>
     </div>
   );
 }
 
 export default function Landing() {
+  const { slug } = useParams();
+  const variant = variantFor(slug);
+
+  useEffect(() => {
+    track("landing_view", { variant: variant.slug || "home" });
+  }, [variant.slug]);
+
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-background">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-40 -top-40 size-[640px] rounded-full bg-[radial-gradient(circle,rgba(47,155,255,0.22),transparent_65%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-60 -left-40 size-[720px] rounded-full bg-[radial-gradient(circle,rgba(54,212,255,0.10),transparent_65%)]"
-      />
-      <header className="relative mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-        <Logo />
-        <div className="flex items-center gap-2">
-          <Link to="/demo" className="hidden min-h-11 cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-muted-foreground hover:text-foreground sm:flex">
-            Demo
-          </Link>
-          <a href="#pricing" className="hidden min-h-11 cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-muted-foreground hover:text-foreground sm:flex">
-            Pricing
-          </a>
-          <Link to="/help" className="hidden min-h-11 cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-muted-foreground hover:text-foreground sm:flex">
-            Help
-          </Link>
-          <SignInButton variant="secondary" signInText="Sign in" />
-        </div>
-      </header>
-      <main className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-6 lg:grid-cols-[1.1fr_0.9fr] lg:pt-12">
-        {/* Hero copy renders fully visible on first paint; only the phone preview animates in. */}
-        <div>
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">
-            Research, as a feed
-          </p>
-          <h1 className="mt-4 text-balance font-display text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-7xl">
-            Nobody reads the report. <span className="text-primary">Everyone</span> watches the scene.
-          </h1>
-          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-            repofeed.ai turns interviews, surveys and diary notes into short, cited insight scenes, made for you and set over your own footage or stock. Your team scrolls them like a social feed, reacts, asks questions and logs actions.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <SignInButton size="lg" className="h-12 px-6 text-base font-semibold" signInText="Get started free" />
-            <Button asChild size="lg" variant="secondary" className="h-12 px-6 text-base font-semibold">
-              <Link to="/demo">
-                <Play className="size-4" /> Watch the demo feed
-              </Link>
-            </Button>
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">No sign-up needed to watch. Your research files never leave your computer.</p>
-          <ul className="mt-12 grid gap-5 sm:grid-cols-2">
-            {POINTS.map((p) => (
-              <li key={p.title} className="border-t border-border pt-4">
-                <p.icon className="size-5 text-primary" />
-                <p className="mt-3 font-display text-base font-bold">{p.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{p.body}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease }}
-          className="mx-auto w-full max-w-[340px]"
-        >
-          <Link
-            to="/demo"
-            aria-label="Open the full demo feed"
-            className="group relative block cursor-pointer rounded-[28px] border border-border bg-card p-2 shadow-[0_40px_120px_-30px_rgba(47,155,255,0.45)] transition-transform hover:-translate-y-1"
-          >
-            <HeroReel />
-            <span className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-              <Play className="size-4" /> Scroll the full feed
-            </span>
-          </Link>
-        </motion.div>
-      </main>
-      <PrivacySection />
-      <section aria-labelledby="engaged-heading" className="relative mx-auto max-w-6xl px-5 py-16">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+    <div className="min-h-dvh bg-background">
+      <Nav variant={variant.slug} />
+
+      <main>
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-10 lg:grid-cols-[1.15fr_0.85fr] lg:pb-24 lg:pt-16">
           <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">Finally</p>
-            <h2 id="engaged-heading" className="mt-3 text-balance font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
-              Research that actually gets <span className="text-primary">engaged with</span>.
-            </h2>
-            <p className="mt-4 max-w-xl text-muted-foreground">
-              You spent weeks on the interviews. Now the findings reach the people who need them, in the format they already scroll every day. Stakeholders watch, react and talk back, and you can see it happen.
-            </p>
-          </div>
-          <ul className="overflow-hidden rounded-2xl border border-border bg-card">
-            {BEFORE_AFTER.map((row, i) => (
-              <motion.li
-                key={row.before}
-                initial={{ opacity: 0, x: 24 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.45, delay: i * 0.08, ease }}
-                className="grid gap-1 border-b border-border p-5 last:border-b-0 sm:grid-cols-2 sm:gap-6"
-              >
-                <p className="text-sm text-muted-foreground line-through decoration-muted-foreground/50">{row.before}</p>
-                <p className="flex items-start gap-2 text-sm font-medium">
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                  {row.after}
-                </p>
-              </motion.li>
-            ))}
-          </ul>
-        </div>
-      </section>
-      <section aria-labelledby="easy-heading" className="relative mx-auto max-w-6xl px-5 py-16">
-        <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-10">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-24 -top-24 size-[420px] rounded-full bg-[radial-gradient(circle,rgba(47,155,255,0.18),transparent_65%)]"
-          />
-          <p className="relative font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">Research repository</p>
-          <h2 id="easy-heading" className="relative mt-3 max-w-3xl text-balance font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
-            The easiest research repository you'll ever use.
-          </h2>
-          <ul className="relative mt-6 flex flex-wrap gap-x-6 gap-y-2">
-            {NO_LIST.map((t, i) => (
-              <motion.li
-                key={t}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.4, delay: i * 0.07, ease }}
-                className="font-display text-xl font-bold text-muted-foreground sm:text-2xl"
-              >
-                {t}
-              </motion.li>
-            ))}
-          </ul>
-          <p className="relative mt-6 max-w-2xl text-muted-foreground">
-            Most repositories need a librarian: tags to maintain, a taxonomy to agree on, training sessions for every new hire. repofeed.ai skips all of that. Your research goes in, and it comes out organized into scenes people want to watch.
-          </p>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.45, ease }}
-            className="relative mt-8 grid gap-5 rounded-2xl border border-primary/40 bg-primary/10 p-5 sm:p-6 md:grid-cols-[auto_1fr] md:items-center"
-          >
-            <span className="grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <Link2 className="size-6" />
-            </span>
-            <div>
-              <p className="font-display text-xl font-bold sm:text-2xl">Viewers need no account. Just a private link.</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Send stakeholders a private share link. They tap it and start scrolling the feed right away, with no sign-up, no password and no app to install. If they want to react or comment, they just add their name.
+            <h1 className="max-w-[18ch] text-balance text-[2.5rem] font-bold leading-[1.04] tracking-[-0.035em] sm:text-6xl">
+              {variant.headline}
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">{variant.sub}</p>
+            <div className="mt-8">
+              <HeroSignup variant={variant.slug} />
+              <p className="mt-3 text-sm text-muted-foreground">
+                Free for your first three studies. No card, no password.{" "}
+                <Link to="/demo" onClick={() => track("demo_open", { location: "hero_text" })} className="cursor-pointer font-medium text-foreground underline underline-offset-4">
+                  Watch the demo first
+                </Link>
               </p>
             </div>
-            <ol className="flex flex-wrap items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider md:col-span-2">
-              {VIEWER_FLOW.map((step, i) => (
-                <li key={step} className="flex items-center gap-2">
-                  <span className="rounded-full bg-background/60 px-3 py-1.5">{step}</span>
-                  {i < VIEWER_FLOW.length - 1 && <ArrowRight className="size-3.5 text-primary" />}
-                </li>
-              ))}
-            </ol>
-          </motion.div>
-          <div className="relative mt-10 grid gap-6 border-t border-border pt-8 md:grid-cols-3">
-            {EASY.map((e) => (
-              <div key={e.title}>
-                <p className="font-display text-lg font-bold">{e.title}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{e.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      <section aria-labelledby="how-heading" className="relative mx-auto max-w-6xl px-5 py-16">
-        <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">How scenes are made</p>
-        <h2 id="how-heading" className="mt-3 max-w-2xl text-balance font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
-          You bring the research. We make the scenes.
-        </h2>
-        <p className="mt-4 max-w-2xl text-muted-foreground">
-          No editing timeline, no video skills. Every scene is generated for you, then you review, tweak or swap the footage before anyone sees it.
-        </p>
-        <ol className="mt-10 grid gap-4 md:grid-cols-3">
-          {STEPS.map((s, i) => (
-            <motion.li
-              key={s.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.45, delay: i * 0.08, ease }}
-              className="relative overflow-hidden rounded-2xl border border-border bg-card p-6"
-            >
-              <span aria-hidden className="absolute right-5 top-4 font-display text-6xl font-extrabold text-foreground/5">
-                {i + 1}
-              </span>
-              <span className="grid size-11 place-items-center rounded-xl bg-primary/15 text-primary">
-                <s.icon className="size-5" />
-              </span>
-              <p className="mt-5 font-display text-lg font-bold">{s.title}</p>
-              <p className="mt-2 text-sm text-muted-foreground">{s.body}</p>
-            </motion.li>
-          ))}
-        </ol>
-      </section>
-      <section aria-labelledby="deck-heading" className="relative mx-auto max-w-6xl px-5 py-16">
-        <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center">
-          <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">Readout decks</p>
-            <h2 id="deck-heading" className="mt-3 text-balance font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
-              The readout deck <span className="text-primary">builds itself</span>.
-            </h2>
-            <p className="mt-4 max-w-xl text-muted-foreground">
-              One click turns your study's findings into a polished slide deck: the outcomes, the evidence and what to do next. Present it right in the browser, or download it as PowerPoint and make it yours.
-            </p>
-            <ul className="mt-8 space-y-4">
-              {DECK_POINTS.map((d) => (
-                <li key={d.title} className="flex gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-                    <d.icon className="size-5" />
-                  </span>
-                  <div>
-                    <p className="font-display text-base font-bold">{d.title}</p>
-                    <p className="mt-0.5 text-sm text-muted-foreground">{d.body}</p>
-                  </div>
+            <ul className="mt-10 grid max-w-xl gap-x-8 gap-y-3 text-[0.9375rem] sm:grid-cols-2">
+              {[
+                "Your files never leave your computer",
+                "Every quote checked against the source",
+                "Viewers need no account",
+                "See who watched and who pushed back",
+              ].map((point) => (
+                <li key={point} className="flex items-start gap-2.5">
+                  <Check className="mt-1 size-4 shrink-0 text-success" strokeWidth={2.5} />
+                  {point}
                 </li>
               ))}
             </ul>
           </div>
-          <DeckPreview />
-        </div>
-      </section>
-      <PricingSection />
+          <HeroDevice />
+        </section>
+
+        <section aria-labelledby="problem-heading" className="border-y border-border bg-card">
+          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-20">
+            <div>
+              <h2 id="problem-heading" className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+                You did the interviews. Then the findings sat in a deck.
+              </h2>
+              <p className="mt-4 max-w-lg text-muted-foreground">
+                The readout goes well, a few people nod, and a month later someone asks a question the study already answered. The research was fine. The format asked too much of busy people.
+              </p>
+            </div>
+            <blockquote className="border-l-4 border-mark pl-6">
+              <p className="quote-voice text-2xl leading-snug sm:text-[1.75rem]">
+                “It stopped feeling like <span className="hl">help</span> and started feeling like <span className="hl">homework</span>.”
+              </p>
+              <footer className="mt-4 text-sm text-muted-foreground">
+                A participant in the demo study, talking about meal kits. Your stakeholders would say the same about a forty-page report.
+              </footer>
+            </blockquote>
+          </div>
+        </section>
+
+        <section aria-labelledby="how-heading" className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
+          <h2 id="how-heading" className="max-w-2xl text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+            From raw files to a feed in three steps
+          </h2>
+          <ol className="mt-10 grid gap-8 md:grid-cols-3">
+            {STEPS.map((step, i) => (
+              <li key={step.title} className="border-t-2 border-foreground pt-5">
+                <span className="text-sm font-semibold text-muted-foreground">Step {i + 1}</span>
+                <h3 className="mt-1 text-xl font-bold tracking-tight">{step.title}</h3>
+                <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted-foreground">{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <PrivacySection />
+
+        <section aria-labelledby="after-heading" className="mx-auto grid max-w-6xl gap-10 px-5 py-16 lg:grid-cols-2 lg:items-center lg:py-20">
+          <div>
+            <h2 id="after-heading" className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+              Then you find out whether it landed
+            </h2>
+            <p className="mt-4 max-w-lg text-muted-foreground">
+              People react with “rings true”, “surprised me” or “push back”, and leave questions and action items on the scene itself. Insights adds it up, so you know which finding to defend in the next meeting and which one is already accepted.
+            </p>
+            <p className="mt-4 max-w-lg text-muted-foreground">
+              Need slides anyway? One click drafts a readout deck from the same findings. Present it in the browser or download it as PowerPoint and make it yours.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <CtaLink location="insights" variant={variant.slug} to="/demo/insights" secondary>See a sample Insights page</CtaLink>
+              <CtaLink location="deck" variant={variant.slug} to="/demo/deck" secondary>Generate a sample deck</CtaLink>
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lift">
+            <div className="grid grid-cols-3 divide-x divide-border border-b border-border text-center">
+              {[
+                ["19", "people reached"],
+                ["86%", "watched to the end"],
+                ["14", "open questions"],
+              ].map(([value, label]) => (
+                <div key={label} className="px-3 py-4">
+                  <p className="text-2xl font-bold tracking-tight">{value}</p>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                </div>
+              ))}
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Scene</th>
+                  <th className="px-2 py-2 text-right font-medium">Finished</th>
+                  <th className="px-2 py-2 text-right font-medium">Rings true</th>
+                  <th className="px-4 py-2 text-right font-medium">Push back</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Why people really leave", "89%", 9, 2],
+                  ["The hidden cancel button", "100%", 10, 1],
+                  ["Fewer nights, please", "71%", 3, 5],
+                  ["Pause would have saved them", "93%", 7, 0],
+                ].map(([scene, finished, rings, push]) => (
+                  <tr key={scene} className="border-t border-border">
+                    <td className="px-4 py-2.5 font-medium">{scene}</td>
+                    <td className="px-2 py-2.5 text-right">{finished}</td>
+                    <td className="px-2 py-2.5 text-right">{rings}</td>
+                    <td className={Number(push) >= 4 ? "px-4 py-2.5 text-right font-semibold text-destructive" : "px-4 py-2.5 text-right"}>{push}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="border-t border-border bg-background px-4 py-2 text-xs text-muted-foreground">Sample numbers from the demo study.</p>
+          </div>
+        </section>
+
+        <section aria-labelledby="compare-heading" className="border-y border-border bg-card">
+          <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
+            <h2 id="compare-heading" className="max-w-2xl text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+              A repository waits to be searched. A feed shows up.
+            </h2>
+            <p className="mt-4 max-w-2xl text-muted-foreground">
+              Most research repositories are built for the researcher doing analysis. repofeed is built for the moment after, when the work has to reach people who weren’t in the room.
+            </p>
+            <div className="mt-8 overflow-x-auto">
+              <table className="w-full min-w-[40rem] text-left text-[0.9375rem]">
+                <thead>
+                  <tr className="border-b border-border text-sm">
+                    <th className="w-[22%] py-3 pr-4 font-medium text-muted-foreground"><span className="sr-only">Topic</span></th>
+                    <th className="w-[36%] py-3 pr-6 font-medium text-muted-foreground">A typical repository</th>
+                    <th className="py-3 font-semibold">repofeed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARE.map((row) => (
+                    <tr key={row.topic} className="border-b border-border align-top last:border-b-0">
+                      <th scope="row" className="py-3.5 pr-4 font-semibold">{row.topic}</th>
+                      <td className="py-3.5 pr-6 text-muted-foreground">
+                        <span className="flex gap-2"><X className="mt-1 size-4 shrink-0 text-muted-foreground/60" />{row.usual}</span>
+                      </td>
+                      <td className="py-3.5">
+                        <span className="flex gap-2"><Check className="mt-1 size-4 shrink-0 text-success" strokeWidth={2.5} />{row.ours}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <PricingSection variant={variant.slug} />
+        <Faq />
+
+        <section aria-labelledby="final-heading" className="dark">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-16 lg:flex-row lg:items-center lg:justify-between lg:py-20">
+            <div>
+              <h2 id="final-heading" className="max-w-xl text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+                Put your last study in front of people this week.
+              </h2>
+              <p className="mt-3 max-w-xl text-muted-foreground">
+                Upload the files you already have. Your first three studies are free, and you can share them with as many viewers as you like.
+              </p>
+            </div>
+            <div className="w-full max-w-md shrink-0">
+              <HeroSignup variant={variant.slug} id="final-email" location="final" />
+            </div>
+          </div>
+        </section>
+      </main>
       <SiteFooter />
     </div>
   );

@@ -45,7 +45,7 @@ const SECTIONS: LegalSection[] = [
   {
     heading: "Analytics and cookies",
     paragraphs: [
-      "We use first-party analytics from our hosting provider (Vercel Analytics and Speed Insights) to understand which pages load, how fast they are, and whether the app is working. These tools set a small amount of data in your browser so we can count visits and measure performance. We do not use them to advertise to you, and we do not sell that data.",
+      "We use first-party analytics from our hosting provider (Vercel Analytics and Speed Insights) to understand which pages load, how fast they are, and whether the app is working. These tools set a small amount of data in your browser so we can count visits and measure performance. We do not use them to advertise to you, and we do not sell that data. If you arrive from an ad or a tagged link, we note which campaign it was, along with the click reference the ad platform attached, so we can tell which ads lead to signups. We may report those signups back to that ad platform using only its own click reference, never your name or email.",
       "The app also stores what it needs to run: your sign-in session, the workspace you last used, and whether you have seen the in-app tour. You can clear these by signing out and clearing site data in your browser.",
     ],
   },

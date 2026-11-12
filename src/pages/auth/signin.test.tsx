@@ -19,6 +19,6 @@ describe("Sign in Google button", () => {
       </MemoryRouter>,
     );
     expect(screen.queryByRole("button", { name: /continue with google/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/use a magic link/i)).toBeInTheDocument();
+    expect(screen.getByText(/email you a link/i)).toBeInTheDocument();
   });
 });

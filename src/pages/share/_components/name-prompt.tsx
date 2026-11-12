@@ -52,7 +52,7 @@ export default function NamePrompt({
           <span className="mb-2 grid size-11 place-items-center rounded-full bg-primary/15 text-primary">
             <MessageCircle className="size-5" />
           </span>
-          <DialogTitle className="font-display text-2xl">What should we call you?</DialogTitle>
+          <DialogTitle className="text-2xl">What should we call you?</DialogTitle>
           <DialogDescription>
             The team behind <span className="font-medium text-foreground">{studyTitle}</span> will see your name next to your reactions and comments. No account needed.
           </DialogDescription>

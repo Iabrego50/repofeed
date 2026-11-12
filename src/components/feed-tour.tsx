@@ -91,7 +91,7 @@ function IconBubble({ icon: Icon, pill }: { icon: LucideIcon; pill?: string }) {
   if (pill) {
     return (
       <span className="grid h-10 w-12 shrink-0 place-items-center">
-        <span className="rounded-full bg-primary px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-primary-foreground">{pill}</span>
+        <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">{pill}</span>
       </span>
     );
   }
@@ -118,7 +118,7 @@ export default function FeedTour({ open, isEditor, onDone }: { open: boolean; is
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md" showCloseButton={false}>
         <div className="relative bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--primary)_28%,transparent),transparent_60%)] px-6 pb-4 pt-6">
           <div className="flex items-center justify-between">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-primary">
+            <p className="text-xs font-medium text-primary">
               {step.kicker} · {index + 1}/{STEPS.length}
             </p>
             <button type="button" onClick={finish} className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
@@ -133,7 +133,7 @@ export default function FeedTour({ open, isEditor, onDone }: { open: boolean; is
               exit={{ opacity: 0, x: -16 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
-              <DialogTitle className="pt-3 font-display text-2xl font-bold leading-tight text-balance">{step.title}</DialogTitle>
+              <DialogTitle className="pt-3 text-2xl font-bold leading-tight text-balance">{step.title}</DialogTitle>
               <DialogDescription className="pt-2 leading-relaxed">{step.body}</DialogDescription>
               <ul className="space-y-3 pt-5">
                 {step.rows.map((r) => (

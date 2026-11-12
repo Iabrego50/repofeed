@@ -18,7 +18,7 @@ export default function UserAvatar({
   return (
     <span
       className={cn(
-        "relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary font-mono text-[11px] font-bold text-foreground",
+        "relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-[11px] font-semibold text-foreground",
         className,
       )}
       aria-hidden
