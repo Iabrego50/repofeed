@@ -23,10 +23,18 @@ export function CtaLink({ location, variant, children, className, secondary = fa
  * straight away rather than making people click through to another page first.
  */
 export function HeroSignup({ variant, id = "hero-email", location = "hero" }: { variant: string; id?: string; location?: string }) {
-  const { signInWithOtp } = useAuth();
+  const { user, signInWithOtp } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
+
+  if (user) {
+    return (
+      <CtaLink location={location} variant={variant} to="/feed">
+        Go to the feed <ArrowRight className="size-4" />
+      </CtaLink>
+    );
+  }
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();

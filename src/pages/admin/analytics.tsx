@@ -86,7 +86,7 @@ export default function AdminAnalyticsPage() {
     <div className="h-dvh overflow-y-auto bg-background">
       <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-[88rem] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
-          <Link to="/" aria-label="Back to the app" className="flex cursor-pointer items-center gap-2 text-muted-foreground hover:text-foreground">
+          <Link to="/feed" aria-label="Back to the app" className="flex cursor-pointer items-center gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" />
             <Logo withText={false} />
           </Link>

@@ -44,6 +44,7 @@
     { "source": "/demo", "destination": "/index.html" },
     { "source": "/for/:slug", "destination": "/index.html" },
     { "source": "/demo/insights", "destination": "/index.html" },
+    { "source": "/demo/explore", "destination": "/index.html" },
     { "source": "/demo/deck", "destination": "/index.html" },
     { "source": "/terms", "destination": "/index.html" },
     { "source": "/privacy", "destination": "/index.html" },

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Info, Play, Presentation } from "lucide-react";
+import { Compass, Info, Play, Presentation } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import PageHeader from "@/components/page-header.tsx";
@@ -20,9 +20,14 @@ export default function DemoInsightsPage() {
     <PublicShell
       wide
       actions={
-        <Button asChild variant="secondary" className="h-11">
-          <Link to="/demo" aria-label="Demo feed"><Play className="size-4" /> <span className="hidden sm:inline">Demo feed</span></Link>
-        </Button>
+        <>
+          <Button asChild variant="secondary" className="h-11">
+            <Link to="/demo" aria-label="Demo feed"><Play className="size-4" /> <span className="hidden sm:inline">Demo feed</span></Link>
+          </Button>
+          <Button asChild variant="secondary" className="h-11">
+            <Link to="/demo/explore"><Compass className="size-4" /> <span className="hidden sm:inline">Explore</span></Link>
+          </Button>
+        </>
       }
     >
       <div className="px-4 pt-2 sm:px-5">

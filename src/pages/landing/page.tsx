@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Check, FileSearch, Heart, MessageCircle, Play, X } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import Logo from "@/components/logo.tsx";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import SiteFooter from "@/components/site-footer.tsx";
@@ -51,6 +52,7 @@ const COMPARE: Array<{ topic: string; usual: string; ours: string }> = [
 ];
 
 function Nav({ variant }: { variant: string }) {
+  const { user } = useAuth();
   const link = "hidden min-h-10 cursor-pointer items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:text-foreground sm:flex";
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
@@ -62,10 +64,16 @@ function Nav({ variant }: { variant: string }) {
           <Link to="/demo" className={link}>Demo</Link>
           <a href="#pricing" className={link}>Pricing</a>
           <Link to="/help" className={link}>Help</Link>
-          <Link to="/signin" className="flex min-h-10 cursor-pointer items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:text-foreground">
-            Sign in
-          </Link>
-          <CtaLink location="nav" variant={variant} className="h-9 px-4 text-sm">Start free</CtaLink>
+          {user ? (
+            <CtaLink location="nav" variant={variant} to="/feed" className="h-9 px-4 text-sm">Go to the feed</CtaLink>
+          ) : (
+            <>
+              <Link to="/signin" className="flex min-h-10 cursor-pointer items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+                Sign in
+              </Link>
+              <CtaLink location="nav" variant={variant} className="h-9 px-4 text-sm">Start free</CtaLink>
+            </>
+          )}
         </nav>
       </div>
     </header>
@@ -202,6 +210,7 @@ export default function Landing() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <CtaLink location="insights" variant={variant.slug} to="/demo/insights" secondary>See a sample Insights page</CtaLink>
+              <CtaLink location="explore" variant={variant.slug} to="/demo/explore" secondary>Search the sample study</CtaLink>
               <CtaLink location="deck" variant={variant.slug} to="/demo/deck" secondary>Generate a sample deck</CtaLink>
             </div>
           </div>

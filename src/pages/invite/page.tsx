@@ -28,7 +28,7 @@ export default function InvitePage() {
     mutationFn: () => api.billing.actions.acceptInvite({ token: token! }),
     onSuccess: () => {
       toast.success("Joined workspace!");
-      navigate("/studies");
+      navigate("/feed");
     },
     onError: (err: any) => {
       toast.error(err.message || "You weren’t added to the workspace. Ask for a fresh invite link.");

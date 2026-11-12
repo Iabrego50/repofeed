@@ -6,6 +6,7 @@ import { COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/site.ts";
 const LINKS = [
   { to: "/demo", label: "Demo" },
   { to: "/demo/insights", label: "Insights demo" },
+  { to: "/demo/explore", label: "Explore demo" },
   { to: "/help", label: "Help Center" },
   { to: "/terms", label: "Terms of Service" },
   { to: "/privacy", label: "Privacy Policy" },

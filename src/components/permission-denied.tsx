@@ -25,7 +25,7 @@ export default function PermissionDenied({ what }: { what: string }) {
           </ErrorStateDescription>
         </ErrorStateHeader>
         <ErrorStateContent>
-          <Button className="h-11" onClick={() => navigate("/")}>Go to the feed</Button>
+          <Button className="h-11" onClick={() => navigate("/feed")}>Go to the feed</Button>
         </ErrorStateContent>
       </ErrorState>
     </div>

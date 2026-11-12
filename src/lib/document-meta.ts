@@ -32,6 +32,10 @@ const EXACT: Record<string, RouteMeta> = {
     title: "Insights demo — repofeed.ai",
     description: "See how repofeed.ai shows who watched research scenes and where they pushed back.",
   },
+  "/demo/explore": {
+    title: "Explore demo — repofeed.ai",
+    description: "Search a sample research study by topic or keyword, or ask a question and see which insights answer it.",
+  },
   "/help": {
     title: "Help — repofeed.ai",
     description: "Guides for building studies, sharing scenes, reading Insights and managing your workspace.",
@@ -69,6 +73,11 @@ const EXACT: Record<string, RouteMeta> = {
   "/welcome": {
     title: "Create a workspace — repofeed.ai",
     description: "Set up your first research workspace on repofeed.ai.",
+    robots: "noindex",
+  },
+  "/feed": {
+    title: "Feed — repofeed.ai",
+    description: "Watch research scenes from your workspace.",
     robots: "noindex",
   },
   "/studies": {

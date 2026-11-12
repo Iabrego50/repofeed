@@ -26,6 +26,12 @@ describe("guided tour schedule", () => {
     expect(nextLessonAfter("measure")).toBeNull();
   });
 
+  it("opens feed stops on /feed, not the marketing landing", () => {
+    expect(LESSONS[0].stops[0].route).toBe("/feed");
+    expect(LESSONS[1].stops.filter((s) => s.route === "/")).toEqual([]);
+    expect(LESSONS.flatMap((l) => l.stops).filter((s) => s.route === "/feed").length).toBeGreaterThan(0);
+  });
+
   it("opens the share stop on a published study when there is one", () => {
     const stop = LESSONS[1].stops[0];
     expect(resolveRoute(stop, "abc")).toBe("/studies/abc?step=review");

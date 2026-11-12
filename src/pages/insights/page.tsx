@@ -18,7 +18,7 @@ import InsightsDashboard, { AudienceToggle } from "./_components/insights-dashbo
 import WatchersDialog from "./_components/watchers-dialog.tsx";
 import { pct, type Audience, type Row } from "./_lib/columns.ts";
 
-const reelHref = (id: string) => `/?reel=${id}`;
+const reelHref = (id: string) => `/feed?reel=${id}`;
 
 export default function InsightsPage() {
   const { current, isEditor } = useWorkspace();

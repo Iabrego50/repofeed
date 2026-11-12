@@ -37,6 +37,8 @@ function renderAt(path: string) {
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/auth/confirm" element={<AuthCallback />} />
         <Route path="/" element={<div>home</div>} />
+        <Route path="/feed" element={<div>feed</div>} />
+        <Route path="/studies" element={<div>studies</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -61,7 +63,17 @@ describe("AuthCallback token_hash and PKCE", () => {
     renderAt("/auth/confirm?token_hash=abc&type=magiclink");
     await waitFor(() => expect(bag.verifyOtp).toHaveBeenCalledWith({ token_hash: "abc", type: "magiclink" }));
     expect(bag.exchangeCodeForSession).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.getByText("home")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("feed")).toBeInTheDocument());
+  });
+
+  it("follows a safe returnTo instead of the default feed", async () => {
+    bag.verifyOtp.mockResolvedValue({ error: null });
+    bag.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1", email: "a@b.com", user_metadata: {} } } },
+      error: null,
+    });
+    renderAt("/auth/confirm?token_hash=abc&type=magiclink&returnTo=%2Fstudies");
+    await waitFor(() => expect(screen.getByText("studies")).toBeInTheDocument());
   });
 
   it("still exchanges a PKCE code on /auth/callback", async () => {

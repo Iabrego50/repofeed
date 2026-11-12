@@ -1,10 +1,17 @@
 /** Canonical in-app paths the router must handle. Tests crawl this table. */
 
+/** Marketing site root. Always the landing page, signed-in or not. */
+export const LANDING_PATH = "/";
+
+/** In-app feed. Signed-in default after sign-in when there is no returnTo. */
+export const FEED_PATH = "/feed";
+
 export const PUBLIC_APP_PATHS = [
   "/",
   "/for/research-repository",
   "/demo",
   "/demo/insights",
+  "/demo/explore",
   "/demo/deck",
   "/help",
   "/terms",
@@ -36,6 +43,8 @@ export const PROTECTED_APP_PATHS = [
 export const APP_PATHS = [...PUBLIC_APP_PATHS, ...PROTECTED_APP_PATHS] as const;
 
 export function signInPath(returnTo?: string): string {
-  if (!returnTo || returnTo === "/" || returnTo.startsWith("/signin")) return "/signin";
+  if (!returnTo || returnTo === LANDING_PATH || returnTo === FEED_PATH || returnTo.startsWith("/signin")) {
+    return "/signin";
+  }
   return `/signin?returnTo=${encodeURIComponent(returnTo)}`;
 }
