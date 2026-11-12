@@ -17,7 +17,7 @@ describe("signInPath", () => {
 });
 
 describe("production SPA rewrites", () => {
-  it("rewrites /feed and /explore to index.html so a hard refresh does not 404", () => {
+  it("rewrites /feed, /explore and /demo/explore to index.html so a hard refresh does not 404", () => {
     const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as {
       rewrites?: Array<{ source: string; destination: string }>;
     };
@@ -29,6 +29,7 @@ describe("production SPA rewrites", () => {
     expect(sources.has("/")).toBe(true);
     expect(sources.has("/feed")).toBe(true);
     expect(sources.has("/explore")).toBe(true);
+    expect(sources.has("/demo/explore")).toBe(true);
     expect(sources.has("/dashboard")).toBe(true);
   });
 });

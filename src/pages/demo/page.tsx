@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, ArrowLeft, BarChart3, RotateCcw, X, Presentation } from "lucide-react";
+import { ArrowDown, ArrowLeft, BarChart3, Compass, RotateCcw, X, Presentation } from "lucide-react";
 import Logo from "@/components/logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { SignInButton } from "@/components/ui/signin.tsx";
@@ -191,6 +191,12 @@ export default function DemoPage() {
           </Link>
           <div className="flex shrink-0 items-center gap-2">
             <Link
+              to="/demo/explore"
+              className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
+            >
+              <Compass className="size-3.5" /> Explore
+            </Link>
+            <Link
               to="/demo/insights"
               className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
             >
@@ -257,6 +263,16 @@ export default function DemoPage() {
             className="min-h-0 flex-1"
           />
           <div className="space-y-2 border-t border-border p-4">
+            <Button
+              asChild
+              variant="secondary"
+              size="sm"
+              className="h-10 w-full font-semibold"
+            >
+              <Link to="/demo/explore">
+                <Compass className="size-4" /> Search these insights
+              </Link>
+            </Button>
             <Button
               asChild
               variant="secondary"
@@ -364,6 +380,11 @@ function EndCard({ onRestart }: { onRestart: () => void }) {
         className="h-12 px-6 text-base font-semibold"
         signInText="Get started free"
       />
+      <Button asChild variant="secondary" className="h-11">
+        <Link to="/demo/explore">
+          <Compass className="size-4" /> Search these insights
+        </Link>
+      </Button>
       <Button asChild variant="secondary" className="h-11">
         <Link to="/demo/insights">
           <BarChart3 className="size-4" /> See who watched, in Insights

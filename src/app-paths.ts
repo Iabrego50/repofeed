@@ -11,6 +11,7 @@ export const PUBLIC_APP_PATHS = [
   "/for/research-repository",
   "/demo",
   "/demo/insights",
+  "/demo/explore",
   "/demo/deck",
   "/help",
   "/terms",

@@ -370,6 +370,7 @@ describe("App routes", () => {
       "/for/research-repository": /research repository people open/i,
       "/demo": /Demo feed|Supperly/i,
       "/demo/insights": /Insights demo|Was the research watched/i,
+      "/demo/explore": /Search the sample study|Explore demo/i,
       "/demo/deck": /Turn the sample study into a readout deck/i,
       "/help": /How can we help/i,
       "/terms": /terms of service/i,

@@ -5,6 +5,7 @@ describe("per-route document meta", () => {
   it("sets public titles and noindexes the 404 page", () => {
     expect(metaForPath("/").title).toMatch(/Research your team will actually watch/);
     expect(metaForPath("/demo").title).toMatch(/Demo/);
+    expect(metaForPath("/demo/explore").title).toMatch(/Explore demo/);
     expect(metaForPath("/help").title).toMatch(/Help/);
     expect(metaForPath("/signin").title).toMatch(/Sign in/);
     expect(metaForPath("/terms").title).toMatch(/Terms/);

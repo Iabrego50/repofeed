@@ -210,6 +210,7 @@ export default function Landing() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <CtaLink location="insights" variant={variant.slug} to="/demo/insights" secondary>See a sample Insights page</CtaLink>
+              <CtaLink location="explore" variant={variant.slug} to="/demo/explore" secondary>Search the sample study</CtaLink>
               <CtaLink location="deck" variant={variant.slug} to="/demo/deck" secondary>Generate a sample deck</CtaLink>
             </div>
           </div>

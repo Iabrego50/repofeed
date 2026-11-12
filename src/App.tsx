@@ -24,6 +24,7 @@ const DemoPage = lazy(() => import("./pages/demo/page.tsx"));
 const ExplorePage = lazy(() => import("./pages/explore/page.tsx"));
 const DemoDeckPage = lazy(() => import("./pages/demo/deck/page.tsx"));
 const DemoInsightsPage = lazy(() => import("./pages/demo/insights/page.tsx"));
+const DemoExplorePage = lazy(() => import("./pages/demo/explore/page.tsx"));
 const FeedPage = lazy(() => import("./pages/feed/page.tsx"));
 const StudiesPage = lazy(() => import("./pages/studies/page.tsx"));
 const NewStudyPage = lazy(() => import("./pages/studies/new/page.tsx"));
@@ -124,6 +125,7 @@ export default function App() {
               <Route path="/for/:slug" element={<Landing />} />
               <Route path="/demo" element={<DemoPage />} />
               <Route path="/demo/insights" element={<DemoInsightsPage />} />
+              <Route path="/demo/explore" element={<DemoExplorePage />} />
               <Route path="/demo/deck" element={<DemoDeckPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
