@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart.tsx";
 import { cn } from "@/lib/utils.ts";
 import type { AdminAnalyticsSnapshot } from "@/lib/api/admin-analytics.ts";
 import type { BreakdownRow, CampaignRow } from "@/lib/api/admin-acquisition.ts";
-import { money, num, pct, shortDay } from "../_lib/format.ts";
+import { money, num, pct } from "../_lib/format.ts";
 import { CAC_TARGET_CENTS, campaignVerdict, type Verdict } from "../_lib/verdict.ts";
-import { Funnel, Kpi, Panel, TD, TH } from "./parts.tsx";
+import { DailyBars, Funnel, Kpi, Panel, TD, TH } from "./parts.tsx";
 
 type SortKey = "spendCents" | "sessions" | "signups" | "visitToSignup" | "activated" | "customers" | "costPerSignupCents" | "cacCents";
 
@@ -28,30 +26,6 @@ const TONE: Record<Verdict["tone"], string> = {
   bad: "bg-destructive/10 text-destructive",
   neutral: "bg-secondary text-muted-foreground",
 };
-
-const trendConfig = {
-  sessions: { label: "Visits", color: "var(--chart-1)" },
-  signups: { label: "Signups", color: "var(--chart-4)" },
-} satisfies ChartConfig;
-
-function Trend({ data, dataKey, title, total }: { data: AdminAnalyticsSnapshot["acquisition"]["daily"]; dataKey: "sessions" | "signups"; title: string; total: number }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-sm text-muted-foreground">
-        {title} <span className="ml-1 font-semibold text-foreground">{num(total)}</span>
-      </p>
-      <ChartContainer config={trendConfig} className="mt-2 aspect-auto h-36 w-full">
-        <BarChart data={data} margin={{ left: 0, right: 4, top: 4, bottom: 0 }}>
-          <CartesianGrid vertical={false} strokeDasharray="2 4" />
-          <XAxis dataKey="day" tickFormatter={shortDay} tickLine={false} axisLine={false} minTickGap={28} tickMargin={6} />
-          <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} />
-          <ChartTooltip cursor={{ fill: "var(--muted)" }} content={<ChartTooltipContent labelFormatter={(value) => shortDay(String(value))} />} />
-          <Bar dataKey={dataKey} fill={`var(--color-${dataKey})`} radius={[3, 3, 0, 0]} maxBarSize={22} />
-        </BarChart>
-      </ChartContainer>
-    </div>
-  );
-}
 
 function BreakdownTable({ rows, first, empty }: { rows: BreakdownRow[]; first: string; empty: string }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>;
@@ -135,8 +109,8 @@ export default function AcquisitionTab({ snapshot }: { snapshot: AdminAnalyticsS
           <p className="text-sm text-muted-foreground">No visits recorded in this window yet.</p>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
-            <Trend data={daily} dataKey="sessions" title="Visits" total={totals.sessions} />
-            <Trend data={daily} dataKey="signups" title="Signups" total={totals.signups} />
+            <DailyBars data={daily} dataKey="sessions" title="Visits" total={totals.sessions} color="var(--chart-1)" />
+            <DailyBars data={daily} dataKey="signups" title="Signups" total={totals.signups} color="var(--chart-4)" />
           </div>
         )}
       </Panel>

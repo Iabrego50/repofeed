@@ -191,7 +191,7 @@ export default function AppLayout() {
           </NavLink>
         )}
         <div className="mt-auto flex flex-col gap-0.5">
-          {isAdmin && <NavRow item={{ to: "/admin/analytics", label: "Growth", icon: TrendingUp }} />}
+          {isAdmin && <NavRow item={{ to: "/admin/analytics", label: "Analytics", icon: TrendingUp }} />}
           {isEditor && (
             <button type="button" onClick={openGuide} className={cn(ROW, "w-full")}>
               <GraduationCap className="size-4" /> Product tour
@@ -250,7 +250,7 @@ export default function AppLayout() {
               )}
               {isAdmin && (
                 <DropdownMenuItem onSelect={() => navigate("/admin/analytics")} className="cursor-pointer">
-                  <TrendingUp className="size-4" /> Growth
+                  <TrendingUp className="size-4" /> Analytics
                 </DropdownMenuItem>
               )}
               {isEditor && (

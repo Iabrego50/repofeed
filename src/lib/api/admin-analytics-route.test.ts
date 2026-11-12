@@ -104,7 +104,14 @@ describe("GET /api/admin/analytics", () => {
       expect.objectContaining({
         range: "7d",
         excludeInternal: true,
-        headlines: expect.objectContaining({ users: 0 }),
+        headlines: expect.objectContaining({ users: 0, viewsInRange: 0 }),
+        product: expect.objectContaining({
+          visits: 0,
+          funnel: expect.arrayContaining([
+            expect.objectContaining({ key: "visit", count: 0 }),
+            expect.objectContaining({ key: "signup", count: 0 }),
+          ]),
+        }),
       }),
     );
   });
