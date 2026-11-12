@@ -96,8 +96,8 @@ export default function CommandPalette() {
   };
 
   const pages = [
-    { to: "/", label: "Feed", icon: Clapperboard },
-    { to: "/?view=saved", label: "Saved scenes", icon: Bookmark },
+    { to: "/feed", label: "Feed", icon: Clapperboard },
+    { to: "/feed?view=saved", label: "Saved scenes", icon: Bookmark },
     { to: "/explore", label: "Explore and ask", icon: Compass },
     ...(isEditor
       ? [
@@ -145,7 +145,7 @@ export default function CommandPalette() {
         {hits.length > 0 && (
           <CommandGroup heading="Scenes">
             {hits.map(({ reel, snippet }) => (
-              <CommandItem key={reel._id} value={`scene-${reel._id}`} onSelect={() => go(`/?reel=${reel._id}`)}>
+              <CommandItem key={reel._id} value={`scene-${reel._id}`} onSelect={() => go(`/feed?reel=${reel._id}`)}>
                 <Quote className="mt-0.5 size-4 self-start text-muted-foreground" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{reel.title}</span>

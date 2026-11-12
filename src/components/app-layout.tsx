@@ -25,8 +25,8 @@ type NavItem = { to: string; label: string; icon: typeof Layers; editorOnly?: bo
 
 /** Watching comes first: most people in a workspace never make a study. */
 const WATCH: NavItem[] = [
-  { to: "/", label: "Feed", icon: Clapperboard, match: (p, q) => p === "/" && !q.includes("view=saved") },
-  { to: "/?view=saved", label: "Saved", icon: Bookmark, match: (p, q) => p === "/" && q.includes("view=saved") },
+  { to: "/feed", label: "Feed", icon: Clapperboard, match: (p, q) => p === "/feed" && !q.includes("view=saved") },
+  { to: "/feed?view=saved", label: "Saved", icon: Bookmark, match: (p, q) => p === "/feed" && q.includes("view=saved") },
   { to: "/explore", label: "Explore", icon: Compass },
 ];
 
@@ -49,7 +49,7 @@ const ROW_ON = "bg-accent text-foreground";
 /** "/insights/deck" becomes "nav-insights-deck"; the guided tour points at these. */
 function tourName(to: string): string {
   const slug = to.split("?")[0].replace(/^\//, "").replace(/\//g, "-");
-  return `nav-${to === "/?view=saved" ? "saved" : slug || "feed"}`;
+  return `nav-${to === "/feed?view=saved" ? "saved" : slug || "feed"}`;
 }
 
 function NavRow({ item }: { item: NavItem }) {
@@ -116,7 +116,7 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
             <CreditCard className="size-4" /> Plan and billing
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onSelect={() => navigate("/?tour=1")} className="cursor-pointer">
+        <DropdownMenuItem onSelect={() => navigate("/feed?tour=1")} className="cursor-pointer">
           <CircleHelp className="size-4" /> Feed tour
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate("/welcome")} className="cursor-pointer">
@@ -154,7 +154,7 @@ export default function AppLayout() {
   const { data: profile } = useQuery({ queryKey: ["users", "me"], queryFn: () => api.users.current() });
   const isAdmin = Boolean((profile as { is_admin?: boolean } | null | undefined)?.is_admin);
   const visible = (items: NavItem[]) => items.filter((n) => !n.editorOnly || isEditor);
-  const onFeed = pathname === "/";
+  const onFeed = pathname === "/feed";
   // Five tabs at most on a phone; workspace settings move to the account menu there.
   const tabs: NavItem[] = [
     WATCH[0],
@@ -167,7 +167,7 @@ export default function AppLayout() {
       <CommandPalette />
       <Guide />
       <aside className="hidden w-[15.5rem] shrink-0 flex-col gap-5 border-r border-border bg-sidebar px-3 py-4 lg:flex">
-        <NavLink to="/" className="cursor-pointer px-1.5" aria-label="repofeed.ai home">
+        <NavLink to="/feed" className="cursor-pointer px-1.5" aria-label="Go to the feed">
           <Logo />
         </NavLink>
         <WorkspaceSwitcher />
@@ -218,7 +218,7 @@ export default function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-1 border-b border-border bg-card px-2 py-1.5 lg:hidden">
-          <NavLink to="/" aria-label="repofeed.ai home" className="cursor-pointer px-1">
+          <NavLink to="/feed" aria-label="Go to the feed" className="cursor-pointer px-1">
             <Logo withText={false} />
           </NavLink>
           <WorkspaceSwitcher compact />
@@ -283,7 +283,7 @@ export default function AppLayout() {
                 key={n.to}
                 to={n.to}
                 data-tour={n.to === "/studies/new" ? "new-study" : tourName(n.to)}
-                end={n.to === "/" || n.to === "/studies"}
+                end={n.to === "/feed" || n.to === "/studies"}
                 className={({ isActive }) =>
                   cn(
                     "flex min-h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",

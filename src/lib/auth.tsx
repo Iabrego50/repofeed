@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { getBrowserSupabase } from './supabase';
+import { FEED_PATH } from '@/app-paths.ts';
 import { resolveReturnTo } from '@/pages/auth/return-to.ts';
 
 function authCallbackUrl(): string {
@@ -8,7 +9,7 @@ function authCallbackUrl(): string {
   const returnTo = resolveReturnTo({
     returnTo: new URLSearchParams(window.location.search).get('returnTo'),
   });
-  if (returnTo === '/') return `${origin}/auth/callback`;
+  if (returnTo === FEED_PATH) return `${origin}/auth/callback`;
   return `${origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`;
 }
 

@@ -45,7 +45,7 @@ export default function BillingPage() {
   }, [current]);
 
   if (!current) {
-    navigate("/");
+    navigate("/feed");
     return null;
   }
 

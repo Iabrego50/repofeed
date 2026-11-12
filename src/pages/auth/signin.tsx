@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import Logo from "@/components/logo.tsx";
 import SiteFooter from "@/components/site-footer.tsx";
+import { FEED_PATH } from "@/app-paths.ts";
 import { resolveReturnTo } from "./return-to.ts";
 
 const googleEnabled = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === "true";
@@ -102,7 +103,7 @@ export default function SignInPage() {
           </div>
         )}
         {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-        {returnTo !== "/" && (
+        {returnTo !== FEED_PATH && (
           <p className="mt-4 text-xs text-muted-foreground">You'll return to {returnTo} after signing in.</p>
         )}
       </main>

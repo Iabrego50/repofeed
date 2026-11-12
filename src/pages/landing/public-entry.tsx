@@ -9,9 +9,9 @@ const Landing = lazy(() => import("./page.tsx"));
 const HelpPage = lazy(() => import("@/pages/help/page.tsx"));
 
 /**
+ * `/` is always the marketing landing, signed-in or not.
  * Signed-out visitors opening a member reel link (`/?reel=…`) go to the public,
  * no-sign-up version when the study's sharing is on. `/help` shows the public Help Center.
- * Everyone else sees the landing page.
  */
 export default function PublicEntry({ loader }: { loader: React.ReactNode }) {
   const [params] = useSearchParams();

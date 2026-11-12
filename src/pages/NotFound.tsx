@@ -29,7 +29,7 @@ export default function NotFound() {
         </p>
         <Button asChild className="mt-8 h-11 font-semibold">
           <Link to="/">
-            <ArrowLeft className="size-4" /> Back to your feed
+            <ArrowLeft className="size-4" /> Back to repofeed.ai
           </Link>
         </Button>
       </main>

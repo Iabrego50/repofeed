@@ -26,7 +26,7 @@ export const LESSONS: GuideLesson[] = [
     stops: [
       {
         id: "feed",
-        route: "/",
+        route: "/feed",
         target: "nav-feed",
         title: "The feed is what your team sees",
         body: "Every study you publish lands here as short scenes, newest and unwatched first. For most of your team this is the whole product: they open it and scroll.",
@@ -68,14 +68,14 @@ export const LESSONS: GuideLesson[] = [
       },
       {
         id: "reactions",
-        route: "/",
+        route: "/feed",
         target: "reactions",
         title: "Three ways to answer a finding",
         body: "Rings true, Surprised me and Push back. They take one tap, and they tell you which findings are accepted and which you’ll need to defend.",
       },
       {
         id: "discussion",
-        route: "/",
+        route: "/feed",
         target: "scene-actions",
         title: "Questions and action items stay on the scene",
         body: "Comments can be a note, a question or an action. Sources opens the exact quote and file behind the scene, so nobody has to take your word for it.",

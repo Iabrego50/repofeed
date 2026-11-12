@@ -71,6 +71,11 @@ const EXACT: Record<string, RouteMeta> = {
     description: "Set up your first research workspace on repofeed.ai.",
     robots: "noindex",
   },
+  "/feed": {
+    title: "Feed — repofeed.ai",
+    description: "Watch research scenes from your workspace.",
+    robots: "noindex",
+  },
   "/studies": {
     title: "Studies — repofeed.ai",
     description: "Your research studies on repofeed.ai.",

@@ -11,7 +11,7 @@ import PublicEntry from "./pages/landing/public-entry.tsx";
 import DocumentMeta from "./components/document-meta.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
-import { signInPath } from "./app-paths.ts";
+import { FEED_PATH, signInPath } from "./app-paths.ts";
 
 const AuthCallback = lazy(() => import("./pages/auth/Callback.tsx"));
 const SignInPage = lazy(() => import("./pages/auth/signin.tsx"));
@@ -65,7 +65,7 @@ function FullScreenLoader() {
 function GuestOnly({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <FullScreenLoader />;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={FEED_PATH} replace />;
   return <>{children}</>;
 }
 
@@ -78,7 +78,8 @@ function RequireWorkspace() {
 }
 
 /**
- * `/` and `/help` stay public when signed out (landing / help center).
+ * `/help` stays public when signed out (help center). `/` is registered
+ * outside this gate so the marketing landing is always public.
  * Every other nested route sends signed-out visitors to sign-in.
  */
 function Gate() {
@@ -87,7 +88,7 @@ function Gate() {
 
   if (loading) return <FullScreenLoader />;
   if (!user) {
-    if (location.pathname === "/" || location.pathname === "/help") {
+    if (location.pathname === "/help") {
       return <PublicEntry loader={<FullScreenLoader />} />;
     }
     return <Navigate to={signInPath(`${location.pathname}${location.search}`)} replace />;
@@ -126,16 +127,16 @@ export default function App() {
               <Route path="/demo/deck" element={<DemoDeckPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/" element={<PublicEntry loader={<FullScreenLoader />} />} />
+              <Route path="/dashboard" element={<Navigate to={FEED_PATH} replace />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               <Route element={<Gate />}>
                 <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
                 <Route element={<RequireWorkspace />}>
                   <Route path="/insights/deck" element={<DeckPage />} />
-                  <Route path="/feed" element={<Navigate to="/" replace />} />
-                  <Route path="/dashboard" element={<Navigate to="/" replace />} />
                   <Route element={<AppLayout />}>
                     <Route element={<ShellOutlet />}>
-                      <Route path="/" element={<FeedPage />} />
+                      <Route path="/feed" element={<FeedPage />} />
                       <Route path="/studies" element={<StudiesPage />} />
                       <Route path="/studies/new" element={<NewStudyPage />} />
                       <Route path="/studies/:studyId" element={<StudyPage />} />

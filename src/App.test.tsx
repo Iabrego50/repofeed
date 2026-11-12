@@ -178,7 +178,8 @@ vi.mock("@/lib/api/complete", () => ({
     },
     feed: { list: async () => [], saved: async () => [] },
     share: {
-      publicTokenForReel: async () => null,
+      publicTokenForReel: async ({ reelId }: { reelId: string }) =>
+        reelId === "shared-reel" ? "public-token" : null,
       feed: async () => null,
       join: async () => ({}),
     },
@@ -272,6 +273,63 @@ describe("App routes", () => {
       expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
     });
     expect(document.body.textContent).toMatch(/repofeed/i);
+  });
+
+  it("keeps / as the marketing landing when signed in, and puts the feed at /feed", async () => {
+    signedInSession();
+    renderAt("/");
+    await waitFor(() => {
+      expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
+    });
+    expect(window.location.pathname).toBe("/");
+    expect(screen.getAllByRole("link", { name: /go to the feed/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/No scenes in your feed yet/i)).not.toBeInTheDocument();
+    cleanup();
+
+    signedInSession();
+    renderAt("/feed");
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/feed");
+      expect(document.body.textContent).toMatch(/Acme Research/);
+    });
+    expect(document.body.textContent).not.toMatch(/Nobody reads the report/i);
+    expect(document.title).toMatch(/Feed/);
+  });
+
+  it("sends a signed-in visitor from /signin to /feed", async () => {
+    signedInSession();
+    renderAt("/signin");
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/feed");
+      expect(document.body.textContent).toMatch(/Acme Research/);
+    });
+    expect(document.body.textContent).not.toMatch(/Nobody reads the report/i);
+  });
+
+  it("redirects /dashboard to /feed for a signed-in visitor", async () => {
+    signedInSession();
+    renderAt("/dashboard");
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/feed");
+      expect(document.body.textContent).toMatch(/Acme Research/);
+    });
+    expect(document.body.textContent).not.toMatch(/Nobody reads the report/i);
+  });
+
+  it("still shows the landing for a signed-out /?reel= link when sharing is off", async () => {
+    renderAt("/?reel=reel-1");
+    await waitFor(() => {
+      expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
+    });
+    expect(window.location.pathname).toBe("/");
+  });
+
+  it("sends a signed-out /?reel= visitor to the public share URL when sharing is on", async () => {
+    renderAt("/?reel=shared-reel");
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/s/public-token");
+      expect(window.location.search).toBe("?reel=shared-reel");
+    });
   });
 
   it("crawls every internal landing href and every route without an unmatched warning", async () => {
