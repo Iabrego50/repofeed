@@ -22,10 +22,10 @@ const RANGES: Array<{ value: AdminAnalyticsRange; label: string }> = [
   { value: "all", label: "All time" },
 ];
 
-type Tab = "acquisition" | "product" | "tools";
+type Tab = "product" | "acquisition" | "tools";
 const TABS: Array<{ value: Tab; label: string }> = [
-  { value: "acquisition", label: "Ads and acquisition" },
   { value: "product", label: "Product" },
+  { value: "acquisition", label: "Ads and acquisition" },
   { value: "tools", label: "Tools" },
 ];
 
@@ -48,9 +48,25 @@ async function fetchSnapshot(range: AdminAnalyticsRange, excludeInternal: boolea
   return (await response.json()) as AdminAnalyticsSnapshot;
 }
 
+function QuietInternalNotice({ snapshot }: { snapshot: AdminAnalyticsSnapshot }) {
+  if (!snapshot.excludeInternal) return null;
+  const quiet =
+    snapshot.headlines.users === 0 &&
+    snapshot.headlines.studies === 0 &&
+    snapshot.headlines.reels === 0;
+  if (!quiet) return null;
+  return (
+    <p className="rounded-xl border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
+      {snapshot.product.visits > 0
+        ? "Visits from people who aren’t signed in still count. Your own admin activity is hidden — turn that off above to include it."
+        : "Your own admin activity is hidden. If this looks empty, turn off “Hide my own activity” to include founder usage."}
+    </p>
+  );
+}
+
 export default function AdminAnalyticsPage() {
   const [range, setRange] = useState<AdminAnalyticsRange>("30d");
-  const [tab, setTab] = useState<Tab>("acquisition");
+  const [tab, setTab] = useState<Tab>("product");
   const [excludeInternal, setExcludeInternal] = useState(true);
 
   const query = useQuery({
@@ -85,23 +101,26 @@ export default function AdminAnalyticsPage() {
   return (
     <div className="h-dvh overflow-y-auto bg-background">
       <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[88rem] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
+        <div className="mx-auto flex max-w-[88rem] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-6">
           <Link to="/feed" aria-label="Back to the app" className="flex cursor-pointer items-center gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" />
             <Logo withText={false} />
           </Link>
-          <div className="mr-auto">
-            <h1 className="text-[0.9375rem] font-semibold leading-tight">Growth</h1>
-            <p className="text-xs text-muted-foreground">Only you can see this page. Updated {updated}.</p>
+          <div className="mr-auto min-w-0">
+            <p className="text-sm text-muted-foreground">Founder</p>
+            <h1 className="text-balance text-2xl font-bold tracking-tight sm:text-[1.75rem]">Product analytics</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Only admins can open this page. Updated {updated}.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Switch id="exclude-internal" checked={excludeInternal} onCheckedChange={setExcludeInternal} />
-            <Label htmlFor="exclude-internal" className="text-sm font-normal text-muted-foreground">Hide my own activity</Label>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Switch id="exclude-internal" checked={excludeInternal} onCheckedChange={setExcludeInternal} />
+              <Label htmlFor="exclude-internal" className="text-sm font-normal text-muted-foreground">Hide my own activity</Label>
+            </div>
+            <Segmented value={range} onChange={setRange} options={RANGES} label="Date range" />
+            <Button variant="outline" size="icon" aria-label="Refresh" onClick={() => void query.refetch()} disabled={query.isFetching}>
+              <RefreshCw className={query.isFetching ? "size-4 animate-spin" : "size-4"} />
+            </Button>
           </div>
-          <Segmented value={range} onChange={setRange} options={RANGES} label="Date range" />
-          <Button variant="outline" size="icon" aria-label="Refresh" onClick={() => void query.refetch()} disabled={query.isFetching}>
-            <RefreshCw className={query.isFetching ? "size-4 animate-spin" : "size-4"} />
-          </Button>
         </div>
         <nav aria-label="Sections" className="mx-auto flex max-w-[88rem] gap-1 px-4 sm:px-6">
           {TABS.map((item) => (
@@ -121,9 +140,10 @@ export default function AdminAnalyticsPage() {
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-[88rem] px-4 py-5 sm:px-6">
-        {tab === "acquisition" && <AcquisitionTab snapshot={snapshot} />}
+      <main className="mx-auto max-w-[88rem] space-y-4 px-4 py-5 sm:px-6">
+        <QuietInternalNotice snapshot={snapshot} />
         {tab === "product" && <ProductTab snapshot={snapshot} rangeLabel={rangeLabel} />}
+        {tab === "acquisition" && <AcquisitionTab snapshot={snapshot} />}
         {tab === "tools" && <ToolsTab snapshot={snapshot} />}
       </main>
     </div>

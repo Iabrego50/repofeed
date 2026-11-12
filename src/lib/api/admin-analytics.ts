@@ -33,6 +33,22 @@ export type SignupDay = {
   signups: number;
 };
 
+export type ProductDay = {
+  day: string;
+  signups: number;
+  studies: number;
+  reels: number;
+  views: number;
+};
+
+export type ProductPulse = {
+  visits: number;
+  viewsInRange: number;
+  viewersInRange: number;
+  daily: ProductDay[];
+  funnel: FunnelStep[];
+};
+
 export type VideoProviderStat = {
   provider: string;
   completed: number;
@@ -64,6 +80,7 @@ export type AdminAnalyticsSnapshot = {
     videosGenerated: number;
     active7d: number;
     active30d: number;
+    viewsInRange: number;
   };
   signups: {
     total: number;
@@ -100,6 +117,7 @@ export type AdminAnalyticsSnapshot = {
     paidWorkspaces: number;
     usage: PlanUsageRow[];
   };
+  product: ProductPulse;
   acquisition: Acquisition;
 };
 
@@ -266,7 +284,7 @@ function videoDurationSeconds(video: ReelVideo | null | undefined): number | nul
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-function namedCounts(values: Array<string | null | undefined>, empty = "(none)"): NamedCount[] {
+export function namedCounts(values: Array<string | null | undefined>, empty = "(none)"): NamedCount[] {
   const map = new Map<string, number>();
   for (const value of values) {
     const name = (value ?? "").trim() || empty;
@@ -275,6 +293,86 @@ function namedCounts(values: Array<string | null | undefined>, empty = "(none)")
   return [...map.entries()]
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+export function countUniqueSessions(
+  events: Array<{ event: string; session_id: string | null; created_at: string; path?: string | null }>,
+  start: Date | null,
+  now: Date,
+): number {
+  const seen = new Set<string>();
+  for (const event of events) {
+    if (event.event !== "session_start") continue;
+    if (!inRange(event.created_at, start, now)) continue;
+    seen.add(event.session_id ?? `${event.created_at}:${event.path ?? ""}`);
+  }
+  return seen.size;
+}
+
+export function viewerKey(event: { user_id: string | null; anonymous_id: string | null }): string | null {
+  return event.user_id || event.anonymous_id || null;
+}
+
+function emptyProductDay(day: string): ProductDay {
+  return { day, signups: 0, studies: 0, reels: 0, views: 0 };
+}
+
+/** Daily product activity. Ranged windows fill empty days so the chart does not collapse. */
+export function buildProductDaily(input: {
+  users: Array<{ created_at: string }>;
+  studies: Array<{ created_at: string }>;
+  reels: Array<{ created_at: string }>;
+  events: Array<{ event: string; created_at: string }>;
+  start: Date | null;
+  now: Date;
+}): ProductDay[] {
+  const map = new Map<string, ProductDay>();
+  const bump = (iso: string, field: keyof Omit<ProductDay, "day">) => {
+    const day = dayKey(iso);
+    const row = map.get(day) ?? emptyProductDay(day);
+    row[field] += 1;
+    map.set(day, row);
+  };
+  for (const user of input.users) bump(user.created_at, "signups");
+  for (const study of input.studies) bump(study.created_at, "studies");
+  for (const reel of input.reels) bump(reel.created_at, "reels");
+  for (const event of input.events) {
+    if (event.event === "scene_view") bump(event.created_at, "views");
+  }
+  if (!input.start) {
+    return [...map.values()].sort((a, b) => a.day.localeCompare(b.day));
+  }
+  const from = Date.UTC(input.start.getUTCFullYear(), input.start.getUTCMonth(), input.start.getUTCDate());
+  const to = Date.UTC(input.now.getUTCFullYear(), input.now.getUTCMonth(), input.now.getUTCDate());
+  const days: ProductDay[] = [];
+  for (let t = from; t <= to; t += MS_DAY) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    days.push(map.get(day) ?? emptyProductDay(day));
+  }
+  return days;
+}
+
+export function buildProductFunnel(input: {
+  visits: number;
+  cohort: Array<{ id: string }>;
+  userHasEvent: (userId: string, name: string | string[]) => boolean;
+}): FunnelStep[] {
+  return [
+    { key: "visit", label: "Visited", count: input.visits },
+    { key: "signup", label: "Signed up", count: input.cohort.length },
+    {
+      key: "first_study",
+      label: "Started a study",
+      count: input.cohort.filter((user) =>
+        input.userHasEvent(user.id, ["first_upload", "generate_started"]),
+      ).length,
+    },
+    {
+      key: "first_reel",
+      label: "Generated a scene",
+      count: input.cohort.filter((user) => input.userHasEvent(user.id, "generate_completed")).length,
+    },
+  ];
 }
 
 export function buildAdminAnalytics(
@@ -504,6 +602,31 @@ export function buildAdminAnalytics(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([day, signups]) => ({ day, signups }));
 
+  const visits = countUniqueSessions(events, start, now);
+  const sceneViews = rangedEvents.filter((event) => event.event === "scene_view");
+  const viewsInRange = sceneViews.length;
+  const viewersInRange = new Set(
+    sceneViews.map(viewerKey).filter((id): id is string => Boolean(id)),
+  ).size;
+  const product: ProductPulse = {
+    visits,
+    viewsInRange,
+    viewersInRange,
+    daily: buildProductDaily({
+      users: usersInRange,
+      studies: studiesInRange,
+      reels: reelsInRange,
+      events: rangedEvents,
+      start,
+      now,
+    }),
+    funnel: buildProductFunnel({
+      visits,
+      cohort,
+      userHasEvent,
+    }),
+  };
+
   return {
     range: query.range,
     excludeInternal: query.excludeInternal,
@@ -517,6 +640,7 @@ export function buildAdminAnalytics(
       videosGenerated,
       active7d: activeFrom(start7),
       active30d: activeFrom(start30),
+      viewsInRange,
     },
     signups: {
       total: usersInRange.length,
@@ -584,6 +708,7 @@ export function buildAdminAnalytics(
       paidWorkspaces: workspaces.filter((workspace) => Boolean(workspace.paid_plan)).length,
       usage,
     },
+    product,
     acquisition: buildAcquisition({
       users,
       events,

@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart.tsx";
 import { cn } from "@/lib/utils.ts";
 import type { FunnelStep, NamedCount } from "@/lib/api/admin-analytics.ts";
-import { num } from "../_lib/format.ts";
+import { num, shortDay } from "../_lib/format.ts";
 
 export function Panel({ title, hint, actions, children, className }: { title: string; hint?: string; actions?: ReactNode; children: ReactNode; className?: string }) {
   return (
@@ -92,6 +94,38 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           {item.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+export function DailyBars({
+  data,
+  dataKey,
+  title,
+  total,
+  color = "var(--chart-1)",
+}: {
+  data: ReadonlyArray<{ day: string }>;
+  dataKey: string;
+  title: string;
+  total: number;
+  color?: string;
+}) {
+  const config = { [dataKey]: { label: title, color } } satisfies ChartConfig;
+  return (
+    <div className="min-w-0">
+      <p className="text-sm text-muted-foreground">
+        {title} <span className="ml-1 font-semibold text-foreground">{num(total)}</span>
+      </p>
+      <ChartContainer config={config} className="mt-2 aspect-auto h-36 w-full">
+        <BarChart data={data} margin={{ left: 0, right: 4, top: 4, bottom: 0 }}>
+          <CartesianGrid vertical={false} strokeDasharray="2 4" />
+          <XAxis dataKey="day" tickFormatter={shortDay} tickLine={false} axisLine={false} minTickGap={28} tickMargin={6} />
+          <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} />
+          <ChartTooltip cursor={{ fill: "var(--muted)" }} content={<ChartTooltipContent labelFormatter={(value) => shortDay(String(value))} />} />
+          <Bar dataKey={dataKey} fill={`var(--color-${dataKey})`} radius={[3, 3, 0, 0]} maxBarSize={22} />
+        </BarChart>
+      </ChartContainer>
     </div>
   );
 }

@@ -424,6 +424,20 @@ describe("App routes", () => {
       expect(screen.getByText(/this scene doesn't exist/i)).toBeInTheDocument();
     });
     expect(unmatched).toEqual([]);
-    expect(document.body.textContent).not.toMatch(/Ad spend|Growth/i);
+    expect(document.body.textContent).not.toMatch(/Ad spend|Growth|Product analytics/i);
+  });
+
+  it("hides /admin/analytics from a signed-in non-admin as a 404", async () => {
+    signedInSession();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: "Not found" }), { status: 404 }),
+    );
+    renderAt("/admin/analytics");
+    await waitFor(() => {
+      expect(screen.getByText(/this scene doesn't exist/i)).toBeInTheDocument();
+    });
+    expect(unmatched).toEqual([]);
+    expect(document.body.textContent).not.toMatch(/Ad spend|Growth|Product analytics/i);
+    expect(document.body.textContent).not.toMatch(/Hide my own activity/i);
   });
 });

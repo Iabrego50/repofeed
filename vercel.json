@@ -63,7 +63,8 @@
     { "source": "/invite/:token", "destination": "/index.html" },
     { "source": "/s/:token", "destination": "/index.html" },
     { "source": "/share/:token", "destination": "/index.html" },
-    { "source": "/admin/analytics", "destination": "/index.html" }
+    { "source": "/admin/analytics", "destination": "/index.html" },
+    { "source": "/admin/:path*", "destination": "/index.html" }
   ],
   "headers": [
     {
