@@ -42,7 +42,7 @@ export default function StudyActions({ studyId, title, archived, isDemo }: Study
       toast.success("Study archived");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to archive study");
+      toast.error(err.message || "The study wasn’t archived. Try again.");
     },
   });
 
@@ -53,7 +53,7 @@ export default function StudyActions({ studyId, title, archived, isDemo }: Study
       toast.success("Study unarchived");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to unarchive study");
+      toast.error(err.message || "The study wasn’t restored. Try again.");
     },
   });
 
@@ -65,7 +65,7 @@ export default function StudyActions({ studyId, title, archived, isDemo }: Study
       navigate("/studies");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to delete study");
+      toast.error(err.message || "The study wasn’t deleted. Try again.");
     },
   });
 

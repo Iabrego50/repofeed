@@ -309,8 +309,10 @@ describe("App routes", () => {
   it("renders public routes signed-out with visible copy", async () => {
     const expected: Record<string, RegExp> = {
       "/": /Nobody reads the report/i,
+      "/for/research-repository": /research repository people open/i,
       "/demo": /Demo feed|Supperly/i,
       "/demo/insights": /Insights demo|Was the research watched/i,
+      "/demo/deck": /Turn the sample study into a readout deck/i,
       "/help": /How can we help/i,
       "/terms": /terms of service/i,
       "/privacy": /privacy policy/i,
@@ -321,7 +323,7 @@ describe("App routes", () => {
       "/auth/confirm": /Signing you in|Something went wrong|No session found|new link/i,
       "/s/test-token": /isn't available|No scenes here yet/i,
       "/share/test-token": /isn't available|No scenes here yet/i,
-      "/invite/test-token": /Sign in to repofeed|Invalid Invite|You're Invited/i,
+      "/invite/test-token": /Sign in to repofeed|invite no longer works|You're Invited/i,
     };
 
     for (const path of PUBLIC_APP_PATHS) {
@@ -363,6 +365,6 @@ describe("App routes", () => {
       expect(screen.getByText(/this scene doesn't exist/i)).toBeInTheDocument();
     });
     expect(unmatched).toEqual([]);
-    expect(document.body.textContent).not.toMatch(/Product analytics/i);
+    expect(document.body.textContent).not.toMatch(/Ad spend|Growth/i);
   });
 });

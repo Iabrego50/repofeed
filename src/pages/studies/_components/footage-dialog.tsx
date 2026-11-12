@@ -30,7 +30,7 @@ export default function FootageDialog({ reel, open, onOpenChange }: FootageDialo
       toast.success("Footage selected");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to select footage");
+      toast.error(err.message || "That clip couldn’t be set. Try again.");
     },
   });
 
@@ -53,7 +53,7 @@ export default function FootageDialog({ reel, open, onOpenChange }: FootageDialo
       toast.success("Footage uploaded");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to upload footage");
+      toast.error(err.message || "The upload didn’t finish. Check the file size and try again.");
     },
   });
 
@@ -117,7 +117,7 @@ export default function FootageDialog({ reel, open, onOpenChange }: FootageDialo
             </div>
           ) : clips.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No footage uploaded yet. Upload a video or image to use as background.
+              Nothing here yet. Add a video or an image and it will play behind the scene.
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-3">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Info, Play } from "lucide-react";
+import { Info, Play, Presentation } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import PageHeader from "@/components/page-header.tsx";
@@ -41,7 +41,14 @@ export default function DemoInsightsPage() {
           eyebrow="Insights demo"
           title="Was the research watched?"
           description="Reach, completion and reactions across the demo study's scenes."
-          actions={<SignInButton className="h-11 font-semibold" signInText="Get this for your research" />}
+          actions={
+            <>
+              <Button asChild variant="outline" className="h-11">
+                <Link to="/demo/deck"><Presentation className="size-4" /> Create readout deck</Link>
+              </Button>
+              <SignInButton className="h-11 font-semibold" signInText="Get this for your research" />
+            </>
+          }
         />
         <div className="mt-5 sm:mt-6">
           <AudienceToggle value={audience} onChange={setAudience} />

@@ -58,7 +58,7 @@ export default function ReelPanel({
               {t}
               {t === "discussion" &&
                 (reel.counts?.comments || reel.commentCount || 0) > 0 && (
-                  <span className="ml-1.5 font-mono text-xs text-muted-foreground">
+                  <span className="ml-1.5 text-xs text-muted-foreground">
                     {reel.counts?.comments || reel.commentCount || 0}
                   </span>
                 )}
@@ -77,7 +77,7 @@ export default function ReelPanel({
         )}
       </div>
       <div className="border-b border-border px-4 py-3">
-        <p className="truncate font-display font-bold">{reel.title}</p>
+        <p className="truncate font-bold">{reel.title}</p>
         <p className="truncate text-xs text-muted-foreground">
           {reel.track} · {reel.studyTitle}
         </p>

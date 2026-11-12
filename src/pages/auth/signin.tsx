@@ -39,7 +39,7 @@ export default function SignInPage() {
       await signInWithOtp(email.trim());
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't send a sign-in link");
+      setError(err instanceof Error ? err.message : "We couldn’t send the link. Check the address and try again.");
     } finally {
       setBusy(false);
     }
@@ -56,16 +56,15 @@ export default function SignInPage() {
         </Link>
       </header>
       <main className="relative m-auto w-full max-w-md px-5 pb-16">
-        <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">Sign in</p>
-        <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight">Sign in to repofeed.ai</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Sign in to repofeed.ai</h1>
         <p className="mt-3 text-muted-foreground">
           {googleEnabled
-            ? "Use Google or a magic link. After you sign in you'll land back where you left off."
-            : "Use a magic link. After you sign in you'll land back where you left off."}
+            ? "New here or coming back, it’s the same step. Use Google, or we’ll email you a link. There’s no password to remember."
+            : "New here or coming back, it’s the same step. We’ll email you a link, and there’s no password to remember."}
         </p>
         {sent ? (
-          <p className="mt-8 rounded-2xl border border-border bg-card p-5 text-sm">
-            Check <span className="font-semibold">{email}</span> for a sign-in link. You can close this tab.
+          <p role="status" className="mt-8 rounded-xl border border-border bg-card p-5 text-[0.9375rem]">
+            We sent a sign-in link to <span className="font-semibold">{email}</span>. Open it on this device. If it hasn’t arrived in a minute, check spam.
           </p>
         ) : (
           <div className="mt-8 space-y-4">
@@ -74,7 +73,7 @@ export default function SignInPage() {
                 <Button size="lg" className="h-12 w-full font-semibold" onClick={() => void onGoogle()} disabled={busy}>
                   Continue with Google
                 </Button>
-                <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="h-px flex-1 bg-border" />
                   or email
                   <span className="h-px flex-1 bg-border" />
@@ -96,7 +95,7 @@ export default function SignInPage() {
                   disabled={busy}
                 />
               </div>
-              <Button type="submit" variant="secondary" size="lg" className="h-12 w-full font-semibold" disabled={busy}>
+              <Button type="submit" variant={googleEnabled ? "outline" : "default"} size="lg" className="h-12 w-full font-semibold" disabled={busy}>
                 Email me a sign-in link
               </Button>
             </form>

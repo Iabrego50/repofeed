@@ -31,21 +31,21 @@ export function ArtBadge({ reel }: { reel: Reel }) {
     reel.video?.status === "in_progress"
   ) {
     return (
-      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
+      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white">
         <Loader2 className="size-3 animate-spin" /> Generating video
       </span>
     );
   }
   if (reel.footage?.media === "video") {
     return (
-      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
+      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white">
         <Sparkles className="size-3 text-primary" /> AI video
       </span>
     );
   }
   if (reel.art?.status === "pending") {
     return (
-      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
+      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white">
         <Loader2 className="size-3 animate-spin" /> Painting backdrop
       </span>
     );
@@ -54,7 +54,7 @@ export function ArtBadge({ reel }: { reel: Reel }) {
     return (
       <span
         title={reel.art.error}
-        className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-[#FFC23D]"
+        className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-warning"
       >
         <AlertTriangle className="size-3" /> Backdrop failed
       </span>
@@ -62,7 +62,7 @@ export function ArtBadge({ reel }: { reel: Reel }) {
   }
   if (reel.footage?.media === "image") {
     return (
-      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
+      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white">
         <Sparkles className="size-3 text-primary" /> AI backdrop
       </span>
     );

@@ -2,8 +2,10 @@
 
 export const PUBLIC_APP_PATHS = [
   "/",
+  "/for/research-repository",
   "/demo",
   "/demo/insights",
+  "/demo/deck",
   "/help",
   "/terms",
   "/privacy",
@@ -24,6 +26,7 @@ export const PROTECTED_APP_PATHS = [
   "/studies",
   "/studies/new",
   "/studies/test-study-id",
+  "/explore",
   "/insights",
   "/insights/deck",
   "/settings",

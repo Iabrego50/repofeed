@@ -37,10 +37,10 @@ function StudyList({ studies, archived }: { studies: Study[]; archived: boolean 
             className="flex min-w-0 flex-1 cursor-pointer flex-col gap-2 px-5 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="min-w-0">
-              <p className="flex items-center gap-2 truncate font-display text-lg font-bold">
+              <p className="flex items-center gap-2 truncate text-lg font-bold">
                 <span className="truncate">{s.title}</span>
                 {s.isDemo && (
-                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-primary">Demo</span>
+                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">Demo</span>
                 )}
               </p>
               <p className="truncate text-sm text-muted-foreground">
@@ -59,7 +59,7 @@ function StudyList({ studies, archived }: { studies: Study[]; archived: boolean 
 function FreeUsageNote({ used }: { used: number }) {
   const full = used >= FREE_LIMIT;
   return (
-    <p className={cn("mt-4 rounded-xl border px-4 py-3 text-sm", full ? "border-[#FFC23D]/50 bg-[#FFC23D]/10 text-[#FFC23D]" : "border-border text-muted-foreground")}>
+    <p className={cn("mt-4 rounded-xl border px-4 py-3 text-sm", full ? "border-warning/50 bg-warning/10 text-warning" : "border-border text-muted-foreground")}>
       {used} of {FREE_LIMIT} free studies used{full ? ". Archive one or " : ". The demo study doesn't count. "}
       {full ? (
         <Link to="/billing" className="cursor-pointer font-semibold underline underline-offset-2">upgrade for unlimited studies</Link>

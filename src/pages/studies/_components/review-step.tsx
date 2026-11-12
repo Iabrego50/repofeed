@@ -34,6 +34,7 @@ interface ReviewReel {
   track: string;
   trackIndex: number;
   scenes: any[];
+  topics?: string[];
   footage?: { url: string; caption: string; media?: "image" | "video" } | null;
   video?: { status?: string; error?: string } | null;
   sourceNames: string[];
@@ -79,7 +80,7 @@ function ReelCard({
     <li
       className={cn(
         "flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-opacity",
-        reel.warning && "border-[#FFC23D]/60",
+        reel.warning && "border-warning/60",
         !reel.enabled && "opacity-70",
       )}
     >
@@ -106,7 +107,7 @@ function ReelCard({
       </button>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <p
-          className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider"
+          className="flex items-center gap-2 text-xs font-medium"
           style={{ color: trackColor(reel.trackIndex) }}
         >
           <span
@@ -115,14 +116,14 @@ function ReelCard({
           />
           <span className="truncate">{reel.track}</span>
         </p>
-        <h3 className="font-display text-lg font-bold leading-tight">
+        <h3 className="text-lg font-bold leading-tight">
           {reel.title}
         </h3>
         <p className="line-clamp-3 text-sm text-muted-foreground">
           {reelScript(reel.scenes)}
         </p>
         <p
-          className="truncate font-mono text-xs text-muted-foreground"
+          className="truncate text-xs text-muted-foreground"
           title={reel.sourceNames.join(", ")}
         >
           {reel.sourceNames.join(", ")}
@@ -130,13 +131,13 @@ function ReelCard({
         {reel.warning && (
           <div
             role="status"
-            className="rounded-lg bg-[#FFC23D]/12 px-3 py-2 text-sm text-[#FFC23D]"
+            className="rounded-lg bg-warning/12 px-3 py-2 text-sm text-warning"
           >
             <p className="flex items-start gap-2 font-medium">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />{" "}
               <span className="min-w-0 break-words">{reel.warning}</span>
             </p>
-            <p className="mt-1 pl-6 text-xs text-[#FFC23D]/80">
+            <p className="mt-1 pl-6 text-xs text-warning/80">
               Edit the scene to match your files, or include it anyway.
             </p>
           </div>
@@ -258,7 +259,7 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="font-display text-lg font-bold">Review & Publish</h3>
+            <h3 className="text-lg font-bold">Review & Publish</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               {enabled.length} scene{enabled.length === 1 ? "" : "s"} ready to
               publish

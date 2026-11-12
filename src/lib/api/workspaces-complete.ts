@@ -320,7 +320,9 @@ export async function createInvite(args: {
     .single();
 
   if (error) throw error;
-  return { token, url: `${process.env.VITE_SITE_URL}/invite/${token}` };
+  // `process` does not exist in the browser, so build the link without it.
+  const origin = typeof window !== 'undefined' ? window.location.origin : (typeof process !== 'undefined' ? process.env.VITE_SITE_URL ?? '' : '');
+  return { token, url: `${origin}/invite/${token}` };
 }
 
 export async function listInvites(args: { workspaceId: string }) {

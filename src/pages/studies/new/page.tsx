@@ -37,7 +37,7 @@ export default function NewStudyPage() {
       <ol className="mt-8 grid gap-3 sm:grid-cols-3">
         {FLOW.map((f, i) => (
           <li key={f.title} className="rounded-2xl border border-border bg-card p-4">
-            <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            <span className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <f.icon className="size-4 text-primary" /> Step {i + 1}
             </span>
             <p className="mt-2 font-medium">{f.title}</p>

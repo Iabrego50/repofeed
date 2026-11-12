@@ -1,12 +1,13 @@
+import { DEFAULT_VARIANT, LANDING_VARIANTS } from "../pages/landing/variants";
+
 export type RouteMeta = {
   title: string;
   description: string;
   robots?: string;
 };
 
-const DEFAULT_TITLE = "repofeed.ai — Research, as a feed";
-const DEFAULT_DESCRIPTION =
-  "repofeed.ai turns raw research files into a scrollable feed of short, AI-generated insight scenes your team actually watches.";
+const DEFAULT_TITLE = DEFAULT_VARIANT.metaTitle;
+const DEFAULT_DESCRIPTION = DEFAULT_VARIANT.metaDescription;
 
 export const DEFAULT_ROUTE_META: RouteMeta = {
   title: DEFAULT_TITLE,
@@ -15,9 +16,17 @@ export const DEFAULT_ROUTE_META: RouteMeta = {
 
 const EXACT: Record<string, RouteMeta> = {
   "/": DEFAULT_ROUTE_META,
+  // Ad landing pages share the home page's content, so search engines are pointed at "/" only.
+  ...Object.fromEntries(
+    LANDING_VARIANTS.map((v) => [`/for/${v.slug}`, { title: v.metaTitle, description: v.metaDescription, robots: "noindex,follow" }]),
+  ),
   "/demo": {
     title: "Demo — repofeed.ai",
     description: "Watch a sample research feed and see how cited insight scenes work.",
+  },
+  "/demo/deck": {
+    title: "Sample readout deck | repofeed.ai",
+    description: "Generate a sample research readout deck from the demo study and download it as PowerPoint.",
   },
   "/demo/insights": {
     title: "Insights demo — repofeed.ai",

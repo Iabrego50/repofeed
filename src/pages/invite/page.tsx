@@ -31,7 +31,7 @@ export default function InvitePage() {
       navigate("/studies");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to accept invite");
+      toast.error(err.message || "You weren’t added to the workspace. Ask for a fresh invite link.");
       setAccepting(false);
     },
   });
@@ -67,9 +67,9 @@ export default function InvitePage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <Logo className="mx-auto mb-4 size-12" />
-            <h1 className="text-3xl font-bold">Invalid Invite</h1>
+            <h1 className="text-3xl font-bold">This invite no longer works</h1>
             <p className="mt-2 text-muted-foreground">
-              This invite link is invalid or has expired.
+              Invite links expire and can run out of uses. Ask the person who sent it for a new one.
             </p>
           </div>
           <Button onClick={() => navigate("/")} className="w-full">
@@ -86,9 +86,9 @@ export default function InvitePage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <Logo className="mx-auto mb-4 size-12" />
-            <h1 className="text-3xl font-bold">Invalid Invite</h1>
+            <h1 className="text-3xl font-bold">This invite no longer works</h1>
             <p className="mt-2 text-muted-foreground">
-              This invite link is invalid or has expired.
+              Invite links expire and can run out of uses. Ask the person who sent it for a new one.
             </p>
           </div>
           <Button onClick={() => navigate("/")} className="w-full">

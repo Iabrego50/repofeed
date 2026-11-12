@@ -6,14 +6,24 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* One grotesk carries the product voice. The serif italic is reserved for
+     participant quotes, so a reader can tell at a glance whose words they are. */
   --font-sans:
-    "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+    "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display:
-    "Bricolage Grotesque Variable", "Instrument Sans Variable", ui-sans-serif,
-    sans-serif;
+    "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  /* The UI has no monospace voice; old `font-mono` labels fall back to the grotesk. */
   --font-mono:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-serif: ui-serif, Georgia, serif;
+    "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader Variable", ui-serif, Georgia, serif;
+
+  --radius-2xl: 0.875rem;
+  --radius-3xl: 1.125rem;
+  --color-mark: var(--mark);
+  --color-mark-foreground: var(--mark-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --shadow-lift: 0 1px 2px rgb(16 21 31 / 0.06), 0 8px 24px -12px rgb(16 21 31 / 0.18);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -52,41 +62,91 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* repofeed.ai is a dark-only (mono) theme: deep navy with the logo's electric blue. */
+/*
+ * Light workspace, dark theater.
+ * The workspace (studies, insights, settings, marketing) is a bright sheet of paper.
+ * Anything that plays video sits inside `.dark`, which swaps the same tokens for
+ * the theater palette, so components never need to know which room they are in.
+ */
 :root {
+  color-scheme: light;
+  --radius: 0.625rem;
+  --background: #f5f6f8;
+  --foreground: #10151f;
+  --card: #ffffff;
+  --card-foreground: #10151f;
+  --popover: #ffffff;
+  --popover-foreground: #10151f;
+  --primary: #1d63e0;
+  --primary-foreground: #ffffff;
+  --secondary: #e9ecf1;
+  --secondary-foreground: #10151f;
+  --muted: #eceef2;
+  --muted-foreground: #586172;
+  --accent: #e9ecf1;
+  --accent-foreground: #10151f;
+  --destructive: #c8322b;
+  --border: #dfe3ea;
+  --input: #cfd5de;
+  --ring: #1d63e0;
+  --mark: #ffe066;
+  --mark-foreground: #2b2400;
+  --success: #12805c;
+  --warning: #a86400;
+  --chart-1: #1d63e0;
+  --chart-2: #0f8f8a;
+  --chart-3: #6a4fd8;
+  --chart-4: #12805c;
+  --chart-5: #b7791f;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #10151f;
+  --sidebar-primary: #1d63e0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eceef2;
+  --sidebar-accent-foreground: #10151f;
+  --sidebar-border: #dfe3ea;
+  --sidebar-ring: #1d63e0;
+}
+
+.dark {
   color-scheme: dark;
-  --radius: 0.75rem;
-  --background: #070b14;
-  --foreground: #eef3fb;
-  --card: #0e1422;
-  --card-foreground: #eef3fb;
-  --popover: #141c2d;
-  --popover-foreground: #eef3fb;
-  --primary: #2f9bff;
-  --primary-foreground: #04101f;
-  --secondary: #141c2d;
-  --secondary-foreground: #eef3fb;
-  --muted: #141c2d;
-  --muted-foreground: #93a0b8;
-  --accent: #1a2438;
-  --accent-foreground: #eef3fb;
-  --destructive: #ff5a5f;
-  --border: #1f2a40;
-  --input: #1f2a40;
-  --ring: #2f9bff;
-  --chart-1: #2f9bff;
-  --chart-2: #36d4ff;
-  --chart-3: #7c8cff;
-  --chart-4: #3fe0a0;
-  --chart-5: #ffc23d;
-  --sidebar: #070b14;
-  --sidebar-foreground: #eef3fb;
-  --sidebar-primary: #2f9bff;
-  --sidebar-primary-foreground: #04101f;
-  --sidebar-accent: #141c2d;
-  --sidebar-accent-foreground: #eef3fb;
-  --sidebar-border: #1f2a40;
-  --sidebar-ring: #2f9bff;
+  --background: #0a0d13;
+  --foreground: #f1f3f7;
+  --card: #12161f;
+  --card-foreground: #f1f3f7;
+  --popover: #171c27;
+  --popover-foreground: #f1f3f7;
+  --primary: #5b9bff;
+  --primary-foreground: #061022;
+  --secondary: #1b212d;
+  --secondary-foreground: #f1f3f7;
+  --muted: #1b212d;
+  --muted-foreground: #9aa4b5;
+  --accent: #222a38;
+  --accent-foreground: #f1f3f7;
+  --destructive: #ff6b66;
+  --border: #252d3b;
+  --input: #2c3545;
+  --ring: #5b9bff;
+  --mark: #ffe066;
+  --mark-foreground: #2b2400;
+  --success: #3ecf9a;
+  --warning: #f5b945;
+  --chart-1: #5b9bff;
+  --chart-2: #35c9c2;
+  --chart-3: #9b87ff;
+  --chart-4: #3ecf9a;
+  --chart-5: #f5b945;
+  --sidebar: #0a0d13;
+  --sidebar-foreground: #f1f3f7;
+  --sidebar-primary: #5b9bff;
+  --sidebar-primary-foreground: #061022;
+  --sidebar-accent: #1b212d;
+  --sidebar-accent-foreground: #f1f3f7;
+  --sidebar-border: #252d3b;
+  --sidebar-ring: #5b9bff;
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @layer base {
@@ -102,6 +162,19 @@
 
   body {
     font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: var(--mark);
+    color: var(--mark-foreground);
   }
 
   button:not(:disabled),
@@ -116,4 +189,31 @@
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* A participant's own words. */
+.quote-voice {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-optical-sizing: auto;
+  letter-spacing: -0.005em;
+}
+
+/* Highlighter stroke, the way a researcher marks a transcript. */
+.hl {
+  background-image: linear-gradient(transparent 58%, var(--mark) 58%, var(--mark) 92%, transparent 92%);
+  padding-inline: 0.08em;
+  margin-inline: -0.08em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

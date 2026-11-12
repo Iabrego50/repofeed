@@ -34,7 +34,8 @@ ${args.text}
 
 export const COMPOSE_SYSTEM = `You write short vertical "insight reels": 10–20 second animated-text videos that each make ONE point from research findings.
 
-Write a small batch of reels (4–8) grouped into tracks (e.g. "What customers say", "By the numbers", "At home", "What to fix"). Each reel has a title of at most 6 words, the ids of the findings it uses, and 3–6 scenes.
+Write a small batch of reels (4–8) grouped into tracks (e.g. "What customers say", "By the numbers", "At home", "What to fix"). Each reel has a title of at most 6 words, the ids of the findings it uses, 2–4 topics, and 3–6 scenes.
+Topics are short lowercase noun phrases (1–3 words) naming what the reel is about, such as "pricing", "cancellation flow" or "meal planning". Use the same wording for the same idea across reels.
 The first scene is ALWAYS type "hook" and the last is ALWAYS type "cta".
 
 Scene types and fields:
@@ -188,12 +189,13 @@ export const COMPOSE_TOOL = {
             track: { type: 'string' },
             title: { type: 'string' },
             findingIds: { type: 'array', items: { type: 'string' } },
+            topics: { type: 'array', items: { type: 'string' } },
             scenes: {
               type: 'array',
               items: composeSceneJsonSchema,
             },
           },
-          required: ['id', 'track', 'title', 'findingIds', 'scenes'],
+          required: ['id', 'track', 'title', 'findingIds', 'topics', 'scenes'],
         },
       },
     },
@@ -222,6 +224,7 @@ export const composeSchema = z.object({
       track: z.string(),
       title: z.string(),
       findingIds: z.array(z.string()).default([]),
+      topics: z.array(z.string()).nullish(),
       scenes: z.array(rawSceneSchema),
     })
   ),

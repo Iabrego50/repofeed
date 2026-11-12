@@ -90,7 +90,7 @@ export default function SharePage() {
           <UserRound className="size-3.5" /> {knownGuest.name}
         </span>
       ) : (
-        <span className="shrink-0 rounded-full bg-black/40 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white/80 backdrop-blur">
+        <span className="shrink-0 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
           View only
         </span>
       )}
@@ -110,7 +110,7 @@ export default function SharePage() {
 
   return (
     <FeedModeContext.Provider value={mode}>
-      <div className="h-dvh">
+      <div className="dark h-dvh">
         <ReelFeed
           reels={data?.reels}
           deepLink={params.get("reel")}

@@ -25,11 +25,11 @@ function StepCard({ index, label, hint, state, progress }: { index: number; labe
         state === "failed" && "border-destructive/60",
       )}
     >
-      <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
         <span
           className={cn(
             "grid size-5 place-items-center rounded-full border border-border text-[10px]",
-            state === "done" && "border-transparent bg-[#3FE0A0] text-black",
+            state === "done" && "border-transparent bg-success text-white",
             state === "current" && "border-primary text-primary",
             state === "failed" && "border-transparent bg-destructive text-white",
           )}
@@ -115,7 +115,7 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="font-display text-lg font-bold">Generate scenes</h3>
+            <h3 className="text-lg font-bold">Generate scenes</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               AI will extract findings from your sources and compose them into scenes.
             </p>
@@ -157,7 +157,7 @@ export default function GenerateStep({ studyId, study, onNext }: GenerateStepPro
         {job?.log && job.log.length > 0 && (
           <details className="mt-6">
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground">View generation log</summary>
-            <ol ref={logRef} className="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-lg bg-muted p-3 font-mono text-xs">
+            <ol ref={logRef} className="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-lg bg-muted p-3 text-xs">
               {job.log.map((entry: any, i: number) => (
                 <li key={i} className="text-muted-foreground">
                   [{format(new Date(entry.timestamp), "HH:mm:ss")}] {entry.message}

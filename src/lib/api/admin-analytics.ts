@@ -1,8 +1,9 @@
 import { hasAiVideo, studyVideoCap } from "./reel-video.js";
 import type { ReelFootageLike, ReelVideo, ReelVideoProvider } from "./reel-video.js";
 import type { Json } from "../database.types.js";
+import { buildAcquisition, type Acquisition, type SpendEntry } from "./admin-acquisition.js";
 
-export const ADMIN_ANALYTICS_RANGES = ["7d", "30d", "all"] as const;
+export const ADMIN_ANALYTICS_RANGES = ["7d", "30d", "90d", "all"] as const;
 export type AdminAnalyticsRange = (typeof ADMIN_ANALYTICS_RANGES)[number];
 
 export const INTERNAL_EMAIL_DOMAIN = "mail.grokbot.com";
@@ -99,6 +100,7 @@ export type AdminAnalyticsSnapshot = {
     paidWorkspaces: number;
     usage: PlanUsageRow[];
   };
+  acquisition: Acquisition;
 };
 
 type UserRow = {
@@ -107,8 +109,14 @@ type UserRow = {
   created_at: string;
   is_admin: boolean | null;
   utm_source: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_term?: string | null;
+  utm_content?: string | null;
   signup_referrer: string | null;
   landing_path: string | null;
+  click_id?: string | null;
+  click_id_type?: string | null;
 };
 
 type WorkspaceRow = {
@@ -118,6 +126,7 @@ type WorkspaceRow = {
   created_at: string;
   paid_plan: string | null;
   customer_id: string | null;
+  seats?: number | null;
 };
 
 type MemberRow = { workspace_id: string; user_id: string };
@@ -129,13 +138,9 @@ type ReelRow = {
   study_id: string;
   workspace_id: string;
   created_at: string;
-  footage?: ReelFootageLike | null;
+  footage: ReelFootageLike;
   video: ReelVideo | null;
 };
-
-/** Video status/provider/timing only — skip the bulky footage JSON. */
-export const ADMIN_ANALYTICS_REEL_COLUMNS =
-  "id, study_id, workspace_id, created_at, video";
 
 type JobRow = {
   id: string;
@@ -150,6 +155,7 @@ type EventRow = {
   event: string;
   created_at: string;
   user_id: string | null;
+  workspace_id?: string | null;
   anonymous_id: string | null;
   session_id: string | null;
   path: string | null;
@@ -173,6 +179,8 @@ export type AdminAnalyticsTables = {
   reactions: ReactionRow[];
   comments: CommentRow[];
   saved: SavedRow[];
+  /** Admin-entered ad spend. Optional so older callers and tests keep working. */
+  spend?: SpendEntry[];
 };
 
 const MS_DAY = 86_400_000;
@@ -195,7 +203,7 @@ export function parseAdminAnalyticsQuery(search: {
 
 export function rangeStart(range: AdminAnalyticsRange, now: Date): Date | null {
   if (range === "all") return null;
-  const days = range === "7d" ? 7 : 30;
+  const days = range === "7d" ? 7 : range === "90d" ? 90 : 30;
   return new Date(now.getTime() - days * MS_DAY);
 }
 
@@ -203,14 +211,9 @@ export function isInternalAccount(user: {
   is_admin?: boolean | null;
   email?: string | null;
 }): boolean {
+  if (user.is_admin) return true;
   const email = user.email?.trim().toLowerCase() ?? "";
   return email.endsWith(`@${INTERNAL_EMAIL_DOMAIN}`);
-}
-
-function reelHasAiVideo(reel: Pick<ReelRow, "footage" | "video">): boolean {
-  if (hasAiVideo(reel.footage ?? null, reel.video)) return true;
-  // Footage JSON is not fetched for analytics; a completed job still counts.
-  return reel.video?.status === "completed";
 }
 
 function inRange(iso: string | null | undefined, start: Date | null, now: Date): boolean {
@@ -322,7 +325,7 @@ export function buildAdminAnalytics(
   );
   const studiesInRange = studies.filter((study) => inRange(study.created_at, start, now));
   const reelsInRange = reels.filter((reel) => inRange(reel.created_at, start, now));
-  const videosGenerated = reelsInRange.filter(reelHasAiVideo).length;
+  const videosGenerated = reelsInRange.filter((reel) => hasAiVideo(reel.footage, reel.video)).length;
 
   const activeFrom = (since: Date) => {
     const ids = new Set<string>();
@@ -478,7 +481,7 @@ export function buildAdminAnalytics(
         : "free";
     const wsStudies = studies.filter((study) => study.workspace_id === workspace.id);
     const wsReels = reels.filter((reel) => reel.workspace_id === workspace.id);
-    const videos = wsReels.filter(reelHasAiVideo).length;
+    const videos = wsReels.filter((reel) => hasAiVideo(reel.footage, reel.video)).length;
     const studyCount = Math.max(wsStudies.length, 1);
     return {
       workspaceId: workspace.id,
@@ -581,6 +584,14 @@ export function buildAdminAnalytics(
       paidWorkspaces: workspaces.filter((workspace) => Boolean(workspace.paid_plan)).length,
       usage,
     },
+    acquisition: buildAcquisition({
+      users,
+      events,
+      workspaces,
+      spend: tables.spend ?? [],
+      start,
+      now,
+    }),
   };
 }
 
@@ -598,6 +609,17 @@ async function selectAll<T>(
     if (batch.length < PAGE) break;
   }
   return rows;
+}
+
+/** Reads a table that a not-yet-applied migration may be missing, without failing the whole dashboard. */
+async function selectOptional<T>(client: AnalyticsClient, table: string, columns: string, fallbackColumns?: string): Promise<T[]> {
+  try {
+    return await selectAll<T>(client, table, columns);
+  } catch (error) {
+    if (!fallbackColumns) return [];
+    console.warn(`[admin-analytics] ${table}: falling back to base columns`, error);
+    return selectAll<T>(client, table, fallbackColumns);
+  }
 }
 
 export async function loadAdminAnalytics(
@@ -618,19 +640,20 @@ export async function loadAdminAnalytics(
     comments,
     saved,
   ] = await Promise.all([
-    selectAll<UserRow>(
+    selectOptional<UserRow>(
       client,
       "users",
-      "id, email, created_at, is_admin, utm_source, signup_referrer, landing_path",
+      "id, email, created_at, is_admin, utm_source, utm_medium, utm_campaign, utm_term, utm_content, signup_referrer, landing_path, click_id, click_id_type",
+      "id, email, created_at, is_admin, utm_source, utm_medium, utm_campaign, utm_term, utm_content, signup_referrer, landing_path",
     ),
     selectAll<WorkspaceRow>(
       client,
       "workspaces",
-      "id, name, created_by, created_at, paid_plan, customer_id",
+      "id, name, created_by, created_at, paid_plan, customer_id, seats",
     ),
     selectAll<MemberRow>(client, "workspace_members", "workspace_id, user_id"),
     selectAll<StudyRow>(client, "studies", "id, workspace_id, created_at"),
-    selectAll<ReelRow>(client, "reels", ADMIN_ANALYTICS_REEL_COLUMNS),
+    selectAll<ReelRow>(client, "reels", "id, study_id, workspace_id, created_at, footage, video"),
     selectAll<JobRow>(
       client,
       "generation_jobs",
@@ -639,13 +662,18 @@ export async function loadAdminAnalytics(
     selectAll<EventRow>(
       client,
       "analytics_events",
-      "event, created_at, user_id, anonymous_id, session_id, path, properties",
+      "event, created_at, user_id, workspace_id, anonymous_id, session_id, path, properties",
     ),
     selectAll<CounterRow>(client, "reel_counters", "views, viewers"),
     selectAll<ReactionRow>(client, "reactions", "user_id, created_at, kind"),
     selectAll<CommentRow>(client, "comments", "user_id, created_at"),
     selectAll<SavedRow>(client, "saved_reels", "user_id, created_at"),
   ]);
+  const spend = await selectOptional<SpendEntry>(
+    client,
+    "ad_spend",
+    "id, period_start, period_end, source, medium, campaign, amount_cents, note",
+  );
 
   return buildAdminAnalytics(
     {
@@ -660,6 +688,7 @@ export async function loadAdminAnalytics(
       reactions,
       comments,
       saved,
+      spend,
     },
     query,
     now,

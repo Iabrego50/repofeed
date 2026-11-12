@@ -19,7 +19,7 @@ export class AppErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children;
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-        <p className="font-display text-2xl font-bold tracking-tight">Something went wrong</p>
+        <p className="text-2xl font-bold tracking-tight">This page hit a problem</p>
         <p className="max-w-md text-sm text-muted-foreground">{this.state.error.message}</p>
         <button
           type="button"

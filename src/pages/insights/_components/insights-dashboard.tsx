@@ -7,19 +7,19 @@ import ReelStatList from "./reel-stat-list.tsx";
 import { AUDIENCES, COLUMNS, forAudience, nextSort, pct, type Audience, type DashboardRow, type DashboardSummary, type Sort } from "../_lib/columns.ts";
 
 const REACTIONS = [
-  { key: "true", label: "Rings true", icon: Check, color: "#3FE0A0" },
-  { key: "surprised", label: "Surprised me", icon: Zap, color: "#FFC23D" },
-  { key: "pushback", label: "Push back", icon: CircleQuestionMark, color: "#FF5A5F" },
+  { key: "true", label: "Rings true", icon: Check, color: "var(--success)" },
+  { key: "surprised", label: "Surprised me", icon: Zap, color: "var(--warning)" },
+  { key: "pushback", label: "Push back", icon: CircleQuestionMark, color: "var(--destructive)" },
 ] as const;
 
 function Stat({ label, value, sub, hint }: { label: string; value: string; sub?: string; hint?: string }) {
   return (
     <div className="min-w-0 rounded-2xl border border-border bg-card p-4 sm:p-5">
       <div className="flex items-center justify-between gap-1">
-        <p className="truncate font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">{label}</p>
+        <p className="truncate text-xs font-medium text-muted-foreground sm:text-[11px]">{label}</p>
         {hint && <HelpHint title={label} article="insights" className="-my-1 -mr-1.5 size-6">{hint}</HelpHint>}
       </div>
-      <p className="mt-1.5 truncate font-display text-3xl font-extrabold tabular-nums sm:mt-2 sm:text-4xl">{value}</p>
+      <p className="mt-1.5 truncate text-3xl font-bold tabular-nums sm:mt-2 sm:text-4xl">{value}</p>
       {sub && <p className="mt-1 hidden text-sm text-muted-foreground sm:block">{sub}</p>}
     </div>
   );
@@ -48,7 +48,7 @@ function TopList({ title, rows, metric, icon: Icon, color, reelHref }: { title: 
   const top = [...rows].filter((r) => r[metric] > 0).sort((a, b) => b[metric] - a[metric]).slice(0, 5);
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="flex items-center gap-2 font-display text-lg font-bold">
+      <h2 className="flex items-center gap-2 text-lg font-bold">
         <Icon className="size-5" style={{ color }} /> {title}
       </h2>
       {top.length === 0 ? (
@@ -58,9 +58,9 @@ function TopList({ title, rows, metric, icon: Icon, color, reelHref }: { title: 
           {top.map((r, i) => (
             <li key={r.reelId}>
               <Link to={reelHref(r.reelId)} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
-                <span className="font-mono text-xs text-muted-foreground">{i + 1}</span>
+                <span className="text-xs text-muted-foreground">{i + 1}</span>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.title}</span>
-                <span className="font-mono text-sm font-bold" style={{ color }}>{r[metric]}</span>
+                <span className="text-sm font-bold" style={{ color }}>{r[metric]}</span>
               </Link>
             </li>
           ))}
@@ -123,11 +123,11 @@ export default function InsightsDashboard<R extends DashboardRow>({ summary, aud
       <div className="mt-3 grid grid-cols-3 gap-3 sm:mt-4 sm:gap-4">
         {REACTIONS.map((r) => (
           <div key={r.label} className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
-            <span className="grid size-8 shrink-0 place-items-center rounded-full sm:size-12" style={{ background: `${r.color}22`, color: r.color }}>
+            <span className="grid size-8 shrink-0 place-items-center rounded-full sm:size-12" style={{ background: `color-mix(in srgb, ${r.color} 14%, transparent)`, color: r.color }}>
               <r.icon className="size-4 sm:size-5" strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="font-display text-2xl font-extrabold tabular-nums sm:text-3xl">{summary.reactions[r.key]}</p>
+              <p className="text-2xl font-bold tabular-nums sm:text-3xl">{summary.reactions[r.key]}</p>
               <p className="truncate text-xs text-muted-foreground sm:text-sm">{r.label}</p>
             </div>
           </div>
@@ -135,8 +135,8 @@ export default function InsightsDashboard<R extends DashboardRow>({ summary, aud
       </div>
 
       <div className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 lg:grid-cols-2">
-        <TopList title="Most pushed back" rows={summary.rows} metric="pushbackCount" icon={CircleQuestionMark} color="#FF5A5F" reelHref={reelHref} />
-        <TopList title="Most surprising" rows={summary.rows} metric="surprisedCount" icon={Zap} color="#FFC23D" reelHref={reelHref} />
+        <TopList title="Most pushed back" rows={summary.rows} metric="pushbackCount" icon={CircleQuestionMark} color="var(--destructive)" reelHref={reelHref} />
+        <TopList title="Most surprising" rows={summary.rows} metric="surprisedCount" icon={Zap} color="var(--warning)" reelHref={reelHref} />
       </div>
 
       <div className="md:hidden">
@@ -150,7 +150,7 @@ export default function InsightsDashboard<R extends DashboardRow>({ summary, aud
               {COLUMNS.map((c) => {
                 const active = sort.key === c.key;
                 return (
-                  <th key={c.key} scope="col" aria-sort={active ? (sort.dir === 1 ? "ascending" : "descending") : "none"} className={cn("px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground", c.numeric ? "text-right" : "text-left")}>
+                  <th key={c.key} scope="col" aria-sort={active ? (sort.dir === 1 ? "ascending" : "descending") : "none"} className={cn("px-3 py-2 text-[11px] text-muted-foreground", c.numeric ? "text-right" : "text-left")}>
                     <button
                       type="button"
                       onClick={() => setSort((s) => nextSort(s, c.key))}
@@ -176,7 +176,7 @@ export default function InsightsDashboard<R extends DashboardRow>({ summary, aud
                       <span className="block truncate text-xs text-muted-foreground">{r.track}{showStudy && ` · ${r.studyTitle}`}</span>
                     </td>
                   ) : c.key === "viewers" && onShowWatchers ? (
-                    <td key={c.key} className="px-3 py-2 text-right font-mono tabular-nums">
+                    <td key={c.key} className="px-3 py-2 text-right tabular-nums">
                       <button
                         type="button"
                         onClick={() => onShowWatchers(r)}
@@ -187,7 +187,7 @@ export default function InsightsDashboard<R extends DashboardRow>({ summary, aud
                       </button>
                     </td>
                   ) : (
-                    <td key={c.key} className="px-3 py-2 text-right font-mono tabular-nums">
+                    <td key={c.key} className="px-3 py-2 text-right tabular-nums">
                       {c.fmt ? c.fmt(r) : r[c.key]}
                     </td>
                   ),

@@ -27,7 +27,7 @@ function SceneFields({ scene, onChange, id }: { scene: Scene; onChange: (s: Scen
         <div className="space-y-2">
           <Label htmlFor={`${id}-text`}>Text</Label>
           <Input id={`${id}-text`} className="h-11" value={scene.text} onChange={(e) => onChange({ ...scene, text: e.target.value })} />
-          {scene.type === "cta" && <p className="font-mono text-xs text-muted-foreground">{scene.sub}</p>}
+          {scene.type === "cta" && <p className="text-xs text-muted-foreground">{scene.sub}</p>}
         </div>
       );
     case "line":
@@ -106,7 +106,7 @@ function SceneFields({ scene, onChange, id }: { scene: Scene; onChange: (s: Scen
 }
 
 interface EditReelDialogProps {
-  reel: { _id: string; title: string; scenes: Scene[] };
+  reel: { _id: string; title: string; scenes: Scene[]; topics?: string[] };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -114,17 +114,20 @@ interface EditReelDialogProps {
 export default function EditReelDialog({ reel, open, onOpenChange }: EditReelDialogProps) {
   const queryClient = useQueryClient();
   const [scenes, setScenes] = useState<Scene[]>(reel.scenes);
+  const [topicsText, setTopicsText] = useState((reel.topics ?? []).join(", "));
   const [saving, setSaving] = useState(false);
 
   const updateMutation = useMutation({
-    mutationFn: () => api.studies.updateReelScenes({ reelId: reel._id, scenes }),
+    mutationFn: () =>
+      api.studies.updateReelScenes({ reelId: reel._id, scenes, topics: topicsText.split(",").map((t) => t.trim()).filter(Boolean) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studies", "reviewReels"] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
       toast.success("Reel updated");
       onOpenChange(false);
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to update reel");
+      toast.error(err.message || "Your changes weren’t saved. Try again.");
     },
   });
 
@@ -148,10 +151,24 @@ export default function EditReelDialog({ reel, open, onOpenChange }: EditReelDia
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="reel-topics">Topics</Label>
+            <Input
+              id="reel-topics"
+              className="h-11"
+              value={topicsText}
+              onChange={(e) => setTopicsText(e.target.value)}
+              placeholder="pricing, cancellation flow"
+              aria-describedby="reel-topics-hint"
+            />
+            <p id="reel-topics-hint" className="text-xs text-muted-foreground">
+              Separate with commas. Up to four, one to three words each. People browse and search Explore by these.
+            </p>
+          </div>
           {scenes.map((scene, i) => (
             <div key={i} className="space-y-3 rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between">
-                <p className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs font-semibold text-muted-foreground">
                   Scene {i + 1} · {TYPE_LABEL[scene.type]}
                 </p>
                 {scenes.length > 1 && (

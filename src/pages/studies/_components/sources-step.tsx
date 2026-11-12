@@ -35,7 +35,7 @@ export default function SourcesStep({ studyId, study, sources, onNext }: Sources
       toast.success("Source removed");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to remove source");
+      toast.error(err.message || "That file couldn’t be removed. Try again.");
     },
   });
 
@@ -67,7 +67,7 @@ export default function SourcesStep({ studyId, study, sources, onNext }: Sources
       toast.success("Sources uploaded");
       e.target.value = "";
     } catch (err: any) {
-      toast.error(err.message || "Failed to upload sources");
+      toast.error(err.message || "Those files didn’t go through. Check your connection and add them again.");
     } finally {
       setUploading(false);
     }
@@ -76,7 +76,7 @@ export default function SourcesStep({ studyId, study, sources, onNext }: Sources
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-lg font-bold">Upload sources</h3>
+        <h3 className="text-lg font-bold">Upload sources</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Upload interviews, surveys, notes, or other research files. We'll extract findings from them.
         </p>
@@ -111,7 +111,7 @@ export default function SourcesStep({ studyId, study, sources, onNext }: Sources
 
       {sources.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-display text-lg font-bold">Uploaded sources</h3>
+          <h3 className="text-lg font-bold">Uploaded sources</h3>
           <ul className="mt-4 divide-y divide-border">
             {sources.map((source) => (
               <li key={source._id} className="flex items-center gap-3 py-3">

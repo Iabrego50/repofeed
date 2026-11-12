@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { Bookmark, Heart, Loader2, MessageCircle } from "lucide-react";
+import { Bookmark, FileSearch, Heart, Link2, Loader2, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
 
 function ActionHint({ children }: { children: ReactNode }) {
   return (
-    <span className="pointer-events-none absolute right-full top-1/2 mr-3 w-max max-w-[10rem] -translate-y-1/2 rounded-full bg-black/70 px-3 py-1.5 text-right text-[11px] font-semibold leading-tight text-white backdrop-blur">
+    <span className="pointer-events-none absolute right-full top-1/2 mr-3 w-max max-w-[10rem] -translate-y-1/2 rounded-full bg-mark px-3 py-1.5 text-right text-[11px] font-semibold leading-tight text-mark-foreground">
       {children}
     </span>
   );
@@ -22,6 +22,7 @@ export default function SceneActions({
   savePending = false,
   onSave,
   onEvidence,
+  onShare,
   hints,
   onDismissHints,
 }: {
@@ -35,6 +36,8 @@ export default function SceneActions({
   savePending?: boolean;
   onSave: () => void;
   onEvidence: () => void;
+  /** Copies a link that opens the feed on this scene. Omitted where there is nothing to link to. */
+  onShare?: () => void;
   hints?: { react?: string; comment?: string; evidence?: string };
   onDismissHints?: () => void;
 }) {
@@ -60,7 +63,7 @@ export default function SceneActions({
           </div>
         ) : (
           <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
-            <Heart className={cn("size-6", hearted && "fill-current")} />
+            <Heart className={cn("size-6", hearted && "fill-[#ff5a6e] text-[#ff5a6e]")} />
           </div>
         )}
         {hearts > 0 && <span className="text-xs font-medium">{hearts}</span>}
@@ -121,10 +124,23 @@ export default function SceneActions({
       >
         {hints?.evidence && <ActionHint>{hints.evidence}</ActionHint>}
         <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
-          <span className="text-xs font-bold">📄</span>
+          <FileSearch className="size-6" />
         </div>
         <span className="text-xs font-medium">Sources</span>
       </button>
+      {onShare && (
+        <button
+          type="button"
+          onClick={onShare}
+          aria-label="Copy link to this scene"
+          className="flex cursor-pointer flex-col items-center gap-1 text-white"
+        >
+          <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
+            <Link2 className="size-6" />
+          </div>
+          <span className="text-xs font-medium">Share</span>
+        </button>
+      )}
 
       {showHints && onDismissHints && (
         <button

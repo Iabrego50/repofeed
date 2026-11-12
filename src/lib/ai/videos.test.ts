@@ -135,3 +135,32 @@ describe("video provider adapter", () => {
     expect(job.error?.message).toMatch(/moderation/i);
   });
 });
+
+describe("xAI model fallback", () => {
+  it("retries once with the documented model when xAI rejects the configured one", async () => {
+    const { createXaiVideo, XAI_FALLBACK_VIDEO_MODEL } = await import("./videos");
+    const sent: string[] = [];
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      sent.push(body.model);
+      if (body.model !== XAI_FALLBACK_VIDEO_MODEL) {
+        return new Response(JSON.stringify({ error: { message: `Model ${body.model} not found` } }), { status: 404 });
+      }
+      return new Response(JSON.stringify({ request_id: "vid_1" }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const job = await createXaiVideo({ prompt: "x", model: "grok-imagine-video-1.5-lite" }, { XAI_API_KEY: "k" } as NodeJS.ProcessEnv, fetchImpl);
+    expect(job.id).toBe("vid_1");
+    expect(sent).toEqual(["grok-imagine-video-1.5-lite", XAI_FALLBACK_VIDEO_MODEL]);
+  });
+
+  it("does not retry other failures", async () => {
+    const { createXaiVideo } = await import("./videos");
+    let calls = 0;
+    const fetchImpl = (async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ error: { message: "Prompt was rejected by moderation" } }), { status: 400 });
+    }) as unknown as typeof fetch;
+    await expect(createXaiVideo({ prompt: "x" }, { XAI_API_KEY: "k" } as NodeJS.ProcessEnv, fetchImpl)).rejects.toThrow(/moderation/);
+    expect(calls).toBe(1);
+  });
+});

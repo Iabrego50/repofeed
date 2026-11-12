@@ -26,6 +26,8 @@ export type Footage = { url: string; caption: string };
 type SeedReel = {
   track: number;
   title: string;
+  /** Subject tags, as the AI would write them at generation time. */
+  topics: string[];
   scenes: Scene[];
   /** Stock clip standing in for observational fieldwork recordings. */
   footage: Footage;
@@ -42,6 +44,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 1,
     title: "Why people really leave",
+    topics: ["cancellation", "pricing"],
     footage: { url: "/footage/receipts.mp4", caption: "Budget review · P04 · Week 6" },
     scenes: [
       { type: "hook", text: "Why do subscribers *actually* cancel?" },
@@ -67,6 +70,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 0,
     title: "Help that became homework",
+    topics: ["meal planning", "effort", "habit"],
     footage: { url: "/footage/mother-cooking.mp4", caption: "Home visit · P07 · Day 3" },
     scenes: [
       { type: "hook", text: "When does a meal kit stop *helping*?" },
@@ -82,6 +86,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 1,
     title: "The forgotten skip",
+    topics: ["skipping", "reminders", "cancellation"],
     footage: { url: "/footage/box-at-door.mp4", caption: "Doorstep cam · P11 · Unwanted box" },
     scenes: [
       { type: "hook", text: "The cancel often starts with a *missed skip*." },
@@ -97,6 +102,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 3,
     title: "Pause would have saved them",
+    topics: ["pausing", "cancellation", "flexibility"],
     footage: { url: "/footage/calendar.mp4", caption: "Planning session · P02 · Day 9" },
     scenes: [
       { type: "hook", text: "What if pausing took *one tap*?" },
@@ -112,6 +118,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 2,
     title: "Fewer nights, please",
+    topics: ["plan size", "flexibility", "food waste"],
     footage: { url: "/footage/family-dinner.mp4", caption: "Dinner obs · P09 · Night 2" },
     scenes: [
       { type: "hook", text: "Most homes want *fewer* kit nights." },
@@ -127,6 +134,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 2,
     title: "30 minutes takes 50",
+    topics: ["cooking time", "effort"],
     footage: { url: "/footage/wall-clock.mp4", caption: "Cook-along · P05 · 18:42" },
     scenes: [
       { type: "hook", text: "The recipe card says *30 minutes*." },
@@ -142,6 +150,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 2,
     title: "What gets thrown out",
+    topics: ["food waste", "portion size"],
     footage: { url: "/footage/half-onion.mp4", caption: "Prep cam · P03 · Week 2" },
     scenes: [
       { type: "hook", text: "Week two is when the *waste* shows up." },
@@ -157,6 +166,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 3,
     title: "The hidden cancel button",
+    topics: ["cancellation flow", "trust"],
     footage: { url: "/footage/frustrated-phone.mp4", caption: "Cancel flow · P02 · Screen 7" },
     scenes: [
       { type: "hook", text: "Hard cancels leave a *bad* last taste." },
@@ -171,6 +181,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 1,
     title: "Kits that never get cooked",
+    topics: ["food waste", "habit", "effort"],
     footage: { url: "/footage/takeout-tv.mp4", caption: "Evening obs · P08 · Day 4" },
     scenes: [
       { type: "hook", text: "How many kits get cooked *on plan*?" },
@@ -186,6 +197,7 @@ export const DEMO_REELS: SeedReel[] = [
   {
     track: 0,
     title: "It never learned me",
+    topics: ["personalization", "recipes"],
     footage: { url: "/footage/mushrooms.mp4", caption: "Cook-along · P06 · Mushroom again" },
     scenes: [
       { type: "hook", text: "Ratings that go *nowhere*." },

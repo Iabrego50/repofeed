@@ -18,7 +18,7 @@ export default function ReelStatList<R extends DashboardRow>({ rows, sort, onSor
   return (
     <section className="mt-8">
       <div className="flex items-center gap-2">
-        <h2 className="flex-1 font-display text-lg font-bold">All scenes</h2>
+        <h2 className="flex-1 text-lg font-bold">All scenes</h2>
         <label htmlFor="reel-sort" className="sr-only">Sort by</label>
         <NativeSelect
           id="reel-sort"
@@ -61,7 +61,7 @@ export default function ReelStatList<R extends DashboardRow>({ rows, sort, onSor
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.track}{showStudy && ` · ${r.studyTitle}`}</p>
               </Link>
               <div className="px-4 pb-4">
-                <div className="flex items-baseline gap-4 font-mono text-sm tabular-nums">
+                <div className="flex items-baseline gap-4 text-sm tabular-nums">
                   {onShowWatchers ? (
                     <button
                       type="button"
@@ -78,18 +78,18 @@ export default function ReelStatList<R extends DashboardRow>({ rows, sort, onSor
                     <span className="text-primary"><span className="font-bold">{r.openCount}</span> <span className="text-xs">open</span></span>
                   )}
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1.5 font-mono text-xs tabular-nums">
+                <div className="mt-2 flex flex-wrap gap-1.5 text-xs tabular-nums">
                   {[
-                    { label: "Rings true", value: r.trueCount, icon: Check, color: "#3FE0A0" },
-                    { label: "Surprised me", value: r.surprisedCount, icon: Zap, color: "#FFC23D" },
-                    { label: "Push back", value: r.pushbackCount, icon: CircleQuestionMark, color: "#FF5A5F" },
-                    { label: "Comments", value: r.commentCount, icon: MessageSquare, color: "#93A0B8" },
+                    { label: "Rings true", value: r.trueCount, icon: Check, color: "var(--success)" },
+                    { label: "Surprised me", value: r.surprisedCount, icon: Zap, color: "var(--warning)" },
+                    { label: "Push back", value: r.pushbackCount, icon: CircleQuestionMark, color: "var(--destructive)" },
+                    { label: "Comments", value: r.commentCount, icon: MessageSquare, color: "var(--muted-foreground)" },
                   ].map((m) => (
                     <span
                       key={m.label}
                       aria-label={`${m.label}: ${m.value}`}
                       className="inline-flex items-center gap-1 rounded-full px-2 py-1"
-                      style={{ background: `${m.color}1f`, color: m.color }}
+                      style={{ background: `color-mix(in srgb, ${m.color} 12%, transparent)`, color: m.color }}
                     >
                       <m.icon className="size-3" strokeWidth={2.5} /> {m.value}
                     </span>

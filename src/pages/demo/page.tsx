@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, ArrowLeft, BarChart3, RotateCcw, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, BarChart3, RotateCcw, X, Presentation } from "lucide-react";
 import Logo from "@/components/logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { SignInButton } from "@/components/ui/signin.tsx";
@@ -177,8 +177,8 @@ export default function DemoPage() {
       : null;
 
   return (
-    <div className="flex h-dvh bg-background">
-      <div className="relative flex min-w-0 flex-1 flex-col items-center bg-[#04070E]">
+    <div className="dark flex h-dvh bg-background">
+      <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
         <div className="absolute inset-x-0 top-0 z-30 mx-auto flex items-center justify-between gap-3 bg-gradient-to-b from-black/75 to-transparent px-3 py-3 lg:max-w-[calc(100dvh*9/16)]">
           <Link
             to="/"
@@ -196,7 +196,7 @@ export default function DemoPage() {
             >
               <BarChart3 className="size-3.5" /> Insights
             </Link>
-            <span className="rounded-full bg-black/40 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white/80 backdrop-blur">
+            <span className="rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
               {onEnd ? "Done" : `${activeIdx + 1} / ${REELS.length}`}
             </span>
           </div>
@@ -265,6 +265,11 @@ export default function DemoPage() {
             >
               <Link to="/demo/insights">
                 <BarChart3 className="size-4" /> See the Insights dashboard
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="h-10 w-full font-semibold">
+              <Link to="/demo/deck">
+                <Presentation className="size-4" /> Make a PowerPoint deck
               </Link>
             </Button>
             <SignInButton
@@ -347,7 +352,7 @@ function EndCard({ onRestart }: { onRestart: () => void }) {
   return (
     <div className="flex h-full w-full snap-start flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_50%_30%,rgba(47,155,255,0.25),transparent_60%)] px-8 text-center">
       <Logo />
-      <h2 className="text-balance font-display text-3xl font-extrabold text-white">
+      <h2 className="text-balance text-3xl font-bold text-white">
         That's the whole study, in {REELS.length} scenes.
       </h2>
       <p className="max-w-xs text-sm text-white/70">
@@ -362,6 +367,11 @@ function EndCard({ onRestart }: { onRestart: () => void }) {
       <Button asChild variant="secondary" className="h-11">
         <Link to="/demo/insights">
           <BarChart3 className="size-4" /> See who watched, in Insights
+        </Link>
+      </Button>
+      <Button asChild variant="secondary" className="h-11">
+        <Link to="/demo/deck">
+          <Presentation className="size-4" /> Make a PowerPoint deck
         </Link>
       </Button>
       <Button

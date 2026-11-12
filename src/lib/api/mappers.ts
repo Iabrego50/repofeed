@@ -12,6 +12,7 @@ export interface DbReel {
   title: string;
   scenes: any;
   finding_ids: any;
+  topics?: string[] | null;
   source_names: any;
   footage: unknown;
   video?: unknown;
@@ -108,6 +109,8 @@ export interface FeedReel {
   title: string;
   scenes?: Scene[];
   findingIds?: string[];
+  /** Lowercase subject tags. Empty until the insight has been tagged. */
+  topics: string[];
   sourceNames?: string[];
   footage?: {
     url: string;
@@ -244,6 +247,7 @@ export function mapReel(row: DbReel): FeedReel {
     title: row.title,
     scenes: parseJson(row.scenes),
     findingIds: parseJson(row.finding_ids),
+    topics: Array.isArray(row.topics) ? row.topics : [],
     sourceNames: parseJson(row.source_names),
     footage: hydrateFootageMedia(parseJson(row.footage), publicStorageOrigin()),
     video: parseJson(row.video),

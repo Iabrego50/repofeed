@@ -39,12 +39,12 @@ function ExportRunner({ reel, onClose }: { reel: ReelData; onClose: () => void }
       {state.status === "rendering" && (
         <div className="space-y-2">
           <Progress value={state.progress * 100} aria-label="Export progress" />
-          <p className="font-mono text-xs text-muted-foreground">{Math.round(state.progress * 100)}%</p>
+          <p className="text-xs text-muted-foreground">{Math.round(state.progress * 100)}%</p>
         </div>
       )}
       {state.status === "done" && (
         <p className="flex items-center gap-2 text-sm">
-          <Download className="size-4 text-[#3FE0A0]" /> Downloaded {state.ext.toUpperCase()} · {state.duration.toFixed(1)}s
+          <Download className="size-4 text-success" /> Downloaded {state.ext.toUpperCase()} · {state.duration.toFixed(1)}s
           {state.ext === "webm" && <span className="text-muted-foreground">(your browser can't encode MP4)</span>}
         </p>
       )}

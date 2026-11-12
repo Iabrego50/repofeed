@@ -10,7 +10,7 @@ export default function ArticleBody({ article }: { article: HelpArticle }) {
         <ol className="space-y-3">
           {article.steps.map((s, i) => (
             <li key={s.title} className="flex gap-3">
-              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 font-mono text-xs font-bold text-primary">{i + 1}</span>
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-medium text-muted-foreground">{i + 1}</span>
               <div className="min-w-0">
                 <p className="font-medium text-foreground">{s.title}</p>
                 <p className="mt-0.5">{s.body}</p>

@@ -49,7 +49,7 @@ export default function EmailUpdates({ workspaceId }: { workspaceId: string }) {
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="flex items-center gap-2 font-display text-xl font-bold">
+      <h2 className="flex items-center gap-2 text-xl font-bold">
         <Mail className="size-5 text-primary" /> Email updates
       </h2>
       <div className="mt-1 text-sm text-muted-foreground">

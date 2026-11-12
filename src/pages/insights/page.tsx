@@ -82,7 +82,7 @@ export default function InsightsPage() {
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <Button asChild className="col-span-2 h-11">
               <Link to={studyId ? `/insights/deck?study=${studyId}` : "/insights/deck"}>
-                <Presentation className="size-4" /> Slide deck
+                <Presentation className="size-4" /> Create readout deck
               </Link>
             </Button>
             <Button variant="secondary" className="h-11" onClick={exportReels} disabled={!summary}>

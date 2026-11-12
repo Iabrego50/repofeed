@@ -1,13 +1,44 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, type ReactNode } from "react";
 import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils.ts";
 import type { Plan } from "@/schema/validators";
-import { PLANS, formatPrice, type Interval } from "@/lib/plans.ts";
+import { PLANS, formatPrice, type Interval, type PlanCard } from "@/lib/plans.ts";
+
+/** One plan column. Shared by the public pricing section and the in-app billing page so the two never drift. */
+export function PlanColumn({ plan, interval, action, note }: { plan: PlanCard; interval: Interval; action: ReactNode; note?: string }) {
+  const yearlySaving = (plan.price.month - plan.price.year) * 12;
+  return (
+    <div className={cn("flex flex-col rounded-xl border bg-card p-6", plan.highlight ? "border-foreground shadow-lift" : "border-border")}>
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-lg font-bold">{plan.name}</h3>
+        {plan.highlight && <span className="rounded bg-mark px-1.5 py-0.5 text-xs font-semibold text-mark-foreground">Recommended</span>}
+      </div>
+      <p className="mt-0.5 text-sm text-muted-foreground">{plan.tagline}</p>
+      <p className="mt-5 flex items-baseline gap-1.5">
+        <span className="text-4xl font-bold tracking-tight">{formatPrice(plan.price[interval])}</span>
+        <span className="text-sm text-muted-foreground">{plan.id === "free" ? "forever" : plan.unit}</span>
+      </p>
+      <p className="mt-1 min-h-5 text-sm text-muted-foreground">
+        {plan.id === "free" ? "No card needed" : interval === "year" && yearlySaving > 0 ? `Billed yearly. You save $${yearlySaving.toFixed(0)} a year.` : "Billed monthly"}
+      </p>
+      <ul className="mt-6 flex-1 space-y-2.5">
+        {plan.features.map((feature) => (
+          <li key={feature} className="flex gap-2.5 text-[0.9375rem]">
+            <Check className="mt-1 size-4 shrink-0 text-success" strokeWidth={2.5} />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-7">{action}</div>
+      {note && <p className="mt-2 text-center text-xs text-muted-foreground">{note}</p>}
+    </div>
+  );
+}
 
 export default function PlanGrid({
   currentPlan,
   onSelect,
-  usage,
   trialAvailable,
   interval: controlledInterval,
   onIntervalChange,
@@ -22,98 +53,61 @@ export default function PlanGrid({
   const [localInterval, setLocalInterval] = useState<Interval>("year");
   const interval = controlledInterval ?? localInterval;
   const setInterval = onIntervalChange ?? setLocalInterval;
-  void usage;
 
   return (
     <div>
-      <div className="mb-8 flex justify-center">
+      <div className="mb-6 flex justify-center">
         <IntervalToggle value={interval} onChange={setInterval} />
       </div>
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {PLANS.map((plan) => (
-          <div
+          <PlanColumn
             key={plan.id}
-            className={`rounded-lg border p-6 ${plan.highlight ? "border-primary shadow-lg" : "border-border"}`}
-          >
-            {plan.highlight && (
-              <div className="mb-4 text-center text-xs font-semibold uppercase text-primary">
-                Most Popular
-              </div>
-            )}
-            <h3 className="text-2xl font-bold">{plan.name}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{plan.tagline}</p>
-            <div className="mt-6 text-4xl font-bold">
-              {formatPrice(plan.price[interval])}
-              {plan.id !== "free" && (
-                <span className="text-lg font-normal text-muted-foreground">/{plan.unit}</span>
-              )}
-            </div>
-            {plan.id === "free" ? (
-              <p className="mt-1 text-sm text-muted-foreground">{plan.unit}</p>
-            ) : interval === "year" ? (
-              <p className="mt-1 text-sm text-muted-foreground">Billed yearly (save 20%)</p>
-            ) : (
-              <p className="mt-1 text-sm text-muted-foreground">Billed monthly</p>
-            )}
-            <ul className="mt-6 space-y-3">
-              {plan.features.map((feature) => (
-                <li key={feature} className="flex gap-2 text-sm">
-                  <Check className="h-5 w-5 shrink-0 text-primary" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8">
-              {currentPlan === plan.id ? (
-                <Button disabled className="w-full">
-                  Current Plan
-                </Button>
+            plan={plan}
+            interval={interval}
+            action={
+              currentPlan === plan.id ? (
+                <Button disabled variant="outline" className="h-10 w-full">Your current plan</Button>
               ) : plan.id === "free" ? (
-                <Button variant="outline" disabled className="w-full">
-                  Downgrade unavailable
-                </Button>
+                <Button variant="outline" disabled className="h-10 w-full">Included with every workspace</Button>
               ) : (
                 <Button
                   onClick={() => {
                     if (plan.id === "pro" || plan.id === "team") onSelect(plan.id, interval);
                   }}
                   variant={plan.highlight ? "default" : "outline"}
-                  className="w-full"
+                  className="h-10 w-full font-semibold"
                 >
-                  {trialAvailable ? "Start 14-day trial" : "Upgrade"}
+                  {trialAvailable ? "Start 14-day trial" : `Upgrade to ${plan.name}`}
                 </Button>
-              )}
-            </div>
-          </div>
+              )
+            }
+          />
         ))}
       </div>
     </div>
   );
 }
 
-export function IntervalToggle({
-  value,
-  onChange,
-}: {
-  value: Interval;
-  onChange: (v: Interval) => void;
-}) {
+export function IntervalToggle({ value, onChange }: { value: Interval; onChange: (v: Interval) => void }) {
+  const option = (v: Interval, label: string) => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={value === v}
+      onClick={() => onChange(v)}
+      className={cn(
+        "min-h-9 cursor-pointer rounded-md px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring",
+        value === v ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
   return (
-    <div className="inline-flex rounded-full border border-border bg-card p-1">
-      <button
-        type="button"
-        onClick={() => onChange("month")}
-        className={value === "month" ? "rounded-full bg-primary px-4 py-2 text-primary-foreground" : "px-4 py-2"}
-      >
-        Monthly
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("year")}
-        className={value === "year" ? "rounded-full bg-primary px-4 py-2 text-primary-foreground" : "px-4 py-2"}
-      >
-        Yearly · save 20%
-      </button>
+    <div role="radiogroup" aria-label="Billing period" className="inline-flex rounded-lg border border-border bg-card p-0.5">
+      {option("month", "Monthly")}
+      {option("year", "Yearly, save 20%")}
     </div>
   );
 }

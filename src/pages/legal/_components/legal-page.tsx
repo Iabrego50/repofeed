@@ -19,14 +19,14 @@ export default function LegalPage({ title, intro, sections }: { title: string; i
         </Link>
       </header>
       <main className="mx-auto max-w-3xl px-5 pb-20 pt-6">
-        <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">Legal</p>
-        <h1 className="mt-3 text-balance font-display text-4xl font-extrabold tracking-tight sm:text-5xl">{title}</h1>
+        <p className="text-sm font-medium text-muted-foreground">Legal</p>
+        <h1 className="mt-3 text-balance text-4xl font-bold tracking-tight sm:text-5xl">{title}</h1>
         <p className="mt-3 text-sm text-muted-foreground">Last updated {LEGAL_LAST_UPDATED}</p>
         <p className="mt-6 leading-relaxed text-muted-foreground">{intro}</p>
         <div className="mt-10 space-y-10">
           {sections.map((s, i) => (
             <section key={s.heading} aria-labelledby={`legal-${i}`}>
-              <h2 id={`legal-${i}`} className="font-display text-xl font-bold">
+              <h2 id={`legal-${i}`} className="text-xl font-bold">
                 {i + 1}. {s.heading}
               </h2>
               {s.paragraphs?.map((p) => (

@@ -9,9 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton.tsx";
 import type { Audience } from "../_lib/columns.ts";
 
 const REACTION = {
-  true: { label: "Rings true", icon: Check, color: "#3FE0A0" },
-  surprised: { label: "Surprised me", icon: Zap, color: "#FFC23D" },
-  pushback: { label: "Push back", icon: CircleQuestionMark, color: "#FF5A5F" },
+  true: { label: "Rings true", icon: Check, color: "var(--success)" },
+  surprised: { label: "Surprised me", icon: Zap, color: "var(--warning)" },
+  pushback: { label: "Push back", icon: CircleQuestionMark, color: "var(--destructive)" },
 } as const;
 
 type Props = {
@@ -64,7 +64,7 @@ export default function WatchersDialog({ reel, audience, onClose }: Props) {
                     </p>
                   </div>
                   {r && (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs" style={{ background: `${r.color}1f`, color: r.color }}>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs" style={{ background: `color-mix(in srgb, ${r.color} 12%, transparent)`, color: r.color }}>
                       <r.icon className="size-3" strokeWidth={2.5} /> {r.label}
                     </span>
                   )}

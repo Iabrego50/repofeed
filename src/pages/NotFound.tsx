@@ -13,16 +13,15 @@ export default function NotFound() {
 
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-background px-5">
-      <div aria-hidden className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-primary/10 blur-3xl" />
       <header className="relative mx-auto w-full max-w-5xl py-5">
         <Link to="/" className="cursor-pointer" aria-label="repofeed.ai home">
           <Logo />
         </Link>
       </header>
-      <main className="relative m-auto max-w-md pb-24 text-center">
+      <main className="relative m-auto w-full max-w-md pb-24">
         <meta name="robots" content="noindex" />
-        <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">Error 404</p>
-        <h1 className="mt-3 text-balance font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
+        <p className="text-sm font-medium text-muted-foreground">Error 404</p>
+        <h1 className="mt-3 text-balance text-4xl font-bold tracking-tight sm:text-5xl">
           This scene doesn't exist.
         </h1>
         <p className="mt-4 text-muted-foreground">

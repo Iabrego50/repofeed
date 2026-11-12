@@ -15,3 +15,14 @@ describe("OpenAI model defaults", () => {
     expect(imageModelQueue().some((model) => model.startsWith("dall-e"))).toBe(false);
   });
 });
+
+describe("isAbortError", () => {
+  it("recognises the abort error openai 7.x throws, whose name is just Error", async () => {
+    const OpenAI = (await import("openai")).default;
+    const { isAbortError } = await import("./client");
+    const err = new OpenAI.APIUserAbortError();
+    expect(err.name).toBe("Error");
+    expect(isAbortError(err)).toBe(true);
+    expect(isAbortError(new Error("boom"))).toBe(false);
+  });
+});
