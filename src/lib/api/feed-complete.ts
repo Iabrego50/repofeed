@@ -366,31 +366,14 @@ export async function recordView(args: {
 }
 
 export async function guestReact(args: { reelId: string; kind: 'true' | 'surprised' | 'pushback'; token: string; secret: string }) {
-  const { data: links } = await supabase
-    .from('share_links')
-    .select('id, study_id')
-    .eq('token', args.token)
-    .single();
-  
-  if (!links) throw new Error('Share link not found');
-  
-  const { data: guest } = await supabase
-    .from('guests')
-    .select('id')
-    .eq('link_id', links.id)
-    .eq('secret', args.secret)
-    .single();
-  
-  if (!guest) throw new Error('Guest not found');
-  
-  await supabase
-    .from('guest_reactions')
-    .upsert({
-      reel_id: args.reelId,
-      study_id: links.study_id,
-      guest_id: guest.id,
-      kind: args.kind,
-    });
+  const { data, error } = await supabase.rpc('share_react', {
+    p_token: args.token,
+    p_secret: args.secret,
+    p_reel_id: args.reelId,
+    p_kind: args.kind,
+  });
+  if (error) throw error;
+  return (typeof data === 'string' ? data : args.kind) as 'true' | 'surprised' | 'pushback';
 }
 
 export async function guestRecordView(args: {
@@ -411,40 +394,14 @@ export async function guestRecordView(args: {
 }
 
 export async function guestAddComment(args: { reelId: string; kind: 'note' | 'question' | 'action'; body: string; parentId?: string; token: string; secret: string }) {
-  const { data: links } = await supabase
-    .from('share_links')
-    .select('id, study_id')
-    .eq('token', args.token)
-    .single();
-  
-  if (!links) throw new Error('Share link not found');
-  
-  const { data: guest } = await supabase
-    .from('guests')
-    .select('id')
-    .eq('link_id', links.id)
-    .eq('secret', args.secret)
-    .single();
-  
-  if (!guest) throw new Error('Guest not found');
-  
-  const { data: reel } = await supabase
-    .from('reels')
-    .select('study_id')
-    .eq('id', args.reelId)
-    .single();
-  
-  if (!reel) throw new Error('Reel not found');
-  
-  await supabase
-    .from('comments')
-    .insert({
-      reel_id: args.reelId,
-      study_id: reel.study_id,
-      guest_id: guest.id,
-      kind: args.kind,
-      body: args.body,
-      parent_id: args.parentId || null,
-      resolved: false,
-    });
+  const { data, error } = await supabase.rpc('share_add_comment', {
+    p_token: args.token,
+    p_secret: args.secret,
+    p_reel_id: args.reelId,
+    p_kind: args.kind,
+    p_body: args.body,
+    p_parent_id: args.parentId ?? null,
+  });
+  if (error) throw error;
+  return data;
 }

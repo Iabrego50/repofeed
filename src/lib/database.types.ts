@@ -1466,6 +1466,66 @@ export type Database = {
         }
         Returns: Json
       }
+      share_load: {
+        Args: {
+          p_token: string
+        }
+        Returns: Json
+      }
+      share_feed: {
+        Args: {
+          p_token: string
+          p_secret?: string | null
+        }
+        Returns: Json
+      }
+      share_join: {
+        Args: {
+          p_token: string
+          p_name: string
+        }
+        Returns: Json
+      }
+      share_comments: {
+        Args: {
+          p_token: string
+          p_reel_id: string
+        }
+        Returns: Json
+      }
+      share_add_comment: {
+        Args: {
+          p_token: string
+          p_secret: string
+          p_reel_id: string
+          p_kind: string
+          p_body: string
+          p_parent_id?: string | null
+        }
+        Returns: Json
+      }
+      share_react: {
+        Args: {
+          p_token: string
+          p_secret: string
+          p_reel_id: string
+          p_kind: string
+        }
+        Returns: Json
+      }
+      share_evidence: {
+        Args: {
+          p_token: string
+          p_reel_id: string
+        }
+        Returns: Json
+      }
+      share_public_token: {
+        Args: {
+          p_reel_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

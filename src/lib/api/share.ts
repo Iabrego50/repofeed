@@ -1,6 +1,6 @@
 import { supabase } from "../supabase";
 import { canCreateShareLink, effectiveRole } from "./access";
-import { mapReel } from "./mappers";
+import { mapComment, mapFinding, mapReel, type DbComment, type DbFinding, type DbReel } from "./mappers";
 import type { Role } from "@/schema";
 
 export function generateShareToken(): string {
@@ -107,23 +107,31 @@ export async function revokeShareLink(args: { studyId: string }): Promise<void> 
   if (error) throw error;
 }
 
+type ShareLoadRow = {
+  link: {
+    id: string;
+    study_id: string;
+    workspace_id: string;
+    token: string;
+    revoked: boolean;
+    hide_team_comments: boolean;
+    expires_at?: string | null;
+  };
+  study: { id: string; title: string; status: string };
+};
+
+async function rpcJson<T>(fn: keyof import("../database.types").Database["public"]["Functions"], args: object): Promise<T> {
+  const { data, error } = await supabase.rpc(fn, args as never);
+  if (error) throw error;
+  return data as T;
+}
+
 export async function loadShare(token: string) {
-  const { data: link } = await supabase
-    .from("share_links")
-    .select("id, study_id, workspace_id, token, revoked, hide_team_comments")
-    .eq("token", token)
-    .maybeSingle();
-
-  if (!isShareLinkLive(link)) return null;
-
-  const { data: study } = await supabase
-    .from("studies")
-    .select("id, title, status")
-    .eq("id", link!.study_id)
-    .maybeSingle();
-
-  if (!study || study.status !== "published") return null;
-  return { link: link!, study };
+  const data = await rpcJson<ShareLoadRow | null>("share_load", { p_token: token });
+  if (!data?.link || !data.study) return null;
+  if (!isShareLinkLive(data.link)) return null;
+  if (data.study.status !== "published") return null;
+  return data;
 }
 
 export async function requireShare(token: string) {
@@ -146,91 +154,48 @@ export async function requireShareReel(studyId: string, reelId: string) {
 
 export async function requireGuest(token: string, secret: string) {
   const share = await requireShare(token);
-  const { data: guest } = await supabase
-    .from("guests")
-    .select("id, name, secret, study_id, link_id")
-    .eq("link_id", share.link.id)
-    .eq("secret", secret)
-    .maybeSingle();
-  if (!guest || guest.study_id !== share.study.id) {
+  const feed = await shareFeed({ token, secret });
+  if (!feed?.guest) {
     throw new Error("Tell us your name to join in");
   }
-  return { ...share, guest };
+  return { ...share, guest: feed.guest };
 }
 
 export async function shareFeed(args: { token: string; secret?: string }) {
-  const share = await loadShare(args.token);
-  if (!share) return null;
-
-  const { data: reels } = await supabase
-    .from("reels")
-    .select("*, studies!inner(title)")
-    .eq("study_id", share.study.id)
-    .eq("enabled", true);
-
-  let guest = null;
-  if (args.secret) {
-    const { data: guestData } = await supabase
-      .from("guests")
-      .select("*")
-      .eq("link_id", share.link.id)
-      .eq("secret", args.secret)
-      .maybeSingle();
-    guest = guestData
-      ? { ...guestData, name: normalizeGuestName(guestData.name) }
-      : null;
-  }
+  const data = await rpcJson<{
+    studyTitle: string;
+    hideTeamComments: boolean;
+    guest: { id: string; name: string; study_id: string; link_id: string } | null;
+    reels: DbReel[];
+  } | null>("share_feed", {
+    p_token: args.token,
+    p_secret: args.secret ?? null,
+  });
+  if (!data) return null;
 
   return {
-    studyTitle: share.study.title || "Untitled Study",
-    reels: (reels || []).map(mapReel),
-    guest,
-    hideTeamComments: share.link.hide_team_comments,
+    studyTitle: data.studyTitle || "Untitled Study",
+    reels: (data.reels || []).map(mapReel),
+    guest: data.guest
+      ? { ...data.guest, name: normalizeGuestName(data.guest.name) }
+      : null,
+    hideTeamComments: data.hideTeamComments ?? true,
   };
 }
 
 export async function joinShare(args: { token: string; name: string }) {
-  const share = await requireShare(args.token);
-  const secret = generateGuestSecret();
-  const { data: guest, error } = await supabase
-    .from("guests")
-    .insert({
-      study_id: share.study.id,
-      link_id: share.link.id,
-      name: normalizeGuestName(args.name),
-      secret,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return { secret, guestId: guest?.id as string | undefined };
+  const data = await rpcJson<{ secret: string; guestId: string }>("share_join", {
+    p_token: args.token,
+    p_name: normalizeGuestName(args.name),
+  });
+  return { secret: data.secret, guestId: data.guestId };
 }
 
 export async function publicTokenForReel(args: { reelId: string }): Promise<string | null> {
-  const { data: reel } = await supabase
-    .from("reels")
-    .select("study_id, enabled")
-    .eq("id", args.reelId)
-    .maybeSingle();
-
-  if (!reel || !reel.enabled) return null;
-
-  const { data: study } = await supabase
-    .from("studies")
-    .select("id, status")
-    .eq("id", reel.study_id)
-    .maybeSingle();
-
-  if (!study || study.status !== "published") return null;
-
-  const { data: shareLink } = await supabase
-    .from("share_links")
-    .select("token")
-    .eq("study_id", study.id)
-    .eq("revoked", false)
-    .maybeSingle();
-
-  return shareLink?.token ?? null;
+  const token = await rpcJson<string | null>("share_public_token", {
+    p_reel_id: args.reelId,
+  });
+  return token ?? null;
 }
 
 export async function reelShareLink(args: { reelId: string }): Promise<string> {
@@ -245,25 +210,17 @@ export async function reelShareLink(args: { reelId: string }): Promise<string> {
 }
 
 export async function shareComments(args: { token: string; reelId: string; secret?: string }) {
-  const share = await requireShare(args.token);
-  await requireShareReel(share.study.id, args.reelId);
-
-  const { data } = await supabase
-    .from("comments")
-    .select("*")
-    .eq("reel_id", args.reelId)
-    .order("created_at", { ascending: true });
-
-  return filterCommentsForGuest(data || [], share.link.hide_team_comments ?? true);
+  const rows = await rpcJson<DbComment[]>("share_comments", {
+    p_token: args.token,
+    p_reel_id: args.reelId,
+  });
+  return (rows || []).map(mapComment);
 }
 
 export async function shareEvidence(args: { token: string; reelId: string }) {
-  const share = await requireShare(args.token);
-  await requireShareReel(share.study.id, args.reelId);
-  const { data: reel } = await supabase
-    .from("reels")
-    .select("finding_ids")
-    .eq("id", args.reelId)
-    .maybeSingle();
-  return reel?.finding_ids ?? [];
+  const rows = await rpcJson<DbFinding[]>("share_evidence", {
+    p_token: args.token,
+    p_reel_id: args.reelId,
+  });
+  return (rows || []).map(mapFinding);
 }
