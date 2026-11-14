@@ -104,7 +104,8 @@ The default Supabase confirmation URL uses PKCE and only works in the same brows
    - Change email address → `email-change.html` (`type=email_change`)
 3. Set **Site URL** to `https://repofeed.ai`.
 4. Add redirect allow-list URLs: `https://repofeed.ai/auth/callback` and `https://repofeed.ai/auth/confirm`.
-5. Same-browser PKCE (`?code=`) still works on `/auth/callback`. Cross-device links use `/auth/confirm?token_hash=…&type=…`.
+5. Same-browser PKCE (`?code=`) still works on `/auth/callback`. Cross-device links use `/auth/confirm?token_hash=…&type=…`. The templates also include `{{ .Token }}` so people can type the 6-digit code on `/signin` without opening the link.
+6. In Authentication → Providers → Email, keep the mailer OTP length at 6. Custom SMTP is optional and unchanged by this repo.
 
 ## Security / performance migration
 

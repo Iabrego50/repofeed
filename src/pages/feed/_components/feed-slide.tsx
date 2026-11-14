@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useFeedMode } from "../_lib/feed-mode.ts";
+import { GuestDismissed, useFeedActions } from "../_lib/use-feed-data.ts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, CircleQuestionMark, Play, Zap } from "lucide-react";
 import type { ReactionType } from "@/schema/validators.ts";
@@ -41,6 +42,7 @@ function isTyping(target: EventTarget | null) {
  */
 export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }: FeedSlideProps) {
   const queryClient = useQueryClient();
+  const { react: reactOnFeed } = useFeedActions();
   // Guests on a share link can't open Explore, so their topic tags are plain text.
   const linkTopics = useFeedMode().kind === "member";
   const [paused, setPaused] = useState(false);
@@ -62,7 +64,7 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
   // The server toggles: sending the same reaction again removes it.
   const [mine, setMine] = useState<ReactionType | null>(null);
   const reactMutation = useMutation({
-    mutationFn: (kind: ReactionType) => api.feed.react({ reelId: reel._id, kind }),
+    mutationFn: (kind: ReactionType) => reactOnFeed(reel._id, kind),
     onSuccess: (result, kind) => {
       // `null` means the server removed an existing reaction of the same kind.
       setMine(result === null ? null : kind);
@@ -71,6 +73,7 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
       track("heart", { reelId: reel._id, workspaceId: reel.workspaceId, kind });
     },
     onError: (err: unknown) => {
+      if (err instanceof GuestDismissed) return;
       toast.error(err instanceof Error ? err.message : "Couldn\u2019t add your reaction. Try again.");
     },
   });

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useServiceWorker } from "@/hooks/use-service-worker.ts";
@@ -12,6 +12,7 @@ import DocumentMeta from "./components/document-meta.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
 import { FEED_PATH, signInPath } from "./app-paths.ts";
+import { resolveReturnTo } from "./pages/auth/return-to.ts";
 
 const AuthCallback = lazy(() => import("./pages/auth/Callback.tsx"));
 const SignInPage = lazy(() => import("./pages/auth/signin.tsx"));
@@ -65,8 +66,10 @@ function FullScreenLoader() {
 
 function GuestOnly({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const [params] = useSearchParams();
+  const returnTo = resolveReturnTo({ returnTo: params.get("returnTo") });
   if (loading) return <FullScreenLoader />;
-  if (user) return <Navigate to={FEED_PATH} replace />;
+  if (user) return <Navigate to={returnTo} replace />;
   return <>{children}</>;
 }
 
