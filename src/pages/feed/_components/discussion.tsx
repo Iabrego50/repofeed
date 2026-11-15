@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api/complete";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { CornerDownRight, Loader2, MessageSquare, Trash2 } from "lucide-react";
 import type { CommentKind } from "@/schema/validators.ts";
 import type { Comment } from "@/lib/api/mappers";
+import { GuestDismissed, useFeedActions, useReelComments } from "../_lib/use-feed-data.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -76,20 +76,23 @@ function Composer({
   onAddComment?: (args: AddCommentArgs) => void;
 }) {
   const queryClient = useQueryClient();
+  const { addComment } = useFeedActions();
   const [kind, setKind] = useState<CommentKind>("note");
   const [body, setBody] = useState("");
   const local = Boolean(onAddComment);
 
   const addMutation = useMutation({
-    mutationFn: () => api.feed.addComment({ reelId, kind, body, parentId }),
+    mutationFn: () => addComment({ reelId, kind, body: body.trim(), parentId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed", "comments", reelId] });
+      queryClient.invalidateQueries({ queryKey: ["share", "comments"] });
       track("comment", { reelId, kind });
       setBody("");
       onDone?.();
       toast.success("Comment posted");
     },
     onError: (err: unknown) => {
+      if (err instanceof GuestDismissed) return;
       toast.error(
         err instanceof Error ? err.message : "Couldn't post your comment",
       );
@@ -295,13 +298,9 @@ export default function Discussion({
   footer,
 }: DiscussionProps) {
   const local = localComments !== undefined;
-  const { data: fetched, isLoading } = useQuery({
-    queryKey: ["feed", "comments", reelId],
-    queryFn: () => api.feed.getComments({ reelId }),
-    enabled: !local,
-  });
+  const fetched = useReelComments(reelId, !local);
 
-  if (!local && isLoading) {
+  if (!local && fetched === undefined) {
     return (
       <div className="space-y-4 p-4">
         {Array.from({ length: 3 }).map((_, i) => (

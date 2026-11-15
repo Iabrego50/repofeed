@@ -7,16 +7,15 @@ import { useFeedMode } from "./feed-mode.ts";
 export class GuestDismissed extends Error {}
 
 /** Mode-aware reads for one reel (inactive mode is skipped). */
-export function useReelComments(reelId: string) {
+export function useReelComments(reelId: string, enabled = true) {
   const mode = useFeedMode();
 
   const { data: memberComments } = useQuery({
     queryKey: ["feed", "comments", reelId],
     queryFn: () => api.feed.getComments({ reelId }),
-    enabled: mode.kind === "member",
+    enabled: enabled && mode.kind === "member",
   });
 
-  // Stub for share comments
   const { data: sharedComments } = useQuery({
     queryKey: [
       "share",
@@ -24,8 +23,12 @@ export function useReelComments(reelId: string) {
       mode.kind === "share" ? mode.token : null,
       reelId,
     ],
-    queryFn: async () => [],
-    enabled: mode.kind === "share",
+    queryFn: () =>
+      api.share.comments({
+        token: mode.kind === "share" ? mode.token : "",
+        reelId,
+      }),
+    enabled: enabled && mode.kind === "share",
   });
 
   return mode.kind === "member" ? memberComments : sharedComments;
@@ -47,7 +50,11 @@ export function useReelEvidence(reelId: string, enabled = true) {
       mode.kind === "share" ? mode.token : null,
       reelId,
     ],
-    queryFn: async () => [],
+    queryFn: () =>
+      api.share.evidence({
+        token: mode.kind === "share" ? mode.token : "",
+        reelId,
+      }),
     enabled: enabled && mode.kind === "share",
   });
 
@@ -68,11 +75,10 @@ export function useFeedActions() {
   return {
     react: async (reelId: string, kind: ReactionType) => {
       if (mode.kind === "member") {
-        await api.feed.react({ reelId, kind });
-      } else {
-        const secret = await guestSecret();
-        await api.feed.guestReact({ reelId, kind, token: mode.token, secret });
+        return api.feed.react({ reelId, kind });
       }
+      const secret = await guestSecret();
+      return api.feed.guestReact({ reelId, kind, token: mode.token, secret });
     },
     recordView: async (reelId: string, completed: boolean, sessionId?: string) => {
       if (mode.kind === "member") {

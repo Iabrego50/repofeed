@@ -346,4 +346,103 @@ describe("RLS policies from supabase/migrations", () => {
       db.query("insert into storage.objects (bucket_id, name) values ('art', 'pwned.png')"),
     ).rejects.toThrow(/row-level security|violates/i);
   });
+
+  it("anon cannot read guests, studies, or comments directly", async () => {
+    await asSuper();
+    await db.query(
+      `insert into public.guests (study_id, link_id, name, secret)
+       select '${STUDY}', id, 'Leaked', 'supersecretguest000000000000001'
+       from public.share_links where token = '${TOKEN}'`,
+    );
+    await setAuth(null);
+    await asTester();
+    expect((await db.query("select secret from public.guests")).rows).toHaveLength(0);
+    expect((await db.query("select id from public.studies")).rows).toHaveLength(0);
+    expect((await db.query("select id from public.comments")).rows).toHaveLength(0);
+    await asSuper();
+  });
+
+  it("anon can load a live share feed through share_feed without a JWT share_token", async () => {
+    await asSuper();
+    await setAuth(null);
+    await db.exec("set role anon");
+    const { rows } = await db.query<{ feed: { studyTitle: string; reels: Array<{ id: string }> } }>(
+      `select public.share_feed('${TOKEN}', null) as feed`,
+    );
+    expect(rows[0]?.feed.studyTitle).toBe("Published");
+    expect(rows[0]?.feed.reels.map((r) => r.id)).toEqual([REEL]);
+    await asSuper();
+  });
+
+  it("revoked, unpublished, and unknown tokens return unavailable through share_load", async () => {
+    await asSuper();
+    await setAuth(null);
+    await db.exec("set role anon");
+    const missing = await db.query<{ share: unknown }>(
+      "select public.share_load('not-a-token') as share",
+    );
+    expect(missing.rows[0]?.share).toBeNull();
+    await asSuper();
+
+    await db.query(`update public.share_links set revoked = true where token = '${TOKEN}'`);
+    await db.exec("set role anon");
+    const revoked = await db.query<{ share: unknown }>(
+      `select public.share_load('${TOKEN}') as share`,
+    );
+    expect(revoked.rows[0]?.share).toBeNull();
+    await asSuper();
+    await db.query(`update public.share_links set revoked = false where token = '${TOKEN}'`);
+
+    await db.query(`update public.studies set status = 'draft' where id = '${STUDY}'`);
+    await db.exec("set role anon");
+    const unpublished = await db.query<{ share: unknown }>(
+      `select public.share_load('${TOKEN}') as share`,
+    );
+    expect(unpublished.rows[0]?.share).toBeNull();
+    await asSuper();
+    await db.query(`update public.studies set status = 'published' where id = '${STUDY}'`);
+  });
+
+  it("anon can join, comment, and react on a live share via RPCs", async () => {
+    await asSuper();
+    await setAuth(null);
+    await db.exec("set role anon");
+    const joined = await db.query<{ join: { secret: string; guestId: string } }>(
+      `select public.share_join('${TOKEN}', '  Priya   Patel ') as join`,
+    );
+    const secret = joined.rows[0]?.join.secret;
+    const guestId = joined.rows[0]?.join.guestId;
+    expect(secret?.length).toBeGreaterThanOrEqual(16);
+    expect(guestId).toBeTruthy();
+
+    const commented = await db.query<{ comment: { body: string; guest_id: string } }>(
+      `select public.share_add_comment('${TOKEN}', '${secret}', '${REEL}', 'note', 'Looks right', null) as comment`,
+    );
+    expect(commented.rows[0]?.comment.body).toBe("Looks right");
+    expect(commented.rows[0]?.comment.guest_id).toBe(guestId);
+
+    const listed = await db.query<{ comments: Array<{ body: string }> }>(
+      `select public.share_comments('${TOKEN}', '${REEL}') as comments`,
+    );
+    expect(listed.rows[0]?.comments.map((c) => c.body)).toEqual(["Looks right"]);
+
+    const reacted = await db.query<{ kind: string }>(
+      `select public.share_react('${TOKEN}', '${secret}', '${REEL}', 'true') as kind`,
+    );
+    expect(reacted.rows[0]?.kind).toBe("true");
+
+    await expect(
+      db.query(`select public.share_add_comment('${TOKEN}', '${secret}', '${OTHER_REEL}', 'note', 'nope', null)`),
+    ).rejects.toThrow(/Scene not found/i);
+    await asSuper();
+  });
+
+  it("anon cannot execute the internal share_live_link helper", async () => {
+    await asSuper();
+    await db.exec("set role anon");
+    await expect(db.query(`select * from public.share_live_link('${TOKEN}')`)).rejects.toThrow(
+      /permission denied/i,
+    );
+    await asSuper();
+  });
 });

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { EmailOtpType } from "@supabase/supabase-js";
+import type { EmailOtpType, Session } from "@supabase/supabase-js";
 import { getBrowserSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button.tsx";
@@ -32,6 +32,37 @@ function isCrossDeviceError(message: string): boolean {
   return /code verifier|pkce|no matching state|verifier not found/i.test(message);
 }
 
+function waitForSession(
+  client: NonNullable<ReturnType<typeof getBrowserSupabase>>,
+  timeoutMs: number,
+): { promise: Promise<Session | null>; cancel: () => void } {
+  let settled = false;
+  let subscription: { unsubscribe: () => void } = { unsubscribe() {} };
+  let timer = 0;
+  let resolvePromise: (session: Session | null) => void = () => undefined;
+
+  const finish = (session: Session | null) => {
+    if (settled) return;
+    settled = true;
+    subscription.unsubscribe();
+    window.clearTimeout(timer);
+    resolvePromise(session);
+  };
+
+  const promise = new Promise<Session | null>((resolve) => {
+    resolvePromise = resolve;
+    const authChange = client.auth.onAuthStateChange((_event, session) => {
+      if (session) finish(session);
+    });
+    subscription = authChange.data.subscription;
+    timer = window.setTimeout(() => {
+      void client.auth.getSession().then(({ data }) => finish(data.session ?? null));
+    }, timeoutMs);
+  });
+
+  return { promise, cancel: () => finish(null) };
+}
+
 interface AuthCallbackProps {
   messages?: AuthCallbackMessages;
 }
@@ -60,6 +91,7 @@ export default function AuthCallback({
 
   useEffect(() => {
     let cancelled = false;
+    let cancelWait: (() => void) | null = null;
 
     const finish = async () => {
       const client = getBrowserSupabase();
@@ -69,10 +101,13 @@ export default function AuthCallback({
       }
 
       try {
+        let session: Session | null = null;
         const tokenHash = params.get("token_hash");
         const otpType = asOtpType(params.get("type"));
+        const code = params.get("code");
+
         if (tokenHash && otpType) {
-          const { error: otpError } = await client.auth.verifyOtp({
+          const { data, error: otpError } = await client.auth.verifyOtp({
             token_hash: tokenHash,
             type: otpType,
           });
@@ -80,32 +115,40 @@ export default function AuthCallback({
             if (!cancelled) setError(otpError.message);
             return;
           }
-        } else {
-          const code = params.get("code");
-          if (code) {
-            const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
-            if (exchangeError) {
-              if (!cancelled) setError(exchangeError.message);
-              return;
-            }
+          session = data?.session ?? null;
+        } else if (code) {
+          const { data, error: exchangeError } = await client.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            if (!cancelled) setError(exchangeError.message);
+            return;
           }
+          session = data?.session ?? null;
         }
 
-        const { data, error: sessionError } = await client.auth.getSession();
-        if (sessionError) {
-          if (!cancelled) setError(sessionError.message);
-          return;
+        if (!session) {
+          const { data } = await client.auth.getSession();
+          session = data.session ?? null;
         }
 
-        if (!data.session) {
-          if (!cancelled) setError("No session found");
+        if (!session && !tokenHash && !code) {
+          const pending = waitForSession(client, 1500);
+          cancelWait = pending.cancel;
+          session = await pending.promise;
+          cancelWait = null;
+          if (cancelled) return;
+        }
+
+        if (!session) {
+          if (!cancelled) {
+            setError("This sign-in link is missing or has expired. Request a new one.");
+          }
           return;
         }
 
         try {
           await completeSignup({
             client,
-            user: data.session.user,
+            user: session.user,
           });
         } catch (upsertError) {
           console.error("Failed to create user:", upsertError);
@@ -121,6 +164,7 @@ export default function AuthCallback({
     void finish();
     return () => {
       cancelled = true;
+      cancelWait?.();
     };
   }, [navigate, params, returnTo]);
 

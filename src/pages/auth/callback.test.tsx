@@ -17,8 +17,11 @@ vi.mock("@/lib/supabase", () => ({
       verifyOtp: bag.verifyOtp,
       exchangeCodeForSession: bag.exchangeCodeForSession,
       getSession: bag.getSession,
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: () => undefined } },
+      }),
     },
-    from: () => ({ upsert: bag.upsert }),
+    from: () => ({ upsert: bag.upsert, select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }),
   }),
 }));
 
@@ -85,6 +88,15 @@ describe("AuthCallback token_hash and PKCE", () => {
     renderAt("/auth/callback?code=pkce-code");
     await waitFor(() => expect(bag.exchangeCodeForSession).toHaveBeenCalledWith("pkce-code"));
     expect(bag.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it("stays on the signing-in screen instead of flashing an error with no code", async () => {
+    bag.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    bag.verifyOtp.mockResolvedValue({ error: null });
+    renderAt("/auth/callback");
+    expect(screen.getByText(/signing you in/i)).toBeInTheDocument();
+    expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no session found/i)).not.toBeInTheDocument();
   });
 
   it("shows a friendly resend form when the PKCE verifier is missing", async () => {

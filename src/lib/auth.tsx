@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { getBrowserSupabase } from './supabase';
 import { FEED_PATH } from '@/app-paths.ts';
 import { resolveReturnTo } from '@/pages/auth/return-to.ts';
+import { completeSignup } from './analytics';
 
 function authCallbackUrl(): string {
   const origin = window.location.origin;
@@ -31,6 +32,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (provider: 'google' | 'azure' | 'apple') => Promise<void>;
   signInWithOtp: (email: string) => Promise<void>;
+  verifyEmailOtp: (email: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   signout: () => Promise<void>; // Alias for compatibility
 }
@@ -138,6 +140,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const verifyEmailOtp = async (email: string, token: string) => {
+    const client = getBrowserSupabase();
+    if (!client) return unavailableAuth();
+    const { data, error } = await client.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+    if (error) throw error;
+    if (data.session?.user) {
+      try {
+        await completeSignup({ client, user: data.session.user });
+      } catch (upsertError) {
+        console.error('Failed to create user:', upsertError);
+      }
+    }
+  };
+
   const signOut = async () => {
     const client = getBrowserSupabase();
     if (client) await client.auth.signOut();
@@ -157,6 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading: loading,
         signIn,
         signInWithOtp,
+        verifyEmailOtp,
         signOut,
         signout: signOut,
       }}
