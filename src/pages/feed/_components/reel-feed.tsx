@@ -124,11 +124,14 @@ export default function ReelFeed({
 
   const quietRecordView = useCallback(
     (reelId: string, completed: boolean) => {
-      if (mode.kind === "share" && !mode.secret) return;
+      // Share viewers are watch-only; never call guest view/write RPCs.
+      if (mode.kind === "share") return;
       void recordView(reelId, completed, getSessionId()).catch(() => undefined);
     },
     [mode, recordView],
   );
+
+  const showPanels = mode.kind === "member";
 
   useEffect(() => {
     if (!reels || reels.length === 0 || feedOpenSent.current) return;
@@ -155,6 +158,7 @@ export default function ReelFeed({
   }, [activeReel?._id, onCaughtUp]);
 
   const openPanel = (tab: PanelTab) => {
+    if (!showPanels) return;
     if (tab === "evidence" && activeReel) {
       track("evidence_open", {
         reelId: activeReel._id,
@@ -213,14 +217,14 @@ export default function ReelFeed({
         )}
       </div>
 
-      {isDesktop && activeReel && (
+      {showPanels && isDesktop && activeReel && (
         <aside className="hidden w-[380px] shrink-0 border-l border-border lg:flex">
           <ReelPanel reel={activeReel} tab={desktopTab} onTab={setDesktopTab} className="w-full" />
         </aside>
       )}
 
       <AnimatePresence>
-        {!isDesktop && panel && activeReel && (
+        {showPanels && !isDesktop && panel && activeReel && (
           <>
             <motion.div
               key="scrim"
@@ -249,7 +253,7 @@ export default function ReelFeed({
         )}
       </AnimatePresence>
 
-      <ExportDialog reel={exporting} onClose={() => setExporting(null)} />
+      {showPanels && <ExportDialog reel={exporting} onClose={() => setExporting(null)} />}
     </div>
   );
 }

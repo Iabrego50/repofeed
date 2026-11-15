@@ -49,12 +49,7 @@ function renderSlide(mode: "member" | "share") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   const value =
     mode === "share"
-      ? {
-          kind: "share" as const,
-          token: "live-token",
-          secret: null,
-          ensureGuest: async () => null,
-        }
+      ? { kind: "share" as const, token: "live-token" }
       : { kind: "member" as const };
 
   return render(
@@ -78,17 +73,22 @@ function renderSlide(mode: "member" | "share") {
 }
 
 describe("FeedSlide access", () => {
-  it("hides Save and Explore topic links on share links", () => {
+  it("is watch-only on share links: no react, comment, save, evidence, or explore links", () => {
     renderSlide("share");
+    expect(screen.queryByRole("button", { name: "React" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/open comments/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/more about checkout/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /your reaction/i })).not.toBeInTheDocument();
     expect(screen.getByText("#checkout")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/pause scene|play scene/i)).toBeInTheDocument();
   });
 
-  it("shows Save and Explore topic links for members", () => {
+  it("shows Save, reactions, and Explore topic links for members", () => {
     renderSlide("member");
     expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
     expect(screen.getByLabelText(/more about checkout/i)).toBeInTheDocument();
   });
 });

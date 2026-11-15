@@ -103,9 +103,13 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
       if (key === " ") {
         e.preventDefault();
         setPaused((p) => !p);
-      } else if (key === "l") react("true");
+        return;
+      }
+      // Share viewers: play/pause only.
+      if (isShare) return;
+      if (key === "l") react("true");
       else if (key === "1" || key === "2" || key === "3") react(REACTIONS[Number(key) - 1].kind);
-      else if (key === "s" && !isShare) save();
+      else if (key === "s") save();
       else if (key === "c") onOpenPanel("discussion");
       else if (key === "e") onOpenPanel("evidence");
     };
@@ -172,40 +176,44 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
                 )}
               </div>
             )}
-            <div role="group" aria-label="Your reaction" data-tour={active ? "reactions" : undefined} className="pointer-events-auto mt-3 flex flex-wrap gap-1.5">
-              {REACTIONS.map((r) => (
-                <button
-                  key={r.kind}
-                  type="button"
-                  aria-pressed={mine === r.kind}
-                  disabled={reactMutation.isPending}
-                  onClick={() => react(r.kind)}
-                  title={`${r.label} (${r.key})`}
-                  className={cn(
-                    "flex min-h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-xs font-semibold backdrop-blur transition-colors focus-visible:outline-2 focus-visible:outline-white",
-                    mine === r.kind ? "border-transparent bg-white text-black" : "border-white/25 bg-black/40 text-white hover:bg-black/60",
-                  )}
-                >
-                  <r.icon className="size-3.5" /> {r.label}
-                </button>
-              ))}
+            {!isShare && (
+              <div role="group" aria-label="Your reaction" data-tour={active ? "reactions" : undefined} className="pointer-events-auto mt-3 flex flex-wrap gap-1.5">
+                {REACTIONS.map((r) => (
+                  <button
+                    key={r.kind}
+                    type="button"
+                    aria-pressed={mine === r.kind}
+                    disabled={reactMutation.isPending}
+                    onClick={() => react(r.kind)}
+                    title={`${r.label} (${r.key})`}
+                    className={cn(
+                      "flex min-h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-xs font-semibold backdrop-blur transition-colors focus-visible:outline-2 focus-visible:outline-white",
+                      mine === r.kind ? "border-transparent bg-white text-black" : "border-white/25 bg-black/40 text-white hover:bg-black/60",
+                    )}
+                  >
+                    <r.icon className="size-3.5" /> {r.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {!isShare && (
+            <div className="pointer-events-auto" data-tour={active ? "scene-actions" : undefined}>
+              <SceneActions
+                hearted={mine === "true"}
+                hearts={reel.reactions?.heart ?? 0}
+                heartPending={reactMutation.isPending}
+                onHeart={() => react("true")}
+                commentCount={reel.commentCount ?? 0}
+                onComment={() => onOpenPanel("discussion")}
+                saved={!!reel.saved}
+                savePending={saveMutation.isPending}
+                onSave={() => save()}
+                onEvidence={() => onOpenPanel("evidence")}
+                onShare={() => void share()}
+              />
             </div>
-          </div>
-          <div className="pointer-events-auto" data-tour={active ? "scene-actions" : undefined}>
-            <SceneActions
-              hearted={mine === "true"}
-              hearts={reel.reactions?.heart ?? 0}
-              heartPending={reactMutation.isPending}
-              onHeart={() => react("true")}
-              commentCount={reel.commentCount ?? 0}
-              onComment={() => onOpenPanel("discussion")}
-              saved={!!reel.saved}
-              savePending={saveMutation.isPending}
-              onSave={isShare ? undefined : () => save()}
-              onEvidence={() => onOpenPanel("evidence")}
-              onShare={() => void share()}
-            />
-          </div>
+          )}
         </div>
         <div className="absolute inset-x-0 bottom-0 z-30 h-1 bg-white/15">
           <div className="h-full bg-white transition-[width] duration-100" style={{ width: `${active ? progress * 100 : 0}%` }} />
