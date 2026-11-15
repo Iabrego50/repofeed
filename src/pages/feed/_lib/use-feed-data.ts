@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import type { CommentKind, ReactionType } from "@/schema/validators.ts";
 import { useFeedMode } from "./feed-mode.ts";
@@ -16,22 +16,8 @@ export function useReelComments(reelId: string, enabled = true) {
     enabled: enabled && mode.kind === "member",
   });
 
-  const { data: sharedComments } = useQuery({
-    queryKey: [
-      "share",
-      "comments",
-      mode.kind === "share" ? mode.token : null,
-      reelId,
-    ],
-    queryFn: () =>
-      api.share.comments({
-        token: mode.kind === "share" ? mode.token : "",
-        reelId,
-      }),
-    enabled: enabled && mode.kind === "share",
-  });
-
-  return mode.kind === "member" ? memberComments : sharedComments;
+  // Share viewers are watch-only — no comment panel, so skip the guest comments RPC.
+  return mode.kind === "member" ? memberComments : undefined;
 }
 
 export function useReelEvidence(reelId: string, enabled = true) {
@@ -43,56 +29,25 @@ export function useReelEvidence(reelId: string, enabled = true) {
     enabled: enabled && mode.kind === "member",
   });
 
-  const { data: sharedEvidence } = useQuery({
-    queryKey: [
-      "share",
-      "evidence",
-      mode.kind === "share" ? mode.token : null,
-      reelId,
-    ],
-    queryFn: () =>
-      api.share.evidence({
-        token: mode.kind === "share" ? mode.token : "",
-        reelId,
-      }),
-    enabled: enabled && mode.kind === "share",
-  });
-
-  return mode.kind === "member" ? memberEvidence : sharedEvidence;
+  return mode.kind === "member" ? memberEvidence : undefined;
 }
 
-/** Mode-aware writes. Guest writes prompt for a name first. */
+/** Mode-aware writes. Share-link viewers never write. */
 export function useFeedActions() {
   const mode = useFeedMode();
 
-  const guestSecret = async (): Promise<string> => {
-    if (mode.kind !== "share") throw new Error("Not a share feed");
-    const secret = await mode.ensureGuest();
-    if (!secret) throw new GuestDismissed();
-    return secret;
+  const rejectShareWrite = () => {
+    throw new Error("Share-link viewers can only watch");
   };
 
   return {
     react: async (reelId: string, kind: ReactionType) => {
-      if (mode.kind === "member") {
-        return api.feed.react({ reelId, kind });
-      }
-      const secret = await guestSecret();
-      return api.feed.guestReact({ reelId, kind, token: mode.token, secret });
+      if (mode.kind === "share") return rejectShareWrite();
+      return api.feed.react({ reelId, kind });
     },
     recordView: async (reelId: string, completed: boolean, sessionId?: string) => {
-      if (mode.kind === "member") {
-        await api.feed.recordView({ reelId, completed, sessionId });
-      } else {
-        const secret = await guestSecret();
-        await api.feed.guestRecordView({
-          reelId,
-          completed,
-          token: mode.token,
-          secret,
-          sessionId,
-        });
-      }
+      if (mode.kind === "share") return;
+      await api.feed.recordView({ reelId, completed, sessionId });
     },
     addComment: async (args: {
       reelId: string;
@@ -100,14 +55,11 @@ export function useFeedActions() {
       body: string;
       parentId?: string;
     }) => {
-      if (mode.kind === "member") {
-        await api.feed.addComment(args);
-      } else {
-        const secret = await guestSecret();
-        await api.feed.guestAddComment({ ...args, token: mode.token, secret });
-      }
+      if (mode.kind === "share") return rejectShareWrite();
+      await api.feed.addComment(args);
     },
     deleteComment: async (commentId: string) => {
+      if (mode.kind === "share") return rejectShareWrite();
       await api.feed.deleteComment({ commentId });
     },
   };

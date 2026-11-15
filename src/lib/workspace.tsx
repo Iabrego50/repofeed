@@ -1,6 +1,8 @@
 import { useCallback, createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from './supabase';
 import { useAuth } from './auth';
+import { effectiveRole, hasRole } from './api/access';
+import type { Role } from '@/schema';
 
 interface Workspace {
   _id: string; // Keep _id for compatibility
@@ -64,20 +66,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const ws = data?.map((m: any) => ({
-      _id: m.workspace_id,
-      id: m.workspace_id,
-      name: m.workspaces.name,
-      role: m.role,
-      createdBy: m.workspaces.created_by,
-      customerId: m.workspaces.customer_id,
-      seatVariant: m.workspaces.seat_variant,
-      seats: m.workspaces.seats,
-      paidPlan: m.workspaces.paid_plan,
-      lapsedPlan: m.workspaces.lapsed_plan,
-      seatOverage: m.workspaces.seat_overage,
-      _creationTime: new Date(m.workspaces.created_at).getTime(),
-    })) || [];
+    const ws = data?.map((m: any) => {
+      const seatOverage = m.workspaces.seat_overage;
+      return {
+        _id: m.workspace_id,
+        id: m.workspace_id,
+        name: m.workspaces.name,
+        role: effectiveRole(m.role as Role, seatOverage),
+        createdBy: m.workspaces.created_by,
+        customerId: m.workspaces.customer_id,
+        seatVariant: m.workspaces.seat_variant,
+        seats: m.workspaces.seats,
+        paidPlan: m.workspaces.paid_plan,
+        lapsedPlan: m.workspaces.lapsed_plan,
+        seatOverage,
+        _creationTime: new Date(m.workspaces.created_at).getTime(),
+      };
+    }) || [];
 
 
     setWorkspaces(ws);
@@ -98,8 +103,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [user, loadWorkspaces]);
 
   const loading = authLoading || (!!user && loadedFor !== user.id);
-  const isEditor = current?.role === 'owner' || current?.role === 'editor';
-  const isOwner = current?.role === 'owner';
+  // Seat-overage editors act as members until seats are restored (matches API effectiveRole).
+  const role = current ? effectiveRole(current.role as Role, current.seatOverage) : null;
+  const isEditor = role ? hasRole(role, 'editor') : false;
+  const isOwner = role === 'owner';
 
   return (
     <WorkspaceContext.Provider

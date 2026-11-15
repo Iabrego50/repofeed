@@ -1,59 +1,25 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
-import { Link2Off, UserRound, X } from "lucide-react";
+import { Link2Off } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import Logo from "@/components/logo.tsx";
 import ReelFeed from "../feed/_components/reel-feed.tsx";
 import { FeedModeContext, type FeedMode } from "../feed/_lib/feed-mode.ts";
-import NamePrompt from "./_components/name-prompt.tsx";
-
-const secretKey = (token: string) => `fieldreel.guest.${token}`;
-const welcomeKey = (token: string) => `fieldreel.shareWelcome.${token}`;
 
 export default function SharePage() {
   const { token = "" } = useParams();
   const [params] = useSearchParams();
-  const [secret, setSecret] = useState<string | null>(() => localStorage.getItem(secretKey(token)));
-  
+
   const { data } = useQuery({
-    queryKey: ["share", "feed", token, secret],
-    queryFn: () => api.share.feed({ token, secret: secret ?? undefined }),
+    queryKey: ["share", "feed", token],
+    queryFn: () => api.share.feed({ token }),
     enabled: !!token,
   });
 
-  const joinMutation = useMutation({
-    mutationFn: (args: { token: string; name: string }) => api.share.join(args),
-  });
-
-  const [prompting, setPrompting] = useState(false);
-  const [welcomeOpen, setWelcomeOpen] = useState(() => !localStorage.getItem(welcomeKey(token)));
-  const waiters = useRef<Array<(s: string | null) => void>>([]);
-
-  const settle = (value: string | null) => {
-    const pending = waiters.current;
-    waiters.current = [];
-    pending.forEach((w) => w(value));
-    setPrompting(false);
-  };
-
-  const knownGuest = data?.guest ?? null;
-  const validSecret = data === undefined ? secret : knownGuest ? secret : null;
-
-  const ensureGuest = useCallback((): Promise<string | null> => {
-    if (validSecret) return Promise.resolve(validSecret);
-    return new Promise((resolve) => {
-      waiters.current.push(resolve);
-      setPrompting(true);
-    });
-  }, [validSecret]);
-
-  const mode = useMemo<FeedMode>(
-    () => ({ kind: "share", token, secret: validSecret, ensureGuest }),
-    [token, validSecret, ensureGuest],
-  );
+  const mode = useMemo<FeedMode>(() => ({ kind: "share", token }), [token]);
 
   if (data === null) {
     return (
@@ -73,44 +39,18 @@ export default function SharePage() {
     );
   }
 
-  const dismissWelcome = () => {
-    localStorage.setItem(welcomeKey(token), "1");
-    setWelcomeOpen(false);
-  };
-
   const header = (
-    <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/70 to-transparent px-3 py-3 lg:max-w-[calc(100dvh*9/16+5rem)] lg:mx-auto">
-     <div className="flex items-center justify-between gap-3">
-      <Link to="/" className="flex min-w-0 cursor-pointer items-center gap-2 text-white" aria-label="repofeed.ai home">
+    <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/70 to-transparent px-3 py-3 lg:max-w-[calc(100dvh*9/16)] lg:mx-auto">
+      <div className="flex items-center gap-2 text-white">
         <Logo withText={false} />
         <span className="truncate text-sm font-semibold">{data?.studyTitle ?? ""}</span>
-      </Link>
-      {knownGuest ? (
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
-          <UserRound className="size-3.5" /> {knownGuest.name}
-        </span>
-      ) : (
-        <span className="shrink-0 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
-          View only
-        </span>
-      )}
-     </div>
-      {welcomeOpen && data && data.reels.length > 0 && (
-        <div role="note" className="mt-3 flex items-start gap-3 rounded-xl bg-black/60 p-3 text-sm text-white backdrop-blur">
-          <p className="min-w-0 flex-1 leading-relaxed">
-            <span className="font-semibold">Welcome!</span> Swipe or scroll to watch each finding. Use the buttons on the right to react, comment or see the evidence behind a scene. You'll only be asked for your name when you react or comment.
-          </p>
-          <button type="button" onClick={dismissWelcome} aria-label="Dismiss welcome note" className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-full text-white/80 hover:bg-white/10 hover:text-white">
-            <X className="size-4" />
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 
   return (
     <FeedModeContext.Provider value={mode}>
-      <div className="dark h-dvh">
+      <div className="dark relative h-dvh">
         <ReelFeed
           reels={data?.reels}
           deepLink={params.get("reel")}
@@ -124,22 +64,13 @@ export default function SharePage() {
             </Empty>
           }
         />
+        <Link
+          to="/signin"
+          className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1.5 text-[11px] font-medium text-white/80 backdrop-blur transition-colors hover:bg-black/70 hover:text-white lg:bottom-6"
+        >
+          Made with repofeed
+        </Link>
       </div>
-      <NamePrompt
-        open={prompting}
-        studyTitle={data?.studyTitle ?? "this study"}
-        onCancel={() => settle(null)}
-        onSubmit={async (name) => {
-          try {
-            const res = await joinMutation.mutateAsync({ token, name });
-            localStorage.setItem(secretKey(token), res.secret);
-            setSecret(res.secret);
-            settle(res.secret);
-          } catch (err: any) {
-            throw new Error(err.message || "Couldn't save your name", { cause: err });
-          }
-        }}
-      />
     </FeedModeContext.Provider>
   );
 }

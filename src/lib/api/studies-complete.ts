@@ -1,7 +1,7 @@
 import { supabase } from '../supabase';
 import { track } from '../analytics';
 import { assertStudySlot } from '../billing/limits';
-import { canSeeStudy, effectiveRole } from './access';
+import { canSeeStudy, effectiveRole, hasRole } from './access';
 import { verifyScenes, buildSourceIndex } from '../reel/verify';
 import { isFirstPublish } from './email-notify';
 import { mapReel, type DbReel } from './mappers';
@@ -79,11 +79,23 @@ export async function getStudy(args: { studyId: string }) {
 
   if (!membership) throw new Error('Not authorized');
 
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('seat_overage')
+    .eq('id', study.workspace_id)
+    .maybeSingle();
+
+  const role = effectiveRole(membership.role as Role, workspace?.seat_overage);
+  // Study detail (sources, generate, publish, share links) is editor/owner only.
+  if (!hasRole(role, 'editor')) {
+    throw new Error('Not authorized');
+  }
+
   return {
     ...study,
     _id: study.id,
     _creationTime: new Date(study.created_at).getTime(),
-    role: membership.role,
+    role,
   };
 }
 
@@ -307,7 +319,6 @@ export async function getReviewReels(args: { studyId: string }) {
 
   if (!study) throw new Error('Study not found');
 
-  // Check membership
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('role')
@@ -316,6 +327,17 @@ export async function getReviewReels(args: { studyId: string }) {
     .single();
 
   if (!membership) throw new Error('Not authorized');
+
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('seat_overage')
+    .eq('id', study.workspace_id)
+    .maybeSingle();
+
+  const role = effectiveRole(membership.role as Role, workspace?.seat_overage);
+  if (!hasRole(role, 'editor')) {
+    throw new Error('Not authorized');
+  }
 
   const { data, error } = await supabase
     .from('reels')
@@ -500,7 +522,6 @@ export async function listSources(args: { studyId: string }) {
 
   if (!study) throw new Error('Study not found');
 
-  // Check membership
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('role')
@@ -509,6 +530,17 @@ export async function listSources(args: { studyId: string }) {
     .single();
 
   if (!membership) throw new Error('Not authorized');
+
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('seat_overage')
+    .eq('id', study.workspace_id)
+    .maybeSingle();
+
+  const role = effectiveRole(membership.role as Role, workspace?.seat_overage);
+  if (!hasRole(role, 'editor')) {
+    throw new Error('Not authorized');
+  }
 
   const { data, error } = await supabase
     .from('sources')
@@ -530,121 +562,12 @@ export async function listSources(args: { studyId: string }) {
   }));
 }
 
-// Get share link for a study
-export async function getShareLink(args: { studyId: string }) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { data: study } = await supabase
-    .from('studies')
-    .select('workspace_id, share_enabled, share_token')
-    .eq('id', args.studyId)
-    .single();
-
-  if (!study) throw new Error('Study not found');
-
-  // Check editor permission
-  const { data: membership } = await supabase
-    .from('workspace_members')
-    .select('role')
-    .eq('workspace_id', study.workspace_id)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
-    throw new Error('Must be an editor');
-  }
-
-  return {
-    enabled: study.share_enabled || false,
-    token: study.share_token || null,
-  };
-}
-
-// Set share enabled for a study
-export async function setShareEnabled(args: { studyId: string; enabled: boolean }) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { data: study } = await supabase
-    .from('studies')
-    .select('workspace_id, share_token')
-    .eq('id', args.studyId)
-    .single();
-
-  if (!study) throw new Error('Study not found');
-
-  // Check editor permission
-  const { data: membership } = await supabase
-    .from('workspace_members')
-    .select('role')
-    .eq('workspace_id', study.workspace_id)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
-    throw new Error('Must be an editor');
-  }
-
-  // Generate token if enabling and doesn't exist
-  let token = study.share_token;
-  if (args.enabled && !token) {
-    token = crypto.randomUUID();
-  }
-
-  const { error } = await supabase
-    .from('studies')
-    .update({
-      share_enabled: args.enabled,
-      share_token: token,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', args.studyId);
-
-  if (error) throw error;
-
-  return { token };
-}
-
-// Regenerate share link for a study
-export async function regenerateShareLink(args: { studyId: string }) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { data: study } = await supabase
-    .from('studies')
-    .select('workspace_id')
-    .eq('id', args.studyId)
-    .single();
-
-  if (!study) throw new Error('Study not found');
-
-  // Check editor permission
-  const { data: membership } = await supabase
-    .from('workspace_members')
-    .select('role')
-    .eq('workspace_id', study.workspace_id)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
-    throw new Error('Must be an editor');
-  }
-
-  const newToken = crypto.randomUUID();
-
-  const { error } = await supabase
-    .from('studies')
-    .update({
-      share_token: newToken,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', args.studyId);
-
-  if (error) throw error;
-
-  return { token: newToken };
-}
+// Share-link card: share_links is the source of truth (not studies.share_token).
+export {
+  getStudyShareLink as getShareLink,
+  setStudyShareEnabled as setShareEnabled,
+  regenerateStudyShareLink as regenerateShareLink,
+} from './share';
 
 // Update reel scenes
 export async function updateReelScenes(args: { reelId: string; title?: string; scenes: Scene[]; topics?: string[] }) {

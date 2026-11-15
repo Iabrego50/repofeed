@@ -57,6 +57,16 @@ async function requireEditor(workspaceId: string): Promise<{ userId: string; rol
   return { userId: user.id, role };
 }
 
+async function liveShareLink(studyId: string) {
+  const { data } = await supabase
+    .from("share_links")
+    .select("token, revoked")
+    .eq("study_id", studyId)
+    .eq("revoked", false)
+    .maybeSingle();
+  return data;
+}
+
 export async function createShareLink(args: { studyId: string }): Promise<string> {
   const { data: study } = await supabase
     .from("studies")
@@ -65,24 +75,17 @@ export async function createShareLink(args: { studyId: string }): Promise<string
     .maybeSingle();
 
   if (!study) throw new Error("Study not found");
-  await requireEditor(study.workspace_id);
+  const { userId } = await requireEditor(study.workspace_id);
 
-  const { data: existing } = await supabase
-    .from("share_links")
-    .select("token, revoked")
-    .eq("study_id", args.studyId)
-    .eq("revoked", false)
-    .maybeSingle();
-
+  const existing = await liveShareLink(args.studyId);
   if (existing?.token) return existing.token;
 
   const token = generateShareToken();
-  const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase.from("share_links").insert({
     study_id: args.studyId,
     workspace_id: study.workspace_id,
     token,
-    created_by: user!.id,
+    created_by: userId,
     revoked: false,
     hide_team_comments: true,
   });
@@ -105,6 +108,71 @@ export async function revokeShareLink(args: { studyId: string }): Promise<void> 
     .eq("study_id", args.studyId)
     .eq("revoked", false);
   if (error) throw error;
+}
+
+/** Card state: enabled iff a non-revoked share_links row exists. */
+export async function getStudyShareLink(args: { studyId: string }): Promise<{
+  enabled: boolean;
+  token: string | null;
+}> {
+  const { data: study } = await supabase
+    .from("studies")
+    .select("workspace_id")
+    .eq("id", args.studyId)
+    .maybeSingle();
+  if (!study) throw new Error("Study not found");
+  await requireEditor(study.workspace_id);
+
+  const live = await liveShareLink(args.studyId);
+  return {
+    enabled: Boolean(live?.token),
+    token: live?.token ?? null,
+  };
+}
+
+/** Enable creates/reuses a live share_links row; disable revokes every live row. */
+export async function setStudyShareEnabled(args: {
+  studyId: string;
+  enabled: boolean;
+}): Promise<{ token: string | null }> {
+  if (args.enabled) {
+    const token = await createShareLink({ studyId: args.studyId });
+    return { token };
+  }
+  await revokeShareLink({ studyId: args.studyId });
+  return { token: null };
+}
+
+/** Kill the current link and mint a new token. Sharing stays on. */
+export async function regenerateStudyShareLink(args: {
+  studyId: string;
+}): Promise<{ token: string }> {
+  const { data: study } = await supabase
+    .from("studies")
+    .select("id, workspace_id")
+    .eq("id", args.studyId)
+    .maybeSingle();
+  if (!study) throw new Error("Study not found");
+  const { userId } = await requireEditor(study.workspace_id);
+
+  const { error: revokeError } = await supabase
+    .from("share_links")
+    .update({ revoked: true })
+    .eq("study_id", args.studyId)
+    .eq("revoked", false);
+  if (revokeError) throw revokeError;
+
+  const token = generateShareToken();
+  const { error } = await supabase.from("share_links").insert({
+    study_id: args.studyId,
+    workspace_id: study.workspace_id,
+    token,
+    created_by: userId,
+    revoked: false,
+    hide_team_comments: true,
+  });
+  if (error) throw error;
+  return { token };
 }
 
 type ShareLoadRow = {

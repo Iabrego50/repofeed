@@ -19,19 +19,23 @@ import {
   filterCommentsForGuest,
   generateGuestSecret,
   generateShareToken,
+  getStudyShareLink,
   isShareLinkLive,
   joinShare,
   loadShare,
   normalizeGuestName,
   publicTokenForReel,
+  regenerateStudyShareLink,
   requireGuest,
   requireShareReel,
   revokeShareLink,
+  setStudyShareEnabled,
   shareComments,
   shareEvidence,
   shareFeed,
 } from "./share";
 import { guestAddComment, guestReact } from "./feed-complete";
+import { getShareLink, regenerateShareLink, setShareEnabled } from "./studies-complete";
 
 describe("guest share links", () => {
   beforeEach(() => {
@@ -160,6 +164,82 @@ describe("guest share links", () => {
 
     fake().queue("rpc:share_feed", { data: null });
     expect(await shareFeed({ token: "fresh" })).toBeNull();
+  });
+
+  it("share-link card reads and writes share_links, not studies.share_token", async () => {
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    fake().queue("share_links", { data: null });
+    expect(await getStudyShareLink({ studyId: "s1" })).toEqual({ enabled: false, token: null });
+
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    fake().queue("share_links", { data: { token: "live-token", revoked: false } });
+    expect(await getStudyShareLink({ studyId: "s1" })).toEqual({
+      enabled: true,
+      token: "live-token",
+    });
+    expect(fake().calls.some((c) => c.table === "studies" && c.op === "update")).toBe(false);
+
+    fake().queue("studies", { data: { id: "s1", workspace_id: "ws1", status: "published" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    fake().queue("share_links", { data: null });
+    const enabled = await setStudyShareEnabled({ studyId: "s1", enabled: true });
+    expect(enabled.token).toBeTruthy();
+    expect(fake().lastCall("share_links", "insert")?.payload).toEqual(
+      expect.objectContaining({
+        study_id: "s1",
+        token: enabled.token,
+        revoked: false,
+      }),
+    );
+
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    expect(await setStudyShareEnabled({ studyId: "s1", enabled: false })).toEqual({ token: null });
+    expect(fake().lastCall("share_links", "update")?.payload).toEqual({ revoked: true });
+  });
+
+  it("regenerating revokes the old share_links row and inserts a new token", async () => {
+    fake().queue("studies", { data: { id: "s1", workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    const { token } = await regenerateStudyShareLink({ studyId: "s1" });
+    expect(token.length).toBeGreaterThanOrEqual(16);
+    expect(fake().lastCall("share_links", "update")?.payload).toEqual({ revoked: true });
+    expect(fake().lastCall("share_links", "insert")?.payload).toEqual(
+      expect.objectContaining({
+        study_id: "s1",
+        workspace_id: "ws1",
+        token,
+        created_by: "owner-1",
+        revoked: false,
+      }),
+    );
+  });
+
+  it("studies card helpers re-export the share_links-backed APIs", async () => {
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "member" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    await expect(getShareLink({ studyId: "s1" })).rejects.toThrow(/editor/);
+
+    fake().queue("studies", { data: { id: "s1", workspace_id: "ws1", status: "published" } });
+    fake().queue("workspace_members", { data: { role: "editor" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    fake().queue("share_links", { data: null });
+    const created = await setShareEnabled({ studyId: "s1", enabled: true });
+    expect(created.token).toBeTruthy();
+
+    fake().queue("studies", { data: { id: "s1", workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "editor" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    const rotated = await regenerateShareLink({ studyId: "s1" });
+    expect(rotated.token).not.toBe(created.token);
   });
 
   it("shareFeed maps RPC reels and a named guest without a studies join", async () => {

@@ -34,7 +34,8 @@ export default function SceneActions({
   onComment: () => void;
   saved?: boolean;
   savePending?: boolean;
-  onSave: () => void;
+  /** Omit on share-link viewers — Saved is a signed-in account feature. */
+  onSave?: () => void;
   onEvidence: () => void;
   /** Copies a link that opens the feed on this scene. Omitted where there is nothing to link to. */
   onShare?: () => void;
@@ -87,31 +88,33 @@ export default function SceneActions({
         )}
       </button>
 
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={savePending}
-        aria-label={saved ? "Remove from saved" : "Save scene"}
-        aria-pressed={saved}
-        className="flex cursor-pointer flex-col items-center gap-1 text-white"
-      >
-        {savePending ? (
-          <div className="flex size-12 items-center justify-center rounded-full bg-black/50">
-            <Loader2 className="size-6 animate-spin" />
-          </div>
-        ) : (
-          <div
-            className={cn(
-              "flex size-12 items-center justify-center rounded-full transition-colors",
-              saved
-                ? "bg-primary text-primary-foreground"
-                : "bg-black/50 hover:bg-black/70",
-            )}
-          >
-            <Bookmark className={cn("size-6", saved && "fill-current")} />
-          </div>
-        )}
-      </button>
+      {onSave && (
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={savePending}
+          aria-label={saved ? "Remove from saved" : "Save scene"}
+          aria-pressed={saved}
+          className="flex cursor-pointer flex-col items-center gap-1 text-white"
+        >
+          {savePending ? (
+            <div className="flex size-12 items-center justify-center rounded-full bg-black/50">
+              <Loader2 className="size-6 animate-spin" />
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "flex size-12 items-center justify-center rounded-full transition-colors",
+                saved
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-black/50 hover:bg-black/70",
+              )}
+            >
+              <Bookmark className={cn("size-6", saved && "fill-current")} />
+            </div>
+          )}
+        </button>
+      )}
 
       <button
         type="button"

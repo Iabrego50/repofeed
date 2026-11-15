@@ -17,6 +17,10 @@ vi.mock("@/lib/api/complete", () => ({
   },
 }));
 
+vi.mock("@/components/reel/reel-canvas.tsx", () => ({
+  default: () => <div data-testid="reel-canvas" />,
+}));
+
 import SharePage from "./page";
 
 function renderShare(token: string) {
@@ -41,7 +45,7 @@ describe("Share page", () => {
     expect(await screen.findByText(/this link isn't available/i)).toBeInTheDocument();
   });
 
-  it("shows published scenes for a signed-out visitor", async () => {
+  it("shows a watch-only feed for signed-out visitors", async () => {
     bag.feed.mockResolvedValue({
       studyTitle: "Checkout study",
       hideTeamComments: true,
@@ -72,9 +76,17 @@ describe("Share page", () => {
     });
     renderShare("live-token");
     await waitFor(() => {
-      expect(bag.feed).toHaveBeenCalledWith({ token: "live-token", secret: undefined });
+      expect(bag.feed).toHaveBeenCalledWith({ token: "live-token" });
     });
     expect((await screen.findAllByText("Checkout study")).length).toBeGreaterThan(0);
     expect(screen.queryByText(/this link isn't available/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/made with repofeed/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "React" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/open comments/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/welcome/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/your name/i)).not.toBeInTheDocument();
+    expect(bag.join).not.toHaveBeenCalled();
   });
 });

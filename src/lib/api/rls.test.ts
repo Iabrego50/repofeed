@@ -403,6 +403,88 @@ describe("RLS policies from supabase/migrations", () => {
     await db.query(`update public.studies set status = 'published' where id = '${STUDY}'`);
   });
 
+  it("backfills studies.share_token into share_links without duplicating an existing token", async () => {
+    await asSuper();
+    const legacyToken = "legacytoken000000000000000000001";
+    await db.query(
+      `update public.studies
+       set share_enabled = true, share_token = '${legacyToken}'
+       where id = '${STUDY}'`,
+    );
+    // Mimic the prod hot-patch: token already lives in share_links.
+    await db.query(
+      `insert into public.share_links (study_id, workspace_id, token, created_by, revoked, hide_team_comments)
+       values ('${STUDY}', '${WS}', '${legacyToken}', '${OWNER}', false, true)
+       on conflict (token) do nothing`,
+    );
+    // Re-run the migration body (idempotent).
+    await db.exec(`
+      update public.share_links sl
+      set revoked = false
+      from public.studies s
+      where s.share_enabled is true
+        and s.share_token is not null
+        and length(trim(s.share_token)) > 0
+        and sl.study_id = s.id
+        and sl.token = s.share_token
+        and sl.revoked is true;
+
+      insert into public.share_links (
+        study_id, workspace_id, token, created_by, revoked, hide_team_comments
+      )
+      select s.id, s.workspace_id, s.share_token, s.created_by, false, true
+      from public.studies s
+      where s.share_enabled is true
+        and s.share_token is not null
+        and length(trim(s.share_token)) > 0
+        and not exists (select 1 from public.share_links sl where sl.token = s.share_token)
+        and not exists (
+          select 1 from public.share_links sl
+          where sl.study_id = s.id and sl.revoked is not true
+        )
+      on conflict (token) do nothing;
+    `);
+    const { rows } = await db.query<{ token: string; n: number }>(
+      `select token, count(*)::int as n from public.share_links
+       where study_id = '${STUDY}' and token = '${legacyToken}'
+       group by token`,
+    );
+    expect(rows).toEqual([{ token: legacyToken, n: 1 }]);
+
+    await setAuth(null);
+    await db.exec("set role anon");
+    const feed = await db.query<{ share: { study: { title: string } } | null }>(
+      `select public.share_load('${legacyToken}') as share`,
+    );
+    expect(feed.rows[0]?.share?.study?.title).toBe("Published");
+    await asSuper();
+  });
+
+  it("a viewer cannot create or revoke share links", async () => {
+    await asSuper();
+    await setAuth(MEMBER);
+    await asTester();
+    await expect(
+      db.query(
+        `insert into public.share_links (study_id, workspace_id, token, created_by, revoked)
+         values ('${STUDY}', '${WS}', 'membertoken000000000000000000001', '${MEMBER}', false)`,
+      ),
+    ).rejects.toThrow(/row-level security|violates/i);
+
+    const updated = await db.query(
+      `update public.share_links set revoked = true where token = '${TOKEN}' returning id`,
+    );
+    expect(updated.rows).toHaveLength(0);
+
+    await asSuper();
+    await setAuth(OWNER);
+    await asTester();
+    const { rows } = await db.query<{ revoked: boolean }>(
+      `select revoked from public.share_links where token = '${TOKEN}'`,
+    );
+    expect(rows[0]?.revoked).toBe(false);
+  });
+
   it("anon can join, comment, and react on a live share via RPCs", async () => {
     await asSuper();
     await setAuth(null);

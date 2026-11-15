@@ -6,6 +6,7 @@ import { CornerDownRight, Loader2, MessageSquare, Trash2 } from "lucide-react";
 import type { CommentKind } from "@/schema/validators.ts";
 import type { Comment } from "@/lib/api/mappers";
 import { GuestDismissed, useFeedActions, useReelComments } from "../_lib/use-feed-data.ts";
+import { useFeedMode } from "../_lib/feed-mode.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -185,6 +186,9 @@ function CommentCard({
 }) {
   const [replying, setReplying] = useState(false);
   const local = Boolean(onAddComment);
+  const isShare = useFeedMode().kind === "share";
+  // Share guests have no delete RPC; hide the control so the viewer UI stays clean.
+  const canDelete = !local && !isShare;
 
   const deleteMutation = {
     mutate: () => console.log("Delete not implemented"),
@@ -236,7 +240,7 @@ function CommentCard({
               <CornerDownRight className="size-3" />
               Reply
             </Button>
-            {!local && (
+            {canDelete && (
               <Button
                 variant="ghost"
                 size="sm"

@@ -2,17 +2,25 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FeedModeContext } from "./feed-mode";
-import { useReelComments } from "./use-feed-data";
+import { useFeedActions, useReelComments } from "./use-feed-data";
 
 const bag = vi.hoisted(() => ({
   comments: vi.fn(),
   getComments: vi.fn(),
+  deleteComment: vi.fn(),
+  react: vi.fn(),
+  guestReact: vi.fn(),
 }));
 
 vi.mock("@/lib/api/complete", () => ({
   api: {
     share: { comments: (...args: unknown[]) => bag.comments(...args) },
-    feed: { getComments: (...args: unknown[]) => bag.getComments(...args) },
+    feed: {
+      getComments: (...args: unknown[]) => bag.getComments(...args),
+      deleteComment: (...args: unknown[]) => bag.deleteComment(...args),
+      react: (...args: unknown[]) => bag.react(...args),
+      guestReact: (...args: unknown[]) => bag.guestReact(...args),
+    },
   },
 }));
 
@@ -22,36 +30,71 @@ function Probe({ reelId }: { reelId: string }) {
 }
 
 describe("useReelComments", () => {
-  it("loads share comments with the token instead of the member API", async () => {
-    bag.comments.mockResolvedValue([
-      {
-        _id: "c1",
-        id: "c1",
-        body: "from a guest",
-        reelId: "r1",
-        studyId: "s1",
-        userId: null,
-        guestId: "g1",
-        parentId: null,
-        kind: "note",
-        resolved: false,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-        _creationTime: 0,
-      },
-    ]);
+  it("does not load comments for share viewers", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <FeedModeContext.Provider
-          value={{ kind: "share", token: "tok", secret: "sec", ensureGuest: async () => "sec" }}
-        >
+        <FeedModeContext.Provider value={{ kind: "share", token: "tok" }}>
           <Probe reelId="r1" />
         </FeedModeContext.Provider>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(bag.comments).toHaveBeenCalledWith({ token: "tok", reelId: "r1" }));
+    expect(await screen.findByText("none")).toBeInTheDocument();
+    expect(bag.comments).not.toHaveBeenCalled();
     expect(bag.getComments).not.toHaveBeenCalled();
-    expect(await screen.findByText("from a guest")).toBeInTheDocument();
+  });
+});
+
+function WriteProbe() {
+  const { react, deleteComment } = useFeedActions();
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          void react("r1", "true").catch((e: Error) => {
+            (window as unknown as { __err?: string }).__err = e.message;
+          })
+        }
+      >
+        react
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          void deleteComment("c1").catch((e: Error) => {
+            (window as unknown as { __err?: string }).__err = e.message;
+          })
+        }
+      >
+        delete
+      </button>
+    </>
+  );
+}
+
+describe("useFeedActions share writes", () => {
+  it("refuses guest write RPCs for share-link viewers", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FeedModeContext.Provider value={{ kind: "share", token: "tok" }}>
+          <WriteProbe />
+        </FeedModeContext.Provider>
+      </QueryClientProvider>,
+    );
+    screen.getByRole("button", { name: /react/i }).click();
+    await waitFor(() => {
+      expect((window as unknown as { __err?: string }).__err).toMatch(/only watch/i);
+    });
+    expect(bag.guestReact).not.toHaveBeenCalled();
+    expect(bag.react).not.toHaveBeenCalled();
+
+    (window as unknown as { __err?: string }).__err = undefined;
+    screen.getByRole("button", { name: /delete/i }).click();
+    await waitFor(() => {
+      expect((window as unknown as { __err?: string }).__err).toMatch(/only watch/i);
+    });
+    expect(bag.deleteComment).not.toHaveBeenCalled();
   });
 });
