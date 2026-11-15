@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { forbidsOnscreenText } from "../ai/onscreen-text";
 import { STOCK_CLIPS } from "../reel/stock-clips";
 import {
   DEFAULT_VIDEO_MODEL,
   DEFAULT_VIDEO_SECONDS,
   PLAN_VIDEO_CAPS,
   buildVideoPrompt,
+  videoVisualTheme,
   countsTowardCap,
   occupiesVideoSlot,
   failedVideoState,
@@ -122,18 +124,28 @@ describe("reel AI video policy", () => {
     );
   });
 
-  it("builds a vertical documentary prompt from the reel script", () => {
-    const prompt = buildVideoPrompt({
+  it("builds a clean-plate prompt that does not quote the overlay script", () => {
+    const row = {
       title: "Why people really leave",
       track: "By the numbers",
       scenes: [
         { type: "hook", text: "Why do subscribers *actually* cancel?" },
         { type: "stat", num: "29%", label: "too expensive" },
       ],
-    });
+    };
+    const prompt = buildVideoPrompt(row);
+    expect(videoVisualTheme(row)).toBe(
+      "Why people really leave, in the By the numbers track",
+    );
     expect(prompt).toMatch(/Why people really leave/);
     expect(prompt).toMatch(/9:16/);
-    expect(prompt).toMatch(/No text/);
+    expect(prompt).toMatch(/Clean-plate/);
+    expect(forbidsOnscreenText(prompt)).toBe(true);
+    // Scene copy is burned in by ReelPainter; quoting it here makes Grok
+    // Imagine paint the same words into the footage.
+    expect(prompt).not.toMatch(/subscribers/);
+    expect(prompt).not.toMatch(/29%/);
+    expect(prompt).not.toMatch(/too expensive/);
     expect(prompt).not.toMatch(/\*/);
   });
 });
