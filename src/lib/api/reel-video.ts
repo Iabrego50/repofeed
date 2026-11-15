@@ -1,3 +1,4 @@
+import { NO_ONSCREEN_TEXT, withNoOnscreenText } from "../ai/onscreen-text.js";
 import { STOCK_CLIPS } from "../reel/stock-clips.js";
 import { nextAttemptAtIso } from "./async-jobs.js";
 
@@ -371,39 +372,37 @@ export function fallbackFootageFor(
   return stockFootageForIndex(row.track_index);
 }
 
-function sceneWords(scenes: unknown): string {
-  if (!Array.isArray(scenes)) return "";
-  return scenes
-    .map((scene) => {
-      if (!scene || typeof scene !== "object") return "";
-      return Object.values(scene as Record<string, unknown>)
-        .flat()
-        .filter((value) => typeof value === "string")
-        .join(" ");
-    })
-    .join(" / ")
-    .replace(/\*/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 500);
+/**
+ * Visual theme for B-roll. Title/track name the situation — they must not
+ * appear as title cards. Scene copy is overlaid later, so it is omitted:
+ * video models (especially Grok Imagine) render quoted script as captions.
+ */
+export function videoVisualTheme(
+  row: Pick<ReelVideoRow, "title" | "track">,
+): string {
+  const title = row.title.trim();
+  const track = row.track.trim();
+  if (title && track) return `${title}, in the ${track} track`;
+  return title || track;
 }
 
 export function buildVideoPrompt(
   row: Pick<ReelVideoRow, "title" | "track" | "scenes">,
 ): string {
-  const script = sceneWords(row.scenes);
-  return [
-    `Vertical 9:16 documentary B-roll for a research insight reel titled "${row.title}"`,
-    row.track ? `(track: ${row.track}).` : ".",
-    script ? `The reel is about: ${script}.` : "",
-    "Slow handheld observational footage of the everyday place, object or moment the finding is about.",
-    "Photorealistic, muted colors, practical light, subtle film grain, calm darker upper half.",
-    "No text, letters, numbers, logos, readable screens or identifiable faces.",
-    "People only from behind, as hands, silhouettes, or out of focus.",
-    "No generic stock tropes (handshakes, lightbulbs, charts, office teams).",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const theme = videoVisualTheme(row);
+  return withNoOnscreenText(
+    [
+      "Clean-plate vertical 9:16 documentary B-roll. The app overlays all captions later — this footage must be a silent plate with nothing readable in the frame.",
+      theme
+        ? `Visual theme (physical scene, objects, places, hands, light — never written words): ${theme}.`
+        : "Visual theme: everyday observational fieldwork.",
+      "Slow handheld observational footage of the everyday place, object or moment the finding is about.",
+      "Photorealistic, muted colors, practical light, subtle film grain, calm darker upper half.",
+      "People only from behind, as hands, silhouettes, or out of focus.",
+      "No generic stock tropes (handshakes, lightbulbs, charts, office teams).",
+      NO_ONSCREEN_TEXT,
+    ].join(" "),
+  );
 }
 
 export function videoStoragePath(reelId: string, at = Date.now()): string {

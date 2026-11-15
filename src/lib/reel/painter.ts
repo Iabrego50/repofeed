@@ -50,6 +50,13 @@ const STAGGER = 0.07;
 const FADE_OUT = 0.28;
 const SLIDE = 56;
 
+/** Dark halo so overlay type stays readable over footage (and any ghosted baked-in type). */
+export const OVERLAY_TEXT_SHADOW = {
+  color: "rgba(0, 0, 0, 0.92)",
+  blur: 18,
+  offsetY: 3,
+} as const;
+
 const DIGITS_ONLY = /^(\D{0,2})(\d{1,6})(\D{0,4})$/;
 
 export class ReelPainter {
@@ -223,11 +230,13 @@ export class ReelPainter {
     const dy = still ? (0.5 - p) * (h - REEL_H) * 0.4 : 0;
     ctx.drawImage(src.el, (REEL_W - w) / 2 + dx, (REEL_H - h) / 2 + dy, w, h);
 
-    // Scrim: dark at the top (chrome) and bottom (captions/UI), lighter mid-frame.
+    // Scrim: dark at the top (chrome) and bottom (captions/UI). The mid band
+    // sits under scene type so a second, baked-in caption cannot show through.
     const scrim = ctx.createLinearGradient(0, 0, 0, REEL_H);
     scrim.addColorStop(0, "rgba(8, 8, 10, 0.82)");
-    scrim.addColorStop(0.22, "rgba(8, 8, 10, 0.5)");
-    scrim.addColorStop(0.6, "rgba(8, 8, 10, 0.55)");
+    scrim.addColorStop(0.18, "rgba(8, 8, 10, 0.55)");
+    scrim.addColorStop(0.32, "rgba(8, 8, 10, 0.66)");
+    scrim.addColorStop(0.72, "rgba(8, 8, 10, 0.7)");
     scrim.addColorStop(1, "rgba(8, 8, 10, 0.9)");
     ctx.fillStyle = scrim;
     ctx.fillRect(0, 0, REEL_W, REEL_H);
@@ -264,7 +273,7 @@ export class ReelPainter {
     ctx.globalAlpha = 1;
     ctx.fillStyle = INK;
     ctx.textBaseline = "middle";
-    ctx.fillText(text, x + 60, y + 31);
+    this.withTextShadow(() => ctx.fillText(text, x + 60, y + 31));
     ctx.textBaseline = "alphabetic";
   }
 
@@ -288,14 +297,41 @@ export class ReelPainter {
     }
     ctx.fillStyle = this.accent;
     ctx.fillRect(96, 214, 44, 8);
-    ctx.font = `700 30px ${FONT_MONO}`;
     ctx.textBaseline = "middle";
-    ctx.fillStyle = INK;
-    ctx.fillText(truncate(ctx, this.reel.track.toUpperCase(), 760), 156, 219);
-    ctx.font = `500 30px ${FONT_UI}`;
-    ctx.fillStyle = INK_MUTED;
-    ctx.fillText(truncate(ctx, `${this.reel.studyTitle || ''} · repofeed.ai`, 860), 96, 272);
+    this.withTextShadow(() => {
+      ctx.font = `700 30px ${FONT_MONO}`;
+      ctx.fillStyle = INK;
+      ctx.fillText(truncate(ctx, this.reel.track.toUpperCase(), 760), 156, 219);
+      ctx.font = `500 30px ${FONT_UI}`;
+      ctx.fillStyle = INK_MUTED;
+      ctx.fillText(truncate(ctx, `${this.reel.studyTitle || ''} · repofeed.ai`, 860), 96, 272);
+    });
     ctx.textBaseline = "alphabetic";
+  }
+
+  private withTextShadow(draw: () => void) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.shadowColor = OVERLAY_TEXT_SHADOW.color;
+    ctx.shadowBlur = OVERLAY_TEXT_SHADOW.blur;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = OVERLAY_TEXT_SHADOW.offsetY;
+    draw();
+    ctx.restore();
+  }
+
+  private drawTextScrim(layout: SceneLayout) {
+    const bounds = overlayStackBounds(layout.blocks);
+    const pad = 90;
+    const top = Math.max(0, bounds.top - pad);
+    const bottom = Math.min(REEL_H, bounds.top + bounds.height + pad);
+    const g = this.ctx.createLinearGradient(0, top, 0, bottom);
+    g.addColorStop(0, "rgba(8, 8, 10, 0)");
+    g.addColorStop(0.18, "rgba(8, 8, 10, 0.42)");
+    g.addColorStop(0.82, "rgba(8, 8, 10, 0.42)");
+    g.addColorStop(1, "rgba(8, 8, 10, 0)");
+    this.ctx.fillStyle = g;
+    this.ctx.fillRect(0, top, REEL_W, bottom - top);
   }
 
   private drawLine(line: Line, b: Block, x: number, baseline: number) {
@@ -320,53 +356,55 @@ export class ReelPainter {
     const fadeOut = isLast ? 1 : clamp((dur - local) / FADE_OUT, 0, 1);
 
     let lineIdx = 0;
-    for (const b of layout.blocks) {
-      if (b.kind === "quoteMark") {
-        const p = reduced ? clamp(local / enter, 0, 1) : easeOutCubic(local / enter);
-        ctx.globalAlpha = p * fadeOut;
-        ctx.font = this.fontString(b.font, b.size);
-        ctx.fillStyle = b.color;
-        ctx.fillText("\u201C", SAFE.left - 8, b.y + 170 + (reduced ? 0 : (1 - p) * SLIDE));
-        lineIdx++;
-        continue;
-      }
-      b.lines.forEach((line, li) => {
-        const start = b.delay + lineIdx * STAGGER;
-        const raw = (local - start) / enter;
-        const p = reduced ? clamp(raw, 0, 1) : easeOutCubic(raw);
-        lineIdx++;
-        if (p <= 0) return;
-        const dy = reduced ? 0 : (1 - p) * SLIDE;
-        const baseline = b.y + li * b.lineHeight + b.size * 0.82 + dy;
-        ctx.globalAlpha = p * fadeOut;
-        const x = SAFE.left + (b.kind === "bullet" ? 64 : 0);
-        if (b.kind === "bullet" && li === 0) {
-          ctx.fillStyle = b.emColor;
-          ctx.fillRect(SAFE.left, baseline - b.size * 0.42, 32, 10);
+    this.withTextShadow(() => {
+      for (const b of layout.blocks) {
+        if (b.kind === "quoteMark") {
+          const p = reduced ? clamp(local / enter, 0, 1) : easeOutCubic(local / enter);
+          ctx.globalAlpha = p * fadeOut;
+          ctx.font = this.fontString(b.font, b.size);
+          ctx.fillStyle = b.color;
+          ctx.fillText("\u201C", SAFE.left - 8, b.y + 170 + (reduced ? 0 : (1 - p) * SLIDE));
+          lineIdx++;
+          continue;
         }
-        if (b.kind === "stat" && scene.type === "stat" && !reduced && scene.num) {
-          const m = scene.num.match(DIGITS_ONLY);
-          if (m) {
-            const target = parseInt(m[2], 10);
-            const cp = easeOutCubic((local - start) / 1.1);
-            const shown = `${m[1]}${Math.round(target * cp)}${m[3]}`;
-            this.drawLine({ tokens: [{ word: shown, em: false }], width: 0 }, b, x, baseline);
-            return;
+        b.lines.forEach((line, li) => {
+          const start = b.delay + lineIdx * STAGGER;
+          const raw = (local - start) / enter;
+          const p = reduced ? clamp(raw, 0, 1) : easeOutCubic(raw);
+          lineIdx++;
+          if (p <= 0) return;
+          const dy = reduced ? 0 : (1 - p) * SLIDE;
+          const baseline = b.y + li * b.lineHeight + b.size * 0.82 + dy;
+          ctx.globalAlpha = p * fadeOut;
+          const x = SAFE.left + (b.kind === "bullet" ? 64 : 0);
+          if (b.kind === "bullet" && li === 0) {
+            ctx.fillStyle = b.emColor;
+            ctx.fillRect(SAFE.left, baseline - b.size * 0.42, 32, 10);
+          }
+          if (b.kind === "stat" && scene.type === "stat" && !reduced && scene.num) {
+            const m = scene.num.match(DIGITS_ONLY);
+            if (m) {
+              const target = parseInt(m[2], 10);
+              const cp = easeOutCubic((local - start) / 1.1);
+              const shown = `${m[1]}${Math.round(target * cp)}${m[3]}`;
+              this.drawLine({ tokens: [{ word: shown, em: false }], width: 0 }, b, x, baseline);
+              return;
+            }
+          }
+          this.drawLine(line, b, x, baseline);
+        });
+        if (b.kind === "underline" && b.lines.length) {
+          const last = b.lines[b.lines.length - 1];
+          const p = reduced ? 1 : easeOutCubic((local - 0.35) / 0.6);
+          if (p > 0) {
+            ctx.globalAlpha = fadeOut;
+            ctx.fillStyle = b.emColor;
+            const y = b.y + b.lines.length * b.lineHeight + 14;
+            ctx.fillRect(SAFE.left, y, last.width * p, 12);
           }
         }
-        this.drawLine(line, b, x, baseline);
-      });
-      if (b.kind === "underline" && b.lines.length) {
-        const last = b.lines[b.lines.length - 1];
-        const p = reduced ? 1 : easeOutCubic((local - 0.35) / 0.6);
-        if (p > 0) {
-          ctx.globalAlpha = fadeOut;
-          ctx.fillStyle = b.emColor;
-          const y = b.y + b.lines.length * b.lineHeight + 14;
-          ctx.fillRect(SAFE.left, y, last.width * p, 12);
-        }
       }
-    }
+    });
     ctx.globalAlpha = 1;
   }
 
@@ -379,9 +417,32 @@ export class ReelPainter {
     this.drawBackground(reduced ? 0 : time);
     this.drawChrome(time);
     this.drawRecChip(time);
+    // One scene only — never crossfade outgoing + incoming copy on the same frame.
+    const layout = this.layoutScene(index);
+    this.drawTextScrim(layout);
     this.drawScene(index, local, reduced, index === this.reel.scenes.length - 1);
     this.ctx.restore();
   }
+}
+
+type OverlayBlock = {
+  y: number;
+  lineHeight: number;
+  lines: readonly unknown[];
+  kind?: string;
+};
+
+/** Vertical span of the scene's overlay stack, for the local readability scrim. */
+export function overlayStackBounds(blocks: OverlayBlock[]): { top: number; height: number } {
+  if (!blocks.length) return { top: SAFE.top, height: SAFE.bottom - SAFE.top };
+  let top = Infinity;
+  let bottom = -Infinity;
+  for (const b of blocks) {
+    const h = b.kind === "quoteMark" ? b.lineHeight : Math.max(1, b.lines.length) * b.lineHeight;
+    top = Math.min(top, b.y);
+    bottom = Math.max(bottom, b.y + h);
+  }
+  return { top, height: Math.max(0, bottom - top) };
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

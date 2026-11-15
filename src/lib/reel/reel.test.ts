@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { overlayStackBounds } from "./painter.ts";
 import { fitText, parseEmphasis, wrapTokens } from "./text.ts";
-import { buildTimeline, sceneDuration } from "./timing.ts";
+import { buildTimeline, sceneDuration, sceneIndexAt } from "./timing.ts";
 
 // Fixed-width fake measurement: each character is 0.5 × font size.
 const measure = (text: string, size: number) => text.length * size * 0.5;
@@ -83,5 +84,41 @@ describe("sceneDuration", () => {
     ]);
     expect(tl.starts).toEqual([0, 3.2]);
     expect(tl.total).toBeCloseTo(6.1);
+  });
+
+  it("maps each timestamp to exactly one scene (no overlapping copy)", () => {
+    const tl = buildTimeline([
+      { type: "hook", text: "Why do they leave?" },
+      { type: "stat", num: "29%", label: "too expensive" },
+      { type: "cta", text: "That's the signal.", sub: "Source: survey" },
+    ]);
+    const seen = new Set<number>();
+    for (let t = 0; t < tl.total; t += 0.05) {
+      const index = sceneIndexAt(tl, t);
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(index).toBeLessThan(tl.starts.length);
+      seen.add(index);
+      if (index + 1 < tl.starts.length) {
+        expect(t).toBeLessThan(tl.starts[index + 1]);
+      }
+    }
+    expect(seen.size).toBe(tl.starts.length);
+  });
+});
+
+describe("overlayStackBounds", () => {
+  it("spans the first block to the last, including quote marks", () => {
+    const bounds = overlayStackBounds([
+      { y: 400, lineHeight: 120, lines: [], kind: "quoteMark" },
+      { y: 560, lineHeight: 80, lines: [{ length: 2 }, { length: 2 }] },
+    ]);
+    expect(bounds.top).toBe(400);
+    expect(bounds.height).toBe(560 + 160 - 400);
+  });
+
+  it("falls back to the safe area when a scene has no blocks", () => {
+    const bounds = overlayStackBounds([]);
+    expect(bounds.top).toBeGreaterThan(0);
+    expect(bounds.height).toBeGreaterThan(0);
   });
 });
