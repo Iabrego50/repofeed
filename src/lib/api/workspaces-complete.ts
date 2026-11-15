@@ -329,7 +329,6 @@ export async function listInvites(args: { workspaceId: string }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Check membership
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('role')
@@ -337,7 +336,9 @@ export async function listInvites(args: { workspaceId: string }) {
     .eq('user_id', user.id)
     .single();
 
-  if (!membership) throw new Error('Not authorized');
+  if (!membership || (membership.role !== 'owner' && membership.role !== 'editor')) {
+    throw new Error('Must be owner or editor');
+  }
 
   const { data } = await supabase
     .from('workspace_invites')

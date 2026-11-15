@@ -108,6 +108,9 @@ export function useFeedActions() {
       }
     },
     deleteComment: async (commentId: string) => {
+      if (mode.kind === "share") {
+        throw new Error("Share-link guests can't delete comments");
+      }
       await api.feed.deleteComment({ commentId });
     },
   };

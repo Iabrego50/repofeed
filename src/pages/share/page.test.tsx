@@ -76,5 +76,7 @@ describe("Share page", () => {
     });
     expect((await screen.findAllByText("Checkout study")).length).toBeGreaterThan(0);
     expect(screen.queryByText(/this link isn't available/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/made with repofeed/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
   });
 });

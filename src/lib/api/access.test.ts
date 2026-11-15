@@ -37,8 +37,18 @@ describe("study access control", () => {
 
     fake().queue("studies", { data: { id: "draft-1", workspace_id: "ws1", status: "draft", created_at: "2024-01-01" } });
     fake().queue("workspace_members", { data: { role: "member" } });
-    const study = await getStudy({ studyId: "draft-1" });
-    expect(study.role).toBe("member");
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    await expect(getStudy({ studyId: "draft-1" })).rejects.toThrow(/authorized/);
+
+    fake().queue("studies", { data: { id: "pub-1", workspace_id: "ws1", status: "published", created_at: "2024-01-01" } });
+    fake().queue("workspace_members", { data: { role: "member" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    await expect(getStudy({ studyId: "pub-1" })).rejects.toThrow(/authorized/);
+
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "member" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    await expect(listSources({ studyId: "draft-1" })).rejects.toThrow(/authorized/);
 
     fake().queue("studies", { data: { workspace_id: "ws1" } });
     fake().queue("workspace_members", { data: null });

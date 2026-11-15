@@ -110,7 +110,7 @@ export default function SharePage() {
 
   return (
     <FeedModeContext.Provider value={mode}>
-      <div className="dark h-dvh">
+      <div className="dark relative h-dvh">
         <ReelFeed
           reels={data?.reels}
           deepLink={params.get("reel")}
@@ -124,6 +124,12 @@ export default function SharePage() {
             </Empty>
           }
         />
+        <Link
+          to="/signin"
+          className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1.5 text-[11px] font-semibold text-white/90 backdrop-blur transition-colors hover:bg-black/70 hover:text-white lg:bottom-6"
+        >
+          Made with repofeed — create your own
+        </Link>
       </div>
       <NamePrompt
         open={prompting}

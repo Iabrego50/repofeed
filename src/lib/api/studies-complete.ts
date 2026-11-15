@@ -1,7 +1,7 @@
 import { supabase } from '../supabase';
 import { track } from '../analytics';
 import { assertStudySlot } from '../billing/limits';
-import { canSeeStudy, effectiveRole } from './access';
+import { canSeeStudy, effectiveRole, hasRole } from './access';
 import { verifyScenes, buildSourceIndex } from '../reel/verify';
 import { isFirstPublish } from './email-notify';
 import { mapReel, type DbReel } from './mappers';
@@ -79,11 +79,23 @@ export async function getStudy(args: { studyId: string }) {
 
   if (!membership) throw new Error('Not authorized');
 
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('seat_overage')
+    .eq('id', study.workspace_id)
+    .maybeSingle();
+
+  const role = effectiveRole(membership.role as Role, workspace?.seat_overage);
+  // Study detail (sources, generate, publish, share links) is editor/owner only.
+  if (!hasRole(role, 'editor')) {
+    throw new Error('Not authorized');
+  }
+
   return {
     ...study,
     _id: study.id,
     _creationTime: new Date(study.created_at).getTime(),
-    role: membership.role,
+    role,
   };
 }
 
@@ -307,7 +319,6 @@ export async function getReviewReels(args: { studyId: string }) {
 
   if (!study) throw new Error('Study not found');
 
-  // Check membership
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('role')
@@ -316,6 +327,17 @@ export async function getReviewReels(args: { studyId: string }) {
     .single();
 
   if (!membership) throw new Error('Not authorized');
+
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('seat_overage')
+    .eq('id', study.workspace_id)
+    .maybeSingle();
+
+  const role = effectiveRole(membership.role as Role, workspace?.seat_overage);
+  if (!hasRole(role, 'editor')) {
+    throw new Error('Not authorized');
+  }
 
   const { data, error } = await supabase
     .from('reels')
@@ -500,7 +522,6 @@ export async function listSources(args: { studyId: string }) {
 
   if (!study) throw new Error('Study not found');
 
-  // Check membership
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('role')
@@ -509,6 +530,17 @@ export async function listSources(args: { studyId: string }) {
     .single();
 
   if (!membership) throw new Error('Not authorized');
+
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('seat_overage')
+    .eq('id', study.workspace_id)
+    .maybeSingle();
+
+  const role = effectiveRole(membership.role as Role, workspace?.seat_overage);
+  if (!hasRole(role, 'editor')) {
+    throw new Error('Not authorized');
+  }
 
   const { data, error } = await supabase
     .from('sources')

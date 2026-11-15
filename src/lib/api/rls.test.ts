@@ -403,6 +403,31 @@ describe("RLS policies from supabase/migrations", () => {
     await db.query(`update public.studies set status = 'published' where id = '${STUDY}'`);
   });
 
+  it("a viewer cannot create or revoke share links", async () => {
+    await asSuper();
+    await setAuth(MEMBER);
+    await asTester();
+    await expect(
+      db.query(
+        `insert into public.share_links (study_id, workspace_id, token, created_by, revoked)
+         values ('${STUDY}', '${WS}', 'membertoken000000000000000000001', '${MEMBER}', false)`,
+      ),
+    ).rejects.toThrow(/row-level security|violates/i);
+
+    const updated = await db.query(
+      `update public.share_links set revoked = true where token = '${TOKEN}' returning id`,
+    );
+    expect(updated.rows).toHaveLength(0);
+
+    await asSuper();
+    await setAuth(OWNER);
+    await asTester();
+    const { rows } = await db.query<{ revoked: boolean }>(
+      `select revoked from public.share_links where token = '${TOKEN}'`,
+    );
+    expect(rows[0]?.revoked).toBe(false);
+  });
+
   it("anon can join, comment, and react on a live share via RPCs", async () => {
     await asSuper();
     await setAuth(null);

@@ -2,10 +2,12 @@ import { useSearchParams, useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, FileSearch, LifeBuoy, Presentation } from "lucide-react";
 import { api } from "@/lib/api/complete";
+import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import PageHeader from "@/components/page-header.tsx";
+import PermissionDenied from "@/components/permission-denied.tsx";
 import { cn } from "@/lib/utils.ts";
 import StatusBadge from "../_components/status-badge.tsx";
 import SourcesStep from "../_components/sources-step.tsx";
@@ -138,7 +140,9 @@ function StudyBody({ studyId }: { studyId: string }) {
 
 export default function StudyDetailPage() {
   const { studyId } = useParams<{ studyId: string }>();
+  const { isEditor } = useWorkspace();
   if (!studyId) return null;
+  if (!isEditor) return <PermissionDenied what="manage studies" />;
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-8 lg:py-12">

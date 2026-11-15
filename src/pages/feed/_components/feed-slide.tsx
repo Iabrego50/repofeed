@@ -43,8 +43,10 @@ function isTyping(target: EventTarget | null) {
 export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }: FeedSlideProps) {
   const queryClient = useQueryClient();
   const { react: reactOnFeed } = useFeedActions();
+  const mode = useFeedMode();
+  const isShare = mode.kind === "share";
   // Guests on a share link can't open Explore, so their topic tags are plain text.
-  const linkTopics = useFeedMode().kind === "member";
+  const linkTopics = !isShare;
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const playing = active && !paused;
@@ -79,7 +81,9 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
   });
 
   const share = async () => {
-    const url = `${SHAREABLE_ORIGIN}/?reel=${reel._id}`;
+    const url = isShare
+      ? `${SHAREABLE_ORIGIN}/share/${mode.token}?reel=${reel._id}`
+      : `${SHAREABLE_ORIGIN}/?reel=${reel._id}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied");
@@ -101,13 +105,13 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
         setPaused((p) => !p);
       } else if (key === "l") react("true");
       else if (key === "1" || key === "2" || key === "3") react(REACTIONS[Number(key) - 1].kind);
-      else if (key === "s") save();
+      else if (key === "s" && !isShare) save();
       else if (key === "c") onOpenPanel("discussion");
       else if (key === "e") onOpenPanel("evidence");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, react, save, onOpenPanel]);
+  }, [active, react, save, onOpenPanel, isShare]);
 
   return (
     <div className="relative flex h-full w-full snap-start snap-always items-center justify-center bg-black">
@@ -197,7 +201,7 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
               onComment={() => onOpenPanel("discussion")}
               saved={!!reel.saved}
               savePending={saveMutation.isPending}
-              onSave={() => save()}
+              onSave={isShare ? undefined : () => save()}
               onEvidence={() => onOpenPanel("evidence")}
               onShare={() => void share()}
             />
