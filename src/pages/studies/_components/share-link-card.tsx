@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
-import { Copy, Link2, Link2Off, Loader2 } from "lucide-react";
+import { Copy, Link2Off, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -14,16 +14,23 @@ interface ShareLinkCardProps {
 
 export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
   const queryClient = useQueryClient();
-  const { data: shareLink, isLoading } = useQuery({
+  const {
+    data: shareLink,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["studies", "shareLink", studyId],
     queryFn: () => api.studies.getShareLink({ studyId }),
   });
 
   const toggleMutation = useMutation({
     mutationFn: (enabled: boolean) => api.studies.setShareEnabled({ studyId, enabled }),
-    onSuccess: () => {
+    onSuccess: (_data, enabled) => {
       queryClient.invalidateQueries({ queryKey: ["studies", "shareLink", studyId] });
-      toast.success(shareLink?.enabled ? "Share link disabled" : "Share link enabled");
+      toast.success(enabled ? "Share link enabled" : "Share link disabled");
     },
     onError: (err: any) => {
       toast.error(err.message || "The share link didn’t change. Try again.");
@@ -42,6 +49,7 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
   });
 
   const [copying, setCopying] = useState(false);
+  const busy = toggleMutation.isPending || regenerateMutation.isPending;
 
   const copyLink = async () => {
     if (!shareLink?.token) return;
@@ -60,10 +68,37 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
     return <Skeleton className="h-32 w-full rounded-2xl" />;
   }
 
+  if (isError) {
+    return (
+      <div data-tour="share-link" className="rounded-2xl border border-border bg-card p-6">
+        <h3 className="text-lg font-bold">Share link</h3>
+        <p className="mt-2 text-sm text-destructive">
+          {(error as Error)?.message || "Couldn’t load the share link."}
+        </p>
+        <Button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+        >
+          {isFetching ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Retrying...
+            </>
+          ) : (
+            "Try again"
+          )}
+        </Button>
+      </div>
+    );
+  }
+
   if (!shareLink) return null;
 
-  const shareUrl = shareLink.enabled && shareLink.token 
-    ? `${SHAREABLE_ORIGIN}/share/${shareLink.token}` 
+  const shareUrl = shareLink.enabled && shareLink.token
+    ? `${SHAREABLE_ORIGIN}/share/${shareLink.token}`
     : null;
 
   return (
@@ -78,8 +113,11 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
         <label className="flex cursor-pointer items-center gap-2">
           <Switch
             checked={shareLink.enabled}
-            onCheckedChange={(v) => toggleMutation.mutate(v)}
-            disabled={toggleMutation.isPending}
+            onCheckedChange={(v) => {
+              if (busy) return;
+              toggleMutation.mutate(v);
+            }}
+            disabled={busy}
           />
           <span className="text-sm">{shareLink.enabled ? "On" : "Off"}</span>
         </label>
@@ -96,7 +134,7 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
           />
           <Button
             onClick={copyLink}
-            disabled={copying}
+            disabled={copying || busy}
             variant="secondary"
             size="icon"
             className="h-11 w-11 shrink-0"
@@ -109,7 +147,7 @@ export default function ShareLinkCard({ studyId }: ShareLinkCardProps) {
       {shareLink.enabled && (
         <Button
           onClick={() => regenerateMutation.mutate()}
-          disabled={regenerateMutation.isPending}
+          disabled={busy}
           variant="ghost"
           size="sm"
           className="mt-3"

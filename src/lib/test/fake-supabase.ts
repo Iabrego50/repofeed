@@ -214,6 +214,14 @@ export class FakeQuery {
         }
         return { data: null, error: null, count: 0 };
       }
+      // Mirror PostgREST: .single() / .maybeSingle() error when more than one row matches.
+      if (result.data.length > 1) {
+        return {
+          data: null,
+          error: { message: "JSON object requested, multiple (or no) rows returned" },
+          count: result.data.length,
+        };
+      }
       return { ...result, data: result.data[0] };
     }
     if (result.data == null && this.wantSingle === "single") {

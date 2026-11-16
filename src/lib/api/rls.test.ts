@@ -411,7 +411,9 @@ describe("RLS policies from supabase/migrations", () => {
        set share_enabled = true, share_token = '${legacyToken}'
        where id = '${STUDY}'`,
     );
-    // Mimic the prod hot-patch: token already lives in share_links.
+    // At most one live share_links row per study (partial unique index). Revoke the
+    // seed link first, then place the legacy token as the sole live row.
+    await db.query(`update public.share_links set revoked = true where study_id = '${STUDY}'`);
     await db.query(
       `insert into public.share_links (study_id, workspace_id, token, created_by, revoked, hide_team_comments)
        values ('${STUDY}', '${WS}', '${legacyToken}', '${OWNER}', false, true)
@@ -462,6 +464,14 @@ describe("RLS policies from supabase/migrations", () => {
 
   it("a viewer cannot create or revoke share links", async () => {
     await asSuper();
+    // Prior tests may revoke live rows; restore a single live seed token.
+    await db.query(`update public.share_links set revoked = true where study_id = '${STUDY}'`);
+    await db.query(
+      `insert into public.share_links (study_id, workspace_id, token, created_by, revoked)
+       values ('${STUDY}', '${WS}', '${TOKEN}', '${OWNER}', false)
+       on conflict (token) do update set revoked = false`,
+    );
+
     await setAuth(MEMBER);
     await asTester();
     await expect(
@@ -483,6 +493,25 @@ describe("RLS policies from supabase/migrations", () => {
       `select revoked from public.share_links where token = '${TOKEN}'`,
     );
     expect(rows[0]?.revoked).toBe(false);
+  });
+
+  it("only workspace editors can select share_links; anon cannot", async () => {
+    await asSuper();
+    await setAuth(null);
+    await asTester();
+    expect((await db.query("select token from public.share_links")).rows).toHaveLength(0);
+
+    await asSuper();
+    await setAuth(MEMBER);
+    await asTester();
+    expect((await db.query("select token from public.share_links")).rows).toHaveLength(0);
+
+    await asSuper();
+    await setAuth(OWNER);
+    await asTester();
+    const { rows } = await db.query<{ token: string }>("select token from public.share_links");
+    expect(rows.length).toBeGreaterThan(0);
+    await asSuper();
   });
 
   it("anon can join, comment, and react on a live share via RPCs", async () => {
