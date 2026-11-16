@@ -35,20 +35,33 @@ const QUESTIONS: Array<{ q: string; a: string }> = [
 
 export default function Faq() {
   return (
-    <section aria-labelledby="faq-heading" className="mx-auto grid max-w-6xl gap-8 px-5 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:py-20">
+    <section
+      aria-labelledby="faq-heading"
+      className="mx-auto grid max-w-6xl gap-10 border-t border-border px-5 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:py-24"
+    >
       <div>
-        <h2 id="faq-heading" className="text-3xl font-bold tracking-tight sm:text-4xl">Questions people ask before they try it</h2>
+        <h2 id="faq-heading" className="max-w-[22ch] text-balance text-[2rem] font-bold leading-[1.02] sm:text-[2.75rem]">
+          Questions people ask before they try it
+        </h2>
         <p className="mt-4 text-muted-foreground">
           Something else on your mind? Write to{" "}
-          <a href={SUPPORT_MAILTO} className="cursor-pointer font-medium text-foreground underline underline-offset-4">{SUPPORT_EMAIL}</a>{" "}
-          or read the <Link to="/help" className="cursor-pointer font-medium text-foreground underline underline-offset-4">Help Center</Link>.
+          <a href={SUPPORT_MAILTO} className="cursor-pointer font-medium text-foreground underline underline-offset-4">
+            {SUPPORT_EMAIL}
+          </a>{" "}
+          or read the{" "}
+          <Link to="/help" className="cursor-pointer font-medium text-foreground underline underline-offset-4">
+            Help Center
+          </Link>
+          .
         </p>
       </div>
-      <Accordion type="single" collapsible className="rounded-xl border border-border bg-card px-5">
+      <Accordion type="single" collapsible className="border-t-2 border-foreground">
         {QUESTIONS.map((item) => (
           <AccordionItem key={item.q} value={item.q}>
-            <AccordionTrigger className="cursor-pointer py-4 text-left text-base font-semibold">{item.q}</AccordionTrigger>
-            <AccordionContent className="max-w-prose pb-5 text-[0.9375rem] leading-relaxed text-muted-foreground">{item.a}</AccordionContent>
+            <AccordionTrigger className="cursor-pointer py-5 text-left text-lg font-semibold">{item.q}</AccordionTrigger>
+            <AccordionContent className="max-w-prose pb-5 text-[0.9375rem] leading-relaxed text-muted-foreground">
+              {item.a}
+            </AccordionContent>
           </AccordionItem>
         ))}
       </Accordion>
