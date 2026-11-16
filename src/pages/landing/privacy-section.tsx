@@ -7,36 +7,46 @@ const FLOW = [
 ];
 
 const FACTS = [
-  { title: "Originals are never uploaded", body: "PDFs, Word documents, decks and spreadsheets are read on your own machine. There’s no copy of the file on our side to track down or delete." },
-  { title: "Quotes are checked word for word", body: "If a quote or a number doesn’t match what’s in your file, the scene is flagged before you publish it." },
-  { title: "Not used for training", body: "We don’t train models of our own on your research, and we don’t sell your data." },
+  {
+    title: "Originals are never uploaded",
+    body: "PDFs, Word documents, decks and spreadsheets are read on your own machine. There’s no copy of the file on our side to track down or delete.",
+  },
+  {
+    title: "Quotes are checked word for word",
+    body: "If a quote or a number doesn’t match what’s in your file, the scene is flagged before you publish it.",
+  },
+  {
+    title: "Not used for training",
+    body: "We don’t train models of our own on your research, and we don’t sell your data.",
+  },
 ];
 
 /** The two objections that stop a research team from trying an AI tool: where do my files go, and can I trust what it writes. */
 export default function PrivacySection() {
   return (
     <section aria-labelledby="privacy-heading" className="dark">
-      <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
+      <div className="mx-auto max-w-6xl px-5 py-16 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
-            <h2 id="privacy-heading" className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 id="privacy-heading" className="max-w-[22ch] text-balance text-[2rem] font-bold leading-[1.02] sm:text-[2.75rem]">
               Your research files never leave your computer
             </h2>
-            <p className="mt-4 max-w-xl text-muted-foreground">
-              Participant interviews, internal decks, anything under NDA. Your browser reads each file locally and sends only the words needed to build the scenes.
+            <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-muted-foreground">
+              Participant interviews, internal decks, anything under NDA. Your browser reads each file locally and sends
+              only the words needed to build the scenes.
             </p>
           </div>
           <ol className="space-y-2">
             {FLOW.map((step, i) => (
               <li key={step.label} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
-                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-foreground">
+                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-primary">
                   <step.icon className="size-5" />
                 </span>
                 <div className="min-w-0">
                   <p className="font-semibold">{step.label}</p>
                   <p className="text-sm text-muted-foreground">{step.sub}</p>
                 </div>
-                <span className="ml-auto text-sm text-muted-foreground">{i + 1}</span>
+                <span className="figures ml-auto text-2xl font-extrabold text-muted-foreground/60">{i + 1}</span>
               </li>
             ))}
           </ol>
@@ -50,7 +60,8 @@ export default function PrivacySection() {
           ))}
         </ul>
         <p className="mt-8 text-sm text-muted-foreground">
-          One exception, so there are no surprises: if an editor adds a video clip as scene footage, that clip is stored so the workspace can play it.
+          One exception, so there are no surprises: if an editor adds a video clip as scene footage, that clip is stored
+          so the workspace can play it.
         </p>
       </div>
     </section>

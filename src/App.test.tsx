@@ -282,7 +282,7 @@ describe("App routes", () => {
       expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
     });
     expect(window.location.pathname).toBe("/");
-    expect(screen.getAllByRole("link", { name: /go to the feed/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: /go to (the|your) feed/i }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/No scenes in your feed yet/i)).not.toBeInTheDocument();
     cleanup();
 

@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, MailCheck } from "lucide-react";
+import { MailCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/button.tsx";
@@ -8,9 +8,28 @@ import { Input } from "@/components/ui/input.tsx";
 import { cn } from "@/lib/utils.ts";
 
 /** A sign-up link that records where on the page it was clicked. */
-export function CtaLink({ location, variant, children, className, secondary = false, to = "/signin" }: { location: string; variant: string; children: ReactNode; className?: string; secondary?: boolean; to?: string }) {
+export function CtaLink({
+  location,
+  variant,
+  children,
+  className,
+  secondary = false,
+  to = "/signin",
+}: {
+  location: string;
+  variant: string;
+  children: ReactNode;
+  className?: string;
+  secondary?: boolean;
+  to?: string;
+}) {
   return (
-    <Button asChild size="lg" variant={secondary ? "outline" : "default"} className={cn("h-11 px-5 text-[0.9375rem] font-semibold", className)}>
+    <Button
+      asChild
+      size="lg"
+      variant={secondary ? "outline" : "default"}
+      className={cn("h-11 px-5 text-[0.9375rem] font-semibold", className)}
+    >
       <Link to={to} onClick={() => track("cta_click", { location, variant: variant || "home", target: to })}>
         {children}
       </Link>
@@ -19,10 +38,20 @@ export function CtaLink({ location, variant, children, className, secondary = fa
 }
 
 /**
- * Email box in the hero. One field and one button: we send the sign-in link
- * straight away rather than making people click through to another page first.
+ * Email box in the hero / final CTA. One field and one button: we send the
+ * sign-in link straight away rather than making people click through first.
  */
-export function HeroSignup({ variant, id = "hero-email", location = "hero" }: { variant: string; id?: string; location?: string }) {
+export function HeroSignup({
+  variant,
+  id = "hero-email",
+  location = "hero",
+  className,
+}: {
+  variant: string;
+  id?: string;
+  location?: string;
+  className?: string;
+}) {
   const { user, signInWithOtp } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -30,8 +59,8 @@ export function HeroSignup({ variant, id = "hero-email", location = "hero" }: { 
 
   if (user) {
     return (
-      <CtaLink location={location} variant={variant} to="/feed">
-        Go to the feed <ArrowRight className="size-4" />
+      <CtaLink location={location} variant={variant} to="/feed" className={cn("h-12 px-6 text-base", className)}>
+        Go to your feed
       </CtaLink>
     );
   }
@@ -46,25 +75,30 @@ export function HeroSignup({ variant, id = "hero-email", location = "hero" }: { 
       await signInWithOtp(value);
       setState("sent");
     } catch {
-      // Fall back to the full sign-in page, which explains what went wrong.
       navigate("/signin");
     }
   };
 
   if (state === "sent") {
     return (
-      <p role="status" className="flex max-w-md items-start gap-3 rounded-lg border border-border bg-card p-4 text-[0.9375rem]">
+      <p
+        role="status"
+        className="flex max-w-md items-start gap-3 rounded-xl border border-border bg-card p-4 text-[0.9375rem] text-card-foreground"
+      >
         <MailCheck className="mt-0.5 size-5 shrink-0 text-success" />
         <span>
-          We sent a sign-in link to <strong className="font-semibold">{email.trim()}</strong>. Open it on this device and you’re in. No password to set.
+          Sign-in link sent to <strong className="font-semibold">{email.trim()}</strong>. Open it on this device and you’re
+          in.
         </span>
       </p>
     );
   }
 
   return (
-    <form onSubmit={(e) => void onSubmit(e)} className="flex max-w-md flex-col gap-2 sm:flex-row">
-      <label htmlFor={id} className="sr-only">Work email</label>
+    <form onSubmit={(e) => void onSubmit(e)} className={cn("flex max-w-md flex-col gap-2 sm:flex-row", className)}>
+      <label htmlFor={id} className="sr-only">
+        Work email
+      </label>
       <Input
         id={id}
         type="email"
@@ -73,10 +107,10 @@ export function HeroSignup({ variant, id = "hero-email", location = "hero" }: { 
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="you@company.com"
-        className="h-11 flex-1 bg-card text-[0.9375rem]"
+        className="h-12 w-full bg-card text-base text-card-foreground sm:flex-1"
       />
-      <Button type="submit" size="lg" disabled={state === "busy"} className="h-11 px-5 text-[0.9375rem] font-semibold">
-        {state === "busy" ? "Sending…" : "Start free"} <ArrowRight className="size-4" />
+      <Button type="submit" size="lg" disabled={state === "busy"} className="h-12 px-6 text-base font-semibold">
+        {state === "busy" ? "Sending…" : "Start free"}
       </Button>
     </form>
   );
