@@ -2,6 +2,31 @@
 
 Vite + React app on Vercel, with a Supabase backend (`odvpqotwaokflegpmmej`) and OpenAI for generation. Billing runs in Vercel functions against Stripe.
 
+## How it works
+
+1. **Browser-side parsing.** `src/lib/extract.ts` pulls text out of uploaded files (txt, md, csv, tsv, json, vtt, srt, pdf, docx, pptx, xlsx, up to 25 MB each) in the browser, so the original files are not uploaded. Only the extracted text is stored.
+2. **Chunking.** `api/generation/start.ts` splits source text into chunks for a generation job.
+3. **Finding extraction.** `api/generation/process.ts` (`extract` phase) sends each chunk to the text model and saves the findings it returns.
+4. **Scene writing.** The `compose` phase turns findings into reels made of scenes (for example quote and stat scenes). See `src/lib/ai/scenes.ts`.
+5. **Human review.** When composition finishes, the study moves to `review` status. An editor reviews and edits reels before publishing.
+6. **Video generation.** Reel video jobs are dispatched (`api/_lib/video-chain.ts` -> `api/videos/process.ts`) once reels are composed.
+
+## Citation checker
+
+`src/lib/reel/verify.ts` checks reel scenes against the study's source text. It runs when an editor saves a reel's scenes (`src/lib/api/studies-complete.ts`), and the first warning it finds is stored on the reel.
+
+- **Normalization.** Both the quote and the source are lowercased. Curly quotes and dashes are unified, punctuation other than `% . ' -` is removed, and whitespace is collapsed.
+- **Quote scenes.** A quote passes (`ok`) only if its normalized text appears verbatim in the normalized source.
+- **Near matches.** If the quote is not verbatim, the checker lines it up against source positions that match one of its first four words. If one alignment matches at least 75% of the quote's words and the quote has 3 or more words, it is flagged as `close` ("not word-for-word"). Otherwise it is `missing` ("not found in your files"). An empty quote is also `missing`.
+- **Stat scenes.** Every digit group in the stat (such as `6.5` or `1`, `140` in `1,140`) must appear in the source as a standalone number, not inside a larger number. For example, `114` fails if the source only contains `1,140`.
+
+`src/lib/reel/verify.test.ts` covers normalization, verbatim and curly-quote matches, one changed or added word (close), invented quotes (missing), decimals, numbers inside larger numbers, and the warning text.
+
+```bash
+pnpm test                                  # all tests
+pnpm vitest run src/lib/reel/verify.test.ts  # just the checker
+```
+
 ## Environment variables
 
 Names only — never commit secret values.

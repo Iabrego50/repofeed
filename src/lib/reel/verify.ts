@@ -40,7 +40,7 @@ export function verifyQuote(quote: string, source: SourceIndex): QuoteResult {
   if (!nq) return "missing";
   if (source.normalized.includes(nq)) return "ok";
 
-  // "Close": some window of source words matches at least 80% of the quote words.
+  // "Close": some window of source words matches at least 75% of the quote words (and 3+ words).
   const qw = nq.split(" ").map(stripWord);
   const starts = new Set<number>();
   for (let k = 0; k < Math.min(4, qw.length); k++) {
