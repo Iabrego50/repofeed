@@ -54,8 +54,51 @@ describe("guest share links", () => {
     fake().queue("workspaces", { data: { seat_overage: false } });
     fake().queue("share_links", { data: { token: "live-token", revoked: false } });
     expect(await createShareLink({ studyId: "s1" })).toBe("live-token");
-    expect(fake().filterEq(fake().lastCall("share_links", "select")!, "study_id")).toBe("s1");
-    expect(fake().filterEq(fake().lastCall("share_links", "select")!, "revoked")).toBe(false);
+    const select = fake().lastCall("share_links", "select")!;
+    expect(fake().filterEq(select, "study_id")).toBe("s1");
+    expect(fake().filterEq(select, "revoked")).toBe(false);
+    expect(select.filters.some((f) => f.method === "order" && f.args[0] === "created_at")).toBe(true);
+    expect(select.filters.some((f) => f.method === "limit" && f.args[0] === 1)).toBe(true);
+  });
+
+  it("getStudyShareLink picks one live row when duplicates exist and surfaces select errors", async () => {
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    // After order+limit(1), PostgREST returns a single object — not an array that maybeSingle rejects.
+    fake().queue("share_links", { data: { token: "newest-token", revoked: false } });
+    expect(await getStudyShareLink({ studyId: "s1" })).toEqual({
+      enabled: true,
+      token: "newest-token",
+    });
+    const select = fake().lastCall("share_links", "select")!;
+    expect(select.filters.some((f) => f.method === "order" && f.args[0] === "created_at" && (f.args[1] as { ascending?: boolean })?.ascending === false)).toBe(true);
+    expect(select.filters.some((f) => f.method === "limit" && f.args[0] === 1)).toBe(true);
+
+    fake().queue("studies", { data: { workspace_id: "ws1" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    fake().queue("share_links", { data: null, error: { message: "permission denied for table share_links" } });
+    await expect(getStudyShareLink({ studyId: "s1" })).rejects.toThrow(/permission denied/);
+  });
+
+  it("createShareLink / enable does not insert when a live link already exists", async () => {
+    fake().queue("studies", { data: { id: "s1", workspace_id: "ws1", status: "published" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    fake().queue("share_links", { data: { token: "already-live", revoked: false } });
+    expect(await createShareLink({ studyId: "s1" })).toBe("already-live");
+    expect(fake().callsFor("share_links", "insert")).toHaveLength(0);
+
+    fake().queue("studies", { data: { id: "s1", workspace_id: "ws1", status: "published" } });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspaces", { data: { seat_overage: false } });
+    fake().queue("share_links", { data: { token: "still-live", revoked: false } });
+    const insertsBefore = fake().callsFor("share_links", "insert").length;
+    expect(await setStudyShareEnabled({ studyId: "s1", enabled: true })).toEqual({
+      token: "still-live",
+    });
+    expect(fake().callsFor("share_links", "insert")).toHaveLength(insertsBefore);
   });
 
   it("share link has a unique token and points at the study", async () => {

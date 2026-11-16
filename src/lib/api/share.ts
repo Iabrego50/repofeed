@@ -57,13 +57,17 @@ async function requireEditor(workspaceId: string): Promise<{ userId: string; rol
   return { userId: user.id, role };
 }
 
+/** One stable live link for a study. Prefer the newest when duplicates exist. */
 async function liveShareLink(studyId: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("share_links")
     .select("token, revoked")
     .eq("study_id", studyId)
     .eq("revoked", false)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
+  if (error) throw error;
   return data;
 }
 
