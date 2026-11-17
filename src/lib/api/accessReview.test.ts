@@ -26,6 +26,7 @@ import {
   createInvite,
   getMembers,
   getWorkspace,
+  listInvites,
   peekInvite,
   removeMember,
 } from "./workspaces-complete";
@@ -171,11 +172,12 @@ describe("identity and access review", () => {
     fake().queue("workspace_members", { data: { role: "owner" } });
     fake().queue("workspaces", { data: { paid_plan: null } });
     fake().queue("workspace_invites", { data: { token: "tok2" } });
-    const b = await createInvite({ workspaceId: "ws1", role: "member" });
+    const b = await createInvite({ workspaceId: "ws1", role: "member", expiresInDays: 1 });
     expect(a.token).not.toBe(b.token);
     const insert = fake().lastCall("workspace_invites", "insert")?.payload as { expires_at: string };
     const expires = new Date(insert.expires_at).getTime();
-    expect(expires).toBeGreaterThan(Date.now() + 6 * 24 * 60 * 60 * 1000);
+    expect(expires).toBeGreaterThan(Date.now() + 0.5 * 24 * 60 * 60 * 1000);
+    expect(expires).toBeLessThan(Date.now() + 2 * 24 * 60 * 60 * 1000);
 
     const expired = inviteIsUsable({
       revoked: false,
@@ -184,5 +186,55 @@ describe("identity and access review", () => {
       uses: 0,
     });
     expect(expired).toBe("expired");
+  });
+
+  it("listInvites maps snake_case rows to camelCase invite fields", async () => {
+    fake().setUser({ id: "owner-1" });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const createdAt = "2024-06-01T12:00:00.000Z";
+    fake().queue("workspace_invites", {
+      data: [{
+        id: "inv-1",
+        token: "abc123",
+        role: "member",
+        expires_at: expiresAt,
+        max_uses: 10,
+        uses: 2,
+        created_at: createdAt,
+      }],
+    });
+
+    const invites = await listInvites({ workspaceId: "ws1" });
+    expect(invites).toEqual([{
+      _id: "inv-1",
+      token: "abc123",
+      role: "member",
+      expiresAt: new Date(expiresAt).getTime(),
+      maxUses: 10,
+      uses: 2,
+      _creationTime: new Date(createdAt).getTime(),
+    }]);
+    expect(Number.isNaN(new Date(invites[0].expiresAt).getTime())).toBe(false);
+  });
+
+  it("listInvites treats null max_uses as null and missing uses as 0", async () => {
+    fake().setUser({ id: "owner-1" });
+    fake().queue("workspace_members", { data: { role: "owner" } });
+    fake().queue("workspace_invites", {
+      data: [{
+        id: "inv-2",
+        token: "tok",
+        role: "editor",
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+        max_uses: null,
+        uses: null,
+        created_at: "2024-06-01T12:00:00.000Z",
+      }],
+    });
+
+    const [invite] = await listInvites({ workspaceId: "ws1" });
+    expect(invite.maxUses).toBeNull();
+    expect(invite.uses).toBe(0);
   });
 });
