@@ -88,5 +88,9 @@ describe("Share page", () => {
     expect(screen.queryByText(/welcome/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/your name/i)).not.toBeInTheDocument();
     expect(bag.join).not.toHaveBeenCalled();
+    // Share links render outside AppLayout — no app chrome in any state.
+    expect(screen.queryByTestId("app-sidebar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-bottom-nav")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
   });
 });

@@ -85,6 +85,14 @@ function RequireWorkspace() {
   return <Outlet />;
 }
 
+/** View-only members stay on /feed; editor-only routes (e.g. deck) redirect. */
+function EditorsOnly() {
+  const { isEditor, loading, current } = useWorkspace();
+  if (loading || !current) return <FullScreenLoader />;
+  if (!isEditor) return <Navigate to={FEED_PATH} replace />;
+  return <Outlet />;
+}
+
 /**
  * `/help` stays public when signed out (help center). `/` is registered
  * outside this gate so the marketing landing is always public.
@@ -147,7 +155,9 @@ export default function App() {
               <Route element={<Gate />}>
                 <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
                 <Route element={<RequireWorkspace />}>
-                  <Route path="/insights/deck" element={<DeckPage />} />
+                  <Route element={<EditorsOnly />}>
+                    <Route path="/insights/deck" element={<DeckPage />} />
+                  </Route>
                   <Route element={<AppLayout />}>
                     <Route element={<ShellOutlet />}>
                       <Route path="/feed" element={<FeedPage />} />
