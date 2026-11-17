@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import {
+  EMAIL_OTP_MAX_LENGTH,
+  isValidEmailOtp,
+  normalizeEmailOtp,
+  shouldAutoSubmitEmailOtp,
+} from "@/lib/email-otp";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -68,7 +74,7 @@ export default function SignInPage() {
   };
 
   const verifyCode = async (token: string) => {
-    if (token.length !== 6 || busy) return;
+    if (!isValidEmailOtp(token) || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -85,11 +91,21 @@ export default function SignInPage() {
     await verifyCode(code);
   };
 
-  const onCodeChange = (value: string) => {
-    const digits = value.replace(/\D/g, "").slice(0, 6);
+  const applyCode = (value: string) => {
+    const digits = normalizeEmailOtp(value);
     setCode(digits);
     setError(null);
-    if (digits.length === 6) void verifyCode(digits);
+    if (shouldAutoSubmitEmailOtp(digits)) void verifyCode(digits);
+  };
+
+  const onCodeChange = (value: string) => {
+    applyCode(value);
+  };
+
+  /** Normalize before maxLength truncates pasted "4056-7273" / "4056 7273". */
+  const onCodePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    applyCode(e.clipboardData.getData("text"));
   };
 
   const useDifferentEmail = () => {
@@ -114,35 +130,36 @@ export default function SignInPage() {
         <h1 className="text-3xl font-bold tracking-tight">Sign in to repofeed.ai</h1>
         <p className="mt-3 text-muted-foreground">
           {googleEnabled
-            ? "New here or coming back, it’s the same step. Use Google, or we’ll email you a link and a 6-digit code. There’s no password to remember."
-            : "New here or coming back, it’s the same step. We’ll email you a link and a 6-digit code, and there’s no password to remember."}
+            ? "New here or coming back, it’s the same step. Use Google, or we’ll email you a link and a sign-in code. There’s no password to remember."
+            : "New here or coming back, it’s the same step. We’ll email you a link and a sign-in code, and there’s no password to remember."}
         </p>
         {sent ? (
           <div className="mt-8 space-y-4">
             <p role="status" className="rounded-xl border border-border bg-card p-5 text-[0.9375rem]">
-              We sent a sign-in link and a 6-digit code to <span className="font-semibold">{email}</span>. Enter the code here, or open the link on this device. If it hasn’t arrived in a minute, check spam.
+              We sent a sign-in link and a code to <span className="font-semibold">{email}</span>. Enter the code from your email here, or open the link on this device. If it hasn’t arrived in a minute, check spam.
             </p>
             <form onSubmit={(e) => void onVerify(e)} className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="signin-otp">6-digit code</Label>
+                <Label htmlFor="signin-otp">Sign-in code</Label>
                 <Input
                   ref={codeRef}
                   id="signin-otp"
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  pattern="[0-9]{6,8}"
                   autoComplete="one-time-code"
                   autoFocus
-                  maxLength={6}
+                  maxLength={EMAIL_OTP_MAX_LENGTH}
                   value={code}
                   onChange={(e) => onCodeChange(e.target.value)}
-                  placeholder="000000"
+                  onPaste={onCodePaste}
+                  placeholder="Enter code"
                   className="h-12 tracking-[0.4em] text-center text-lg font-semibold"
                   disabled={busy}
-                  aria-label="6-digit sign-in code"
+                  aria-label="Sign-in code from your email"
                 />
               </div>
-              <Button type="submit" size="lg" className="h-12 w-full font-semibold" disabled={busy || code.length !== 6}>
+              <Button type="submit" size="lg" className="h-12 w-full font-semibold" disabled={busy || !isValidEmailOtp(code)}>
                 {busy ? "Signing you in…" : "Verify code"}
               </Button>
             </form>
