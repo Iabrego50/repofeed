@@ -48,10 +48,14 @@ function PageLoader() {
 }
 
 function ShellOutlet() {
+  const { pathname } = useLocation();
+  // Keep the sidebar outside this boundary so a page crash does not kill nav.
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Outlet />
-    </Suspense>
+    <AppErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
+    </AppErrorBoundary>
   );
 }
 
@@ -100,12 +104,17 @@ function Gate() {
   return <Outlet />;
 }
 
+function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  return <AppErrorBoundary resetKey={pathname}>{children}</AppErrorBoundary>;
+}
+
 export default function App() {
   useServiceWorker();
   return (
-    <AppErrorBoundary>
-      <DefaultProviders>
-        <BrowserRouter>
+    <DefaultProviders>
+      <BrowserRouter>
+        <RouteErrorBoundary>
           <DocumentMeta />
           <SpaAnalytics />
           <Suspense fallback={<FullScreenLoader />}>
@@ -157,8 +166,8 @@ export default function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-        </BrowserRouter>
-      </DefaultProviders>
-    </AppErrorBoundary>
+        </RouteErrorBoundary>
+      </BrowserRouter>
+    </DefaultProviders>
   );
 }

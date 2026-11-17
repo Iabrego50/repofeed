@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { isChunkLoadError, reloadForChunkError } from "@/lib/chunk-load-error.ts";
 
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; /** When this changes, clear a caught error so nav can recover. */ resetKey?: string };
 type State = { error: Error | null };
 
 /** Catches render crashes so the app shows a message instead of a white screen. */
@@ -12,7 +13,14 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    if (isChunkLoadError(error) && reloadForChunkError()) return;
     console.error("[app] uncaught render error", error, info.componentStack);
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (this.props.resetKey !== prevProps.resetKey && this.state.error) {
+      this.setState({ error: null });
+    }
   }
 
   render() {
