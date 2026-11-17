@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { Copy, Link2, Trash2, UserMinus, Loader2 } from "lucide-react";
-import type { Role } from "@/schema/validators.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -18,6 +17,12 @@ import EmailUpdates from "./_components/email-updates.tsx";
 
 const inviteUrl = (token: string) => `${SHAREABLE_ORIGIN}/invite/${token}`;
 
+function inviteExpiryLabel(expiresAt: unknown): string {
+  const date = new Date(expiresAt as string | number | Date);
+  if (Number.isNaN(date.getTime())) return "soon";
+  return formatDistanceToNow(date, { addSuffix: true });
+}
+
 async function copy(text: string) {
   try {
     await navigator.clipboard.writeText(text);
@@ -28,6 +33,7 @@ async function copy(text: string) {
 }
 
 function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
+  const queryClient = useQueryClient();
   const { data: invites } = useQuery({
     queryKey: ["workspaces", "invites", workspaceId],
     queryFn: () => api.workspaces.listInvites({ workspaceId }),
@@ -36,11 +42,17 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   const createMutation = useMutation({
     mutationFn: (args: { workspaceId: string; role: "editor" | "member"; expiresInDays: number; maxUses: number }) =>
       api.billing.actions.createInvite(args),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["workspaces", "invites", workspaceId] });
+    },
   });
 
   const revokeMutation = useMutation({
     mutationFn: (args: { workspaceId: string; inviteId: string }) =>
       api.workspaces.revokeInvite(args),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["workspaces", "invites", workspaceId] });
+    },
   });
 
   const [role, setRole] = useState<"member" | "editor">("member");
@@ -85,8 +97,8 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
             try {
               const result = await createMutation.mutateAsync({ workspaceId, role, expiresInDays: Number(days), maxUses: Number(uses) });
               await copy(inviteUrl(result.token));
-            } catch (err: any) {
-              toast.error(err.message || "Couldn't create the invite");
+            } catch (err: unknown) {
+              toast.error(err instanceof Error ? err.message : "Couldn't create the invite");
             } finally {
               setBusy(false);
             }
@@ -101,11 +113,11 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
         ) : invites.length === 0 ? (
           <li className="text-sm text-muted-foreground">No active invite links.</li>
         ) : (
-          invites.map((inv: any) => (
+          invites.map((inv) => (
             <li key={inv._id} className="flex flex-col gap-2 rounded-xl border border-border p-3 sm:flex-row sm:items-center">
               <Input readOnly value={inviteUrl(inv.token)} className="h-10 min-w-0 flex-1 text-xs" aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
               <span className="text-xs text-muted-foreground">
-                {inv.role} · expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })} · {inv.uses}{inv.maxUses !== null ? ` of ${inv.maxUses}` : ""} joined
+                {inv.role} · expires {inviteExpiryLabel(inv.expiresAt)} · {inv.uses}{inv.maxUses != null ? ` of ${inv.maxUses}` : ""} joined
               </span>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="size-11" aria-label="Copy invite link" onClick={() => void copy(inviteUrl(inv.token))}>
@@ -124,6 +136,7 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 }
 
 function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
+  const queryClient = useQueryClient();
   const { data: members } = useQuery({
     queryKey: ["workspaces", "members", workspaceId],
     queryFn: () => api.workspaces.listMembers({ workspaceId }),
@@ -132,6 +145,9 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   const removeMutation = useMutation({
     mutationFn: (args: { workspaceId: string; userId: string }) =>
       api.workspaces.removeMember(args),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["workspaces", "members", workspaceId] });
+    },
   });
 
   return (
@@ -140,7 +156,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
       <ul className="mt-4 divide-y divide-border">
         {members === undefined
           ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="my-2 h-12 w-full" />)
-          : members.map((m: any) => {
+          : members.map((m) => {
               return (
                 <li key={m._id} className="flex flex-wrap items-center gap-3 py-3">
                   <UserAvatar name={m.name} src={m.avatar} className="size-9" />
@@ -155,7 +171,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
                       size="icon" 
                       className="size-11" 
                       aria-label={m.isMe ? "Leave workspace" : `Remove ${m.name}`} 
-                      onClick={() => removeMutation.mutate({ workspaceId, userId: m._id })}
+                      onClick={() => removeMutation.mutate({ workspaceId, userId: m.userId })}
                     >
                       <UserMinus className="size-4" />
                     </Button>
@@ -169,10 +185,16 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 }
 
 export default function SettingsPage() {
-  const { current, isEditor, isOwner } = useWorkspace();
+  const queryClient = useQueryClient();
+  const { current, isEditor, isOwner, refresh } = useWorkspace();
   const renameMutation = useMutation({
     mutationFn: (args: { workspaceId: string; name: string }) =>
       api.workspaces.rename(args),
+    onSuccess: async () => {
+      await refresh();
+      void queryClient.invalidateQueries({ queryKey: ["workspaces", "mine"] });
+      void queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    },
   });
   
   const [name, setName] = useState<string | null>(null);
@@ -191,8 +213,8 @@ export default function SettingsPage() {
               await renameMutation.mutateAsync({ workspaceId: current._id, name: name ?? current.name });
               toast.success("Workspace renamed");
               setName(null);
-            } catch (err: any) {
-              toast.error(err.message || "Couldn't rename");
+            } catch (err: unknown) {
+              toast.error(err instanceof Error ? err.message : "Couldn't rename");
             }
           }}
         >

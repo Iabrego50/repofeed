@@ -268,10 +268,21 @@ export async function setMemberRole(args: {
   if (error) throw error;
 }
 
+export type WorkspaceInvite = {
+  _id: string;
+  token: string;
+  role: string;
+  expiresAt: number;
+  maxUses: number | null;
+  uses: number;
+  _creationTime: number;
+};
+
 export async function createInvite(args: {
   workspaceId: string;
   role: 'editor' | 'member';
   maxUses?: number;
+  expiresInDays?: number;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -302,9 +313,10 @@ export async function createInvite(args: {
     await assertEditorSeat(args.workspaceId, plan);
   }
 
+  const days = Math.min(30, Math.max(1, args.expiresInDays ?? 7));
   const token = crypto.randomUUID().replace(/-/g, '');
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
+  expiresAt.setDate(expiresAt.getDate() + days);
 
   const { data, error } = await supabase
     .from('workspace_invites')
@@ -325,7 +337,7 @@ export async function createInvite(args: {
   return { token, url: `${origin}/invite/${token}` };
 }
 
-export async function listInvites(args: { workspaceId: string }) {
+export async function listInvites(args: { workspaceId: string }): Promise<WorkspaceInvite[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -340,14 +352,24 @@ export async function listInvites(args: { workspaceId: string }) {
     throw new Error('Must be owner or editor');
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('workspace_invites')
-    .select('*')
+    .select('id, token, role, expires_at, max_uses, uses, created_at')
     .eq('workspace_id', args.workspaceId)
     .eq('revoked', false)
     .gt('expires_at', new Date().toISOString());
 
-  return data || [];
+  if (error) throw error;
+
+  return (data || []).map((row) => ({
+    _id: row.id,
+    token: row.token,
+    role: row.role,
+    expiresAt: new Date(row.expires_at).getTime(),
+    maxUses: row.max_uses ?? null,
+    uses: row.uses ?? 0,
+    _creationTime: new Date(row.created_at).getTime(),
+  }));
 }
 
 export async function revokeInvite(args: { inviteId: string }) {
