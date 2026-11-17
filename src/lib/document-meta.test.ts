@@ -13,6 +13,9 @@ describe("per-route document meta", () => {
     expect(metaForPath("/").title).toMatch(/Research your team will actually watch/);
     expect(metaForPath("/feed").title).toMatch(/Feed/);
     expect(metaForPath("/feed").robots).toMatch(/noindex/);
+    expect(metaForPath("/explore").title).toMatch(/Explore/);
+    expect(metaForPath("/explore").robots).toMatch(/noindex/);
+    expect(metaForPath("/explore").title).not.toMatch(/not found/i);
     expect(metaForPath("/this-is-missing")).toEqual(NOT_FOUND_META);
     expect(NOT_FOUND_META.robots).toBe("noindex");
     expect(metaForPath("/admin/analytics").robots).toMatch(/noindex/);

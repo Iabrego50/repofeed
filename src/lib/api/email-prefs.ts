@@ -27,13 +27,13 @@ export async function getEmailPrefs(workspaceId: string): Promise<EmailPrefs> {
     .eq('id', user.id)
     .single();
 
-  // Get preferences (defaults to true if not set)
+  // Get preferences (defaults to true if no row exists — maybeSingle avoids PostgREST 406)
   const { data: prefs } = await supabase
     .from('email_prefs')
     .select('new_studies, feedback')
     .eq('workspace_id', workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   return {
     email: userData?.email || null,
@@ -60,13 +60,13 @@ export async function setEmailPrefs(args: {
 
   if (!member) throw new Error('Not authorized');
 
-  // Get existing prefs
+  // Get existing prefs (maybeSingle: no row is fine for first-time upsert path)
   const { data: existing } = await supabase
     .from('email_prefs')
     .select('*')
     .eq('workspace_id', args.workspaceId)
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   const updates = {
     new_studies: args.newStudies ?? existing?.new_studies ?? true,

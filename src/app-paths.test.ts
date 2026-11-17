@@ -33,3 +33,18 @@ describe("production SPA rewrites", () => {
     expect(sources.has("/dashboard")).toBe(true);
   });
 });
+
+describe("Content-Security-Policy", () => {
+  it("allows Google profile avatars without loosening other img-src hosts", () => {
+    const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as {
+      headers?: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
+    };
+    const csp = vercel.headers
+      ?.flatMap((h) => h.headers)
+      .find((h) => h.key === "Content-Security-Policy")?.value;
+    expect(csp).toBeTruthy();
+    expect(csp!).toMatch(/img-src[^;]*https:\/\/\*\.googleusercontent\.com/);
+    expect(csp!).toMatch(/img-src[^;]*https:\/\/\*\.supabase\.co/);
+    expect(csp!).toMatch(/img-src[^;]*https:\/\/\*\.stripe\.com/);
+  });
+});

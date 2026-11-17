@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { EMPTY_GUIDE, LESSONS, finishLesson, lessonToOffer, nextLessonAfter, resolveRoute } from "./guide";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  EMPTY_GUIDE,
+  LESSONS,
+  finishLesson,
+  isGuideSnoozed,
+  lessonToOffer,
+  nextLessonAfter,
+  resolveRoute,
+  snoozeGuide,
+} from "./guide";
 
 describe("guided tour schedule", () => {
   it("offers the first lesson on the first visit", () => {
@@ -41,5 +50,19 @@ describe("guided tour schedule", () => {
   it("gives every stop a unique id", () => {
     const ids = LESSONS.flatMap((l) => l.stops.map((s) => s.id));
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("guide snooze (Not now)", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  it("remembers Not now for the session so the welcome modal does not reopen", () => {
+    expect(isGuideSnoozed("user-1")).toBe(false);
+    snoozeGuide("user-1");
+    expect(isGuideSnoozed("user-1")).toBe(true);
+    expect(isGuideSnoozed("user-2")).toBe(false);
   });
 });

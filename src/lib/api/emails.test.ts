@@ -43,11 +43,12 @@ describe("email notifications", () => {
     fake().setUser({ id: "owner-1", email: "owner@example.com" });
   });
 
-  it("email preferences default to enabled", async () => {
+  it("email preferences default to enabled when no email_prefs row exists (maybeSingle, not 406)", async () => {
     expect(defaultEmailPrefs()).toEqual({ newStudies: true, feedback: true });
     fake().queue("workspace_members", { data: { role: "owner" } });
     fake().queue("users", { data: { email: "owner@example.com" } });
-    fake().queue("email_prefs", { data: null });
+    // PostgREST .single() would 406 here; maybeSingle returns null data without error.
+    fake().queue("email_prefs", { data: null, error: null });
     expect(await getEmailPrefs("ws1")).toEqual({
       email: "owner@example.com",
       newStudies: true,
@@ -70,6 +71,18 @@ describe("email notifications", () => {
     const member = { newStudies: true, feedback: true };
     expect(shouldSendFeedback({ prefs: owner, recipientEmail: "owner@example.com" })).toBe(false);
     expect(shouldSendFeedback({ prefs: member, recipientEmail: "member@example.com" })).toBe(true);
+  });
+
+  it("inserts email prefs when no row exists yet", async () => {
+    fake().queue("workspace_members", { data: { role: "member" } });
+    fake().queue("email_prefs", { data: null, error: null });
+    await setEmailPrefs({ workspaceId: "ws1", newStudies: false });
+    expect(fake().lastCall("email_prefs", "insert")?.payload).toEqual({
+      workspace_id: "ws1",
+      user_id: "owner-1",
+      new_studies: false,
+      feedback: true,
+    });
   });
 
   it("study publish email sent only on first publish and never to the publisher", async () => {
