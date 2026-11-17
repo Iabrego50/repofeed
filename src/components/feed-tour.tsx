@@ -113,9 +113,14 @@ export default function FeedTour({ open, isEditor, onDone }: { open: boolean; is
     setIndex(0);
   };
 
+  // Non-modal: sidebar and bottom tabs stay clickable while the tour is open.
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && finish()}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md" showCloseButton={false}>
+    <Dialog open={open} modal={false} onOpenChange={(o) => !o && finish()}>
+      <DialogContent
+        className="pointer-events-auto gap-0 overflow-hidden p-0 sm:max-w-md"
+        overlayClassName="pointer-events-none"
+        showCloseButton={false}
+      >
         <div className="relative bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--primary)_28%,transparent),transparent_60%)] px-6 pb-4 pt-6">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-primary">

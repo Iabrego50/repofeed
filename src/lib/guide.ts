@@ -157,6 +157,7 @@ export function resolveRoute(stop: GuideStop, publishedStudyId: string | null): 
 
 const key = (userId: string) => `repofeed.guide.${userId}`;
 const VISIT_FLAG = "repofeed.guide.visit";
+const snoozeKey = (userId: string) => `repofeed.guide.snooze.${userId}`;
 
 export function readGuide(userId: string): GuideState {
   try {
@@ -178,6 +179,23 @@ export function writeGuide(userId: string, state: GuideState): void {
     window.localStorage.setItem(key(userId), JSON.stringify(state));
   } catch {
     // Private windows can refuse storage. The guide then simply starts over next time.
+  }
+}
+
+/** "Not now" — hide the welcome offer for the rest of this browser session. */
+export function isGuideSnoozed(userId: string): boolean {
+  try {
+    return window.sessionStorage.getItem(snoozeKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function snoozeGuide(userId: string): void {
+  try {
+    window.sessionStorage.setItem(snoozeKey(userId), "1");
+  } catch {
+    // If sessionStorage is blocked, the in-memory snooze in the component still applies.
   }
 }
 

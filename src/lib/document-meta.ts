@@ -80,6 +80,11 @@ const EXACT: Record<string, RouteMeta> = {
     description: "Watch research scenes from your workspace.",
     robots: "noindex",
   },
+  "/explore": {
+    title: "Explore — repofeed.ai",
+    description: "Search your research by topic or ask a question and see which insights answer it.",
+    robots: "noindex",
+  },
   "/studies": {
     title: "Studies — repofeed.ai",
     description: "Your research studies on repofeed.ai.",

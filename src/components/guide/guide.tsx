@@ -12,11 +12,13 @@ import { cn } from "@/lib/utils.ts";
 import {
   LESSONS,
   finishLesson,
+  isGuideSnoozed,
   lessonToOffer,
   nextLessonAfter,
   readGuide,
   registerVisit,
   resolveRoute,
+  snoozeGuide,
   writeGuide,
   type GuideLesson,
   type GuideState,
@@ -31,6 +33,11 @@ export function openGuide() {
 type Box = { top: number; left: number; width: number; height: number };
 const CARD_W = 340;
 const GAP = 14;
+
+/** Non-modal tour chrome: dimming never captures clicks; only the card does. */
+const TOUR_LAYER_CLASS = "pointer-events-none fixed inset-0 z-[70]";
+const TOUR_CARD_CLASS =
+  "pointer-events-auto absolute rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lift outline-none transition-[top,left] duration-200 motion-reduce:transition-none";
 
 /** The first element carrying this `data-tour` name that is actually on screen (desktop and phone use different ones). */
 function findTarget(name: string): HTMLElement | null {
@@ -55,20 +62,46 @@ function placeCard(box: Box | null, cardH: number): { top: number; left: number 
   return { top: clampY(vh - cardH - 96), left: clampX((vw - width) / 2) };
 }
 
-function Tour({ lesson, publishedStudyId, onClose }: { lesson: GuideLesson; publishedStudyId: string | null; onClose: (finished: boolean) => void }) {
+export function Tour({
+  lesson,
+  publishedStudyId,
+  onClose,
+}: {
+  lesson: GuideLesson;
+  publishedStudyId: string | null;
+  onClose: (finished: boolean) => void;
+}) {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   const [index, setIndex] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
   const [cardH, setCardH] = useState(220);
   const cardRef = useRef<HTMLDivElement>(null);
+  const prevIndexRef = useRef(index);
+  const settledRef = useRef(false);
   const stop = lesson.stops[index];
   const route = resolveRoute(stop, publishedStudyId);
   const here = `${pathname}${search}`;
 
+  // On the stop's route after mount or Next/Back; otherwise either navigate there
+  // (tour-driven) or close (user left via sidebar / bottom tabs / history).
   useEffect(() => {
-    if (here !== route && pathname !== route) navigate(route);
-  }, [route, here, pathname, navigate]);
+    const indexChanged = prevIndexRef.current !== index;
+    prevIndexRef.current = index;
+
+    if (here === route || pathname === route) {
+      settledRef.current = true;
+      return;
+    }
+
+    if (indexChanged || !settledRef.current) {
+      settledRef.current = false;
+      navigate(route);
+      return;
+    }
+
+    onClose(false);
+  }, [index, route, here, pathname, navigate, onClose]);
 
   // The target may render a moment after the route changes, so look for it a few times, then keep tracking it.
   useEffect(() => {
@@ -123,28 +156,41 @@ function Tour({ lesson, publishedStudyId, onClose }: { lesson: GuideLesson; publ
     return () => window.removeEventListener("keydown", onKey, true);
   }, [next, back, onClose]);
 
+  // Backdrop is non-modal (pointer-events: none). Dismiss on outside / nav click via capture.
+  useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (cardRef.current?.contains(target)) return;
+      onClose(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [onClose]);
+
   const pos = placeCard(box, cardH);
 
   return (
-    <div className="fixed inset-0 z-[70]" role="presentation">
-      {/* Dims everything except the thing being explained, and swallows stray clicks while the tour runs. */}
+    <div className={TOUR_LAYER_CLASS} role="presentation" data-guide-layer>
+      {/* Dims everything except the thing being explained — never captures clicks. */}
       {box ? (
         <div
           aria-hidden
+          data-guide-backdrop
           className="pointer-events-none absolute rounded-lg ring-2 ring-mark transition-all duration-200 motion-reduce:transition-none"
           style={{ top: box.top, left: box.left, width: box.width, height: box.height, boxShadow: "0 0 0 200vmax rgb(16 21 31 / 0.55)" }}
         />
       ) : (
-        <div aria-hidden className="absolute inset-0 bg-[rgb(16_21_31_/_0.55)]" />
+        <div aria-hidden data-guide-backdrop className="pointer-events-none absolute inset-0 bg-[rgb(16_21_31_/_0.55)]" />
       )}
       <div
         ref={cardRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby="guide-title"
         aria-describedby="guide-body"
         tabIndex={-1}
-        className="absolute rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lift outline-none transition-[top,left] duration-200 motion-reduce:transition-none"
+        data-guide-card
+        className={TOUR_CARD_CLASS}
         style={{ top: pos.top, left: pos.left, width: Math.min(CARD_W, window.innerWidth - 24) }}
       >
         <div className="flex items-center justify-between gap-3">
@@ -197,6 +243,7 @@ export default function Guide() {
     // Reading browser storage has to happen after mount; this runs once per user.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setState(registerVisit(userId));
+    setSnoozed(isGuideSnoozed(userId));
   }, [userId]);
 
   useEffect(() => {
@@ -225,6 +272,11 @@ export default function Guide() {
     [userId],
   );
 
+  const dismissOffer = useCallback(() => {
+    setSnoozed(true);
+    if (userId) snoozeGuide(userId);
+  }, [userId]);
+
   if (!isEditor || !state) return null;
 
   const start = (lesson: GuideLesson) => {
@@ -243,7 +295,7 @@ export default function Guide() {
       setJustFinished(lesson);
       track("onboarding_completed", { stage: "lesson_finished", lesson: lesson.id });
     } else {
-      setSnoozed(true);
+      dismissOffer();
     }
   };
 
@@ -251,11 +303,14 @@ export default function Guide() {
 
   const offer = lessonToOffer(state);
   const shell = "fixed bottom-20 right-4 z-40 w-[min(21rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lift lg:bottom-5 lg:right-5";
+  // Non-modal: overlay must not swallow sidebar / bottom-tab clicks.
+  const nonModalOverlay = "pointer-events-none";
+  const nonModalContent = "pointer-events-auto";
 
   if (menu) {
     return (
-      <Dialog open onOpenChange={(open) => !open && setMenu(false)}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open modal={false} onOpenChange={(open) => !open && setMenu(false)}>
+        <DialogContent className={cn("sm:max-w-md", nonModalContent)} overlayClassName={nonModalOverlay}>
           <DialogTitle className="text-xl">Product tour</DialogTitle>
           <DialogDescription>Three short lessons. Pick one to start, or replay one you’ve done.</DialogDescription>
           <ul className="space-y-1">
@@ -310,8 +365,8 @@ export default function Guide() {
   const number = LESSONS.indexOf(offer) + 1;
 
   return (
-    <Dialog open onOpenChange={(open) => !open && setSnoozed(true)}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open modal={false} onOpenChange={(open) => !open && dismissOffer()}>
+      <DialogContent className={cn("sm:max-w-md", nonModalContent)} overlayClassName={nonModalOverlay}>
         <span className="grid size-11 place-items-center rounded-full bg-mark text-mark-foreground">
           <GraduationCap className="size-5" />
         </span>
@@ -332,7 +387,7 @@ export default function Guide() {
         </ol>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button type="button" className="h-10 px-5 font-semibold" onClick={() => start(offer)}>Show me</Button>
-          <Button type="button" variant="outline" className="h-10" onClick={() => setSnoozed(true)}>Not now</Button>
+          <Button type="button" variant="outline" className="h-10" onClick={dismissOffer}>Not now</Button>
           <Button type="button" variant="ghost" className="ml-auto h-10 text-muted-foreground" onClick={() => save({ ...state, off: true })}>
             Don’t show again
           </Button>

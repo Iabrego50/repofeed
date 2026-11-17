@@ -74,8 +74,8 @@ async function getEmailPrefs(workspaceId: string, userId: string) {
     .select('new_studies, feedback')
     .eq('workspace_id', workspaceId)
     .eq('user_id', userId)
-    .single();
-  
+    .maybeSingle();
+
   return resolveEmailPrefs(data);
 }
 
