@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { FeedModeContext } from "../_lib/feed-mode";
+import { FeedModeContext, type FeedMode } from "../_lib/feed-mode";
 import type { FeedReel } from "../_lib/types";
 import FeedSlide from "./feed-slide";
 
@@ -45,12 +45,18 @@ const reel: FeedReel = {
   reactions: { heart: 0 },
 };
 
+function shareMode(): FeedMode {
+  return {
+    kind: "share",
+    token: "live-token",
+    secret: null,
+    ensureGuest: async () => null,
+  };
+}
+
 function renderSlide(mode: "member" | "share") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const value =
-    mode === "share"
-      ? { kind: "share" as const, token: "live-token" }
-      : { kind: "member" as const };
+  const value: FeedMode = mode === "share" ? shareMode() : { kind: "member" };
 
   return render(
     <QueryClientProvider client={client}>
@@ -73,12 +79,12 @@ function renderSlide(mode: "member" | "share") {
 }
 
 describe("FeedSlide access", () => {
-  it("share links: discussion/evidence only — no react, save, or explore links", () => {
+  it("share links: discussion/evidence + reactions — no save or explore links", () => {
     renderSlide("share");
-    expect(screen.queryByRole("button", { name: "React" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/more about checkout/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: /your reaction/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /your reaction/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
     expect(screen.getByText("#checkout")).toBeInTheDocument();

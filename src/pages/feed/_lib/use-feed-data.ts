@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
+import type { Comment } from "@/lib/api/mappers";
 import type { CommentKind, ReactionType } from "@/schema/validators.ts";
 import { useFeedMode } from "./feed-mode.ts";
 
@@ -53,20 +54,27 @@ export function useReelEvidence(reelId: string, enabled = true) {
   return undefined;
 }
 
-/** Mode-aware writes. Share-link viewers never write. */
+/** Mode-aware writes. Guests join (name prompt) before comment/react; delete stays member-only. */
 export function useFeedActions() {
   const mode = useFeedMode();
 
-  const rejectShareWrite = () => {
-    throw new Error("Share-link viewers can only watch");
+  const guestSecret = async (): Promise<string> => {
+    if (mode.kind !== "share") throw new Error("Not a share feed");
+    const secret = await mode.ensureGuest();
+    if (!secret) throw new GuestDismissed();
+    return secret;
   };
 
   return {
     react: async (reelId: string, kind: ReactionType) => {
-      if (mode.kind === "share") return rejectShareWrite();
-      return api.feed.react({ reelId, kind });
+      if (mode.kind === "member") {
+        return api.feed.react({ reelId, kind });
+      }
+      const secret = await guestSecret();
+      return api.feed.guestReact({ reelId, kind, token: mode.token, secret });
     },
     recordView: async (reelId: string, completed: boolean, sessionId?: string) => {
+      // Don't prompt for a name just to record a view.
       if (mode.kind === "share") return;
       await api.feed.recordView({ reelId, completed, sessionId });
     },
@@ -75,12 +83,18 @@ export function useFeedActions() {
       kind: CommentKind;
       body: string;
       parentId?: string;
-    }) => {
-      if (mode.kind === "share") return rejectShareWrite();
-      await api.feed.addComment(args);
+    }): Promise<Comment | void> => {
+      if (mode.kind === "member") {
+        await api.feed.addComment(args);
+        return;
+      }
+      const secret = await guestSecret();
+      return api.feed.guestAddComment({ ...args, token: mode.token, secret });
     },
     deleteComment: async (commentId: string) => {
-      if (mode.kind === "share") return rejectShareWrite();
+      if (mode.kind === "share") {
+        throw new Error("Share-link viewers can only watch");
+      }
       await api.feed.deleteComment({ commentId });
     },
   };

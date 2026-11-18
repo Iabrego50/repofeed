@@ -1,5 +1,13 @@
 import { supabase } from '../supabase';
-import { mapReel, mapComment, mapFinding, type FeedReel, type Comment, type Finding } from './mappers';
+import {
+  mapReel,
+  mapComment,
+  mapFinding,
+  type FeedReel,
+  type Comment,
+  type Finding,
+  type DbComment,
+} from './mappers';
 import type { CommentKind } from '@/schema/validators';
 
 /** `limit` defaults to the feed's 100; Explore asks for the whole library. */
@@ -393,7 +401,14 @@ export async function guestRecordView(args: {
   if (error) throw error;
 }
 
-export async function guestAddComment(args: { reelId: string; kind: 'note' | 'question' | 'action'; body: string; parentId?: string; token: string; secret: string }) {
+export async function guestAddComment(args: {
+  reelId: string;
+  kind: 'note' | 'question' | 'action';
+  body: string;
+  parentId?: string;
+  token: string;
+  secret: string;
+}) {
   const { data, error } = await supabase.rpc('share_add_comment', {
     p_token: args.token,
     p_secret: args.secret,
@@ -403,5 +418,27 @@ export async function guestAddComment(args: { reelId: string; kind: 'note' | 'qu
     p_parent_id: args.parentId ?? null,
   });
   if (error) throw error;
-  return data;
+  // Panel-safe shape (ids/emails omitted by RPC after migrate); map for optimistic UI.
+  const row = (data ?? {}) as Partial<DbComment> & {
+    id: string;
+    reel_id: string;
+    kind: DbComment['kind'];
+    body: string;
+    created_at: string;
+  };
+  const displayName = row.users?.name?.trim() || 'Guest';
+  return mapComment({
+    id: row.id,
+    reel_id: row.reel_id,
+    study_id: '',
+    user_id: null,
+    guest_id: null,
+    parent_id: row.parent_id ?? null,
+    kind: row.kind,
+    body: row.body,
+    resolved: row.resolved ?? false,
+    created_at: row.created_at,
+    updated_at: row.updated_at ?? row.created_at,
+    users: { name: displayName, email: null, avatar: null },
+  });
 }

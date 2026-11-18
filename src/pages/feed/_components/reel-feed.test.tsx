@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import { FeedModeContext } from "../_lib/feed-mode";
+import { FeedModeContext, type FeedMode } from "../_lib/feed-mode";
 import type { FeedReel } from "../_lib/types";
 
 const bag = vi.hoisted(() => ({
@@ -11,6 +11,7 @@ const bag = vi.hoisted(() => ({
   getEvidence: vi.fn(),
   shareComments: vi.fn(),
   shareEvidence: vi.fn(),
+  ensureGuest: vi.fn(),
 }));
 
 vi.mock("@/lib/api/complete", () => ({
@@ -19,10 +20,12 @@ vi.mock("@/lib/api/complete", () => ({
       getComments: (...args: unknown[]) => bag.getComments(...args),
       getEvidence: (...args: unknown[]) => bag.getEvidence(...args),
       react: vi.fn(),
+      guestReact: vi.fn(),
       save: vi.fn(),
       unsave: vi.fn(),
       recordView: vi.fn(),
       addComment: vi.fn(),
+      guestAddComment: vi.fn(),
       deleteComment: vi.fn(),
     },
     share: {
@@ -80,14 +83,20 @@ function mockDesktop(desktop: boolean) {
   });
 }
 
+function shareMode(): FeedMode {
+  return {
+    kind: "share",
+    token: "live-token",
+    secret: null,
+    ensureGuest: (...args: unknown[]) => bag.ensureGuest(...args) as Promise<string | null>,
+  };
+}
+
 function renderFeed(mode: "member" | "share") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const value =
-    mode === "share"
-      ? { kind: "share" as const, token: "live-token" }
-      : { kind: "member" as const };
+  const value: FeedMode = mode === "share" ? shareMode() : { kind: "member" };
 
   return render(
     <QueryClientProvider client={client}>
@@ -112,6 +121,7 @@ describe("ReelFeed panels", () => {
     bag.getEvidence.mockReset().mockResolvedValue([]);
     bag.shareComments.mockReset().mockResolvedValue([]);
     bag.shareEvidence.mockReset().mockResolvedValue([]);
+    bag.ensureGuest.mockReset().mockResolvedValue(null);
     mockDesktop(true);
   });
 
@@ -120,7 +130,7 @@ describe("ReelFeed panels", () => {
     cleanup();
   });
 
-  it("share mode shows the desktop panel read-only: no composer and no export", async () => {
+  it("share mode shows the composer and hides export/save", async () => {
     renderFeed("share");
 
     const panel = await screen.findByRole("tablist", { name: /scene details/i });
@@ -128,13 +138,15 @@ describe("ReelFeed panels", () => {
     expect(screen.getByRole("tab", { name: /discussion/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /evidence/i })).toBeInTheDocument();
 
-    expect(await screen.findByText(/no discussion yet/i)).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/ask a question or leave a note/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("radiogroup", { name: /comment type/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^post$/i })).not.toBeInTheDocument();
+    expect(
+      await screen.findByPlaceholderText(/ask a question or leave a note/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: /comment type/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^post$/i })).toBeInTheDocument();
     expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "React" })).not.toBeInTheDocument();
+    // Reactions are allowed for guests; save/export are not.
+    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
 
     expect(bag.shareComments).toHaveBeenCalledWith({
       token: "live-token",
@@ -155,14 +167,13 @@ describe("ReelFeed panels", () => {
     expect(screen.getByRole("radiogroup", { name: /comment type/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
-    expect(screen.queryByText(/no discussion yet/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument();
 
     expect(bag.getComments).toHaveBeenCalledWith({ reelId: "r1" });
     expect(bag.shareComments).not.toHaveBeenCalled();
   });
 
-  it("share mode opens the mobile bottom sheet from Discussion", async () => {
+  it("share mode opens the mobile bottom sheet with a composer", async () => {
     mockDesktop(false);
     const user = userEvent.setup();
     renderFeed("share");
@@ -175,9 +186,9 @@ describe("ReelFeed panels", () => {
       name: /scene discussion and evidence/i,
     });
     expect(within(dialog).getByRole("tab", { name: /discussion/i })).toBeInTheDocument();
-    expect(await within(dialog).findByText(/no discussion yet/i)).toBeInTheDocument();
     expect(
-      within(dialog).queryByPlaceholderText(/ask a question or leave a note/i),
-    ).not.toBeInTheDocument();
+      await within(dialog).findByPlaceholderText(/ask a question or leave a note/i),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("radiogroup", { name: /comment type/i })).toBeInTheDocument();
   });
 });

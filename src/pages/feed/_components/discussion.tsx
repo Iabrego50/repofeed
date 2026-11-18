@@ -63,6 +63,10 @@ const KINDS: Array<{ key: CommentKind; label: string; cls: string }> = [
 ];
 const kindMeta = (k: CommentKind) => KINDS.find((x) => x.key === k) ?? KINDS[0];
 
+function shareCommentsKey(token: string, reelId: string) {
+  return ["share", "comments", token, reelId] as const;
+}
+
 function Composer({
   reelId,
   parentId,
@@ -77,14 +81,48 @@ function Composer({
   onAddComment?: (args: AddCommentArgs) => void;
 }) {
   const queryClient = useQueryClient();
+  const mode = useFeedMode();
   const { addComment } = useFeedActions();
   const [kind, setKind] = useState<CommentKind>("note");
   const [body, setBody] = useState("");
   const local = Boolean(onAddComment);
+  const isShare = mode.kind === "share";
+  const shareToken = isShare ? mode.token : null;
 
   const addMutation = useMutation({
     mutationFn: () => addComment({ reelId, kind, body: body.trim(), parentId }),
-    onSuccess: () => {
+    onMutate: async () => {
+      if (!isShare || !shareToken) return { previous: undefined as Comment[] | undefined, tempId: "" };
+      const key = shareCommentsKey(shareToken, reelId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Comment[]>(key);
+      const tempId = `temp-${Date.now()}`;
+      const optimistic: Comment = {
+        _id: tempId,
+        id: tempId,
+        _creationTime: Date.now(),
+        reelId,
+        studyId: "",
+        userId: null,
+        guestId: null,
+        parentId: parentId ?? null,
+        kind,
+        body: body.trim(),
+        resolved: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        author: { name: "You" },
+      };
+      queryClient.setQueryData<Comment[]>(key, (old) => [...(old ?? []), optimistic]);
+      return { previous, tempId };
+    },
+    onSuccess: (created, _vars, ctx) => {
+      if (isShare && shareToken && created && ctx?.tempId) {
+        const key = shareCommentsKey(shareToken, reelId);
+        queryClient.setQueryData<Comment[]>(key, (old) =>
+          (old ?? []).map((c) => (c._id === ctx.tempId ? created : c)),
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["feed", "comments", reelId] });
       queryClient.invalidateQueries({ queryKey: ["share", "comments"] });
       track("comment", { reelId, kind });
@@ -92,7 +130,10 @@ function Composer({
       onDone?.();
       toast.success("Comment posted");
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, _vars, ctx) => {
+      if (isShare && shareToken && ctx?.previous !== undefined) {
+        queryClient.setQueryData(shareCommentsKey(shareToken, reelId), ctx.previous);
+      }
       if (err instanceof GuestDismissed) return;
       toast.error(
         err instanceof Error ? err.message : "Couldn't post your comment",
@@ -132,7 +173,7 @@ function Composer({
             aria-checked={kind === k.key}
             onClick={() => setKind(k.key)}
             className={cn(
-              "min-h-9 cursor-pointer rounded-full border border-border px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+              "min-h-11 cursor-pointer rounded-full border border-border px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring",
               kind === k.key
                 ? k.cls + " border-transparent"
                 : "text-muted-foreground hover:text-foreground",
@@ -161,6 +202,7 @@ function Composer({
         type="submit"
         disabled={!body.trim() || (!local && addMutation.isPending)}
         size="sm"
+        className="min-h-11"
       >
         {!local && addMutation.isPending ? (
           <Loader2 className="size-4 animate-spin" />
@@ -178,22 +220,20 @@ function CommentCard({
   reelId,
   level,
   onAddComment,
-  readOnly,
 }: {
   comment: CommentWithReplies;
   reelId: string;
   level: number;
   onAddComment?: (args: AddCommentArgs) => void;
-  readOnly?: boolean;
 }) {
   const [replying, setReplying] = useState(false);
   const local = Boolean(onAddComment);
   const isShare = useFeedMode().kind === "share";
-  // Share recipients are viewers — no reply/delete/write controls.
-  const canReply = !readOnly && !isShare;
-  const canDelete = !readOnly && !local && !isShare;
+  // Guests and members can reply; only members can delete. Share never deletes.
+  const canReply = true;
+  const canDelete = !local && !isShare;
   const authorName =
-    comment.author?.name?.trim() || (isShare || readOnly ? "Team member" : "User");
+    comment.author?.name?.trim() || (isShare ? "Team member" : "User");
 
   const deleteMutation = {
     mutate: () => console.log("Delete not implemented"),
@@ -213,7 +253,7 @@ function CommentCard({
       <div className="flex items-start gap-2">
         <UserAvatar
           name={authorName}
-          src={readOnly || isShare ? undefined : comment.author?.avatar}
+          src={isShare ? undefined : comment.author?.avatar}
           className="size-8 shrink-0"
         />
         <div className="min-w-0 flex-1">
@@ -240,6 +280,7 @@ function CommentCard({
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="min-h-11"
                   onClick={() => setReplying(!replying)}
                 >
                   <CornerDownRight className="size-3" />
@@ -250,6 +291,7 @@ function CommentCard({
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="min-h-11"
                   onClick={() => deleteMutation.mutate()}
                   disabled={deleteMutation.isPending}
                 >
@@ -287,7 +329,6 @@ function CommentCard({
               reelId={reelId}
               level={level + 1}
               onAddComment={onAddComment}
-              readOnly={readOnly}
             />
           ))}
         </div>
@@ -311,9 +352,6 @@ export default function Discussion({
 }: DiscussionProps) {
   const local = localComments !== undefined;
   const fetched = useReelComments(reelId, !local);
-  const isShare = useFeedMode().kind === "share";
-  // Share-link recipients are viewers — list only, no composer/reply/kind picker.
-  const readOnly = isShare;
 
   if (!local && fetched === undefined) {
     return (
@@ -330,25 +368,21 @@ export default function Discussion({
 
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
-      {!readOnly && <Composer reelId={reelId} onAddComment={onAddComment} />}
+      <Composer reelId={reelId} onAddComment={onAddComment} />
       {footer}
 
       {topLevel.length === 0 ? (
-        readOnly ? (
-          <p className="text-sm text-muted-foreground">No discussion yet.</p>
-        ) : (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <MessageSquare />
-              </EmptyMedia>
-              <EmptyTitle>Nobody has said anything yet</EmptyTitle>
-              <EmptyDescription>
-                Does this match what you’ve seen? Leave a note, ask a question, or log an action.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        )
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MessageSquare />
+            </EmptyMedia>
+            <EmptyTitle>Nobody has said anything yet</EmptyTitle>
+            <EmptyDescription>
+              Does this match what you’ve seen? Leave a note, ask a question, or log an action.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <div className="space-y-4">
           {topLevel.map((comment) => (
@@ -358,7 +392,6 @@ export default function Discussion({
               reelId={reelId}
               level={0}
               onAddComment={onAddComment}
-              readOnly={readOnly}
             />
           ))}
         </div>

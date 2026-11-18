@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { Link2Off } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
@@ -8,18 +8,59 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import Logo from "@/components/logo.tsx";
 import ReelFeed from "../feed/_components/reel-feed.tsx";
 import { FeedModeContext, type FeedMode } from "../feed/_lib/feed-mode.ts";
+import NamePrompt from "./_components/name-prompt.tsx";
+
+const secretKey = (token: string) => `fieldreel.guest.${token}`;
 
 export default function SharePage() {
   const { token = "" } = useParams();
   const [params] = useSearchParams();
+  const [secret, setSecret] = useState<string | null>(() =>
+    token ? localStorage.getItem(secretKey(token)) : null,
+  );
 
   const { data } = useQuery({
-    queryKey: ["share", "feed", token],
-    queryFn: () => api.share.feed({ token }),
+    queryKey: ["share", "feed", token, secret],
+    queryFn: () => api.share.feed({ token, secret: secret ?? undefined }),
     enabled: !!token,
   });
 
-  const mode = useMemo<FeedMode>(() => ({ kind: "share", token }), [token]);
+  const joinMutation = useMutation({
+    mutationFn: (args: { token: string; name: string }) => api.share.join(args),
+  });
+
+  const [prompting, setPrompting] = useState(false);
+  const waiters = useRef<Array<(s: string | null) => void>>([]);
+
+  const settle = (value: string | null) => {
+    const pending = waiters.current;
+    waiters.current = [];
+    pending.forEach((w) => w(value));
+    setPrompting(false);
+  };
+
+  const knownGuest = data?.guest ?? null;
+  // Until feed resolves, trust the stored secret; drop it if the server rejects it.
+  const validSecret = data === undefined ? secret : knownGuest ? secret : null;
+
+  useEffect(() => {
+    if (!token || data === undefined || !secret || knownGuest) return;
+    localStorage.removeItem(secretKey(token));
+    setSecret(null);
+  }, [token, data, secret, knownGuest]);
+
+  const ensureGuest = useCallback((): Promise<string | null> => {
+    if (validSecret) return Promise.resolve(validSecret);
+    return new Promise((resolve) => {
+      waiters.current.push(resolve);
+      setPrompting(true);
+    });
+  }, [validSecret]);
+
+  const mode = useMemo<FeedMode>(
+    () => ({ kind: "share", token, secret: validSecret, ensureGuest }),
+    [token, validSecret, ensureGuest],
+  );
 
   if (data === null) {
     return (
@@ -71,6 +112,17 @@ export default function SharePage() {
           Made with repofeed
         </Link>
       </div>
+      <NamePrompt
+        open={prompting}
+        studyTitle={data?.studyTitle ?? "this study"}
+        onCancel={() => settle(null)}
+        onSubmit={async (name) => {
+          const res = await joinMutation.mutateAsync({ token, name });
+          localStorage.setItem(secretKey(token), res.secret);
+          setSecret(res.secret);
+          settle(res.secret);
+        }}
+      />
     </FeedModeContext.Provider>
   );
 }

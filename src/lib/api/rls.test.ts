@@ -526,11 +526,28 @@ describe("RLS policies from supabase/migrations", () => {
     expect(secret?.length).toBeGreaterThanOrEqual(16);
     expect(guestId).toBeTruthy();
 
-    const commented = await db.query<{ comment: { body: string; guest_id: string } }>(
+    const commented = await db.query<{
+      comment: {
+        body: string;
+        guest_id?: string;
+        user_id?: string;
+        study_id?: string;
+        users?: { name: string; email: string | null };
+      };
+    }>(
       `select public.share_add_comment('${TOKEN}', '${secret}', '${REEL}', 'note', 'Looks right', null) as comment`,
     );
     expect(commented.rows[0]?.comment.body).toBe("Looks right");
-    expect(commented.rows[0]?.comment.guest_id).toBe(guestId);
+    // Panel-safe: display name only — no guest/user/study ids on the wire.
+    expect(commented.rows[0]?.comment.guest_id).toBeUndefined();
+    expect(commented.rows[0]?.comment.user_id).toBeUndefined();
+    expect(commented.rows[0]?.comment.study_id).toBeUndefined();
+    expect(commented.rows[0]?.comment.users).toEqual({
+      name: "Priya Patel",
+      email: null,
+      avatar: null,
+    });
+    expect(guestId).toBeTruthy();
 
     const listed = await db.query<{ comments: Array<{ body: string }> }>(
       `select public.share_comments('${TOKEN}', '${REEL}') as comments`,

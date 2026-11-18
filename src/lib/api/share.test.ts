@@ -380,13 +380,33 @@ describe("guest share links", () => {
       p_kind: "true",
     });
 
-    fake().queue("rpc:share_add_comment", { data: { id: "c1" } });
-    await guestAddComment({
+    fake().queue("rpc:share_add_comment", {
+      data: {
+        id: "c1",
+        reel_id: "r1",
+        parent_id: null,
+        kind: "note",
+        body: "hello",
+        resolved: false,
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-01T00:00:00.000Z",
+        users: { name: "Priya", email: null, avatar: null },
+      },
+    });
+    const posted = await guestAddComment({
       reelId: "r1",
       kind: "note",
       body: "hello",
       token: "tok",
       secret: "sec",
+    });
+    expect(posted).toMatchObject({
+      id: "c1",
+      body: "hello",
+      author: { name: "Priya" },
+      userId: null,
+      guestId: null,
+      studyId: "",
     });
     expect(fake().lastCall("share_add_comment")?.payload).toEqual({
       p_token: "tok",
