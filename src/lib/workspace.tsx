@@ -26,8 +26,8 @@ interface WorkspaceContextType {
   isEditor: boolean;
   isOwner: boolean;
   loading: boolean;
-  /** Reload the list, e.g. right after creating a workspace. Resolves once the new list is in place. */
-  refresh: () => Promise<void>;
+  /** Reload the list, e.g. right after creating a workspace. Resolves with the new list once it is in place. */
+  refresh: () => Promise<Workspace[]>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -39,7 +39,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // Which user the workspace list was last loaded for. Until it matches the signed-in user we are still loading.
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
-  const loadWorkspaces = useCallback(async (userId: string) => {
+  const loadWorkspaces = useCallback(async (userId: string): Promise<Workspace[]> => {
     const { data, error } = await supabase
       .from('workspace_members')
       .select(`
@@ -63,7 +63,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error('Error loading workspaces:', error);
       setLoadedFor(userId);
-      return;
+      return [];
     }
 
     const ws = data?.map((m: any) => {
@@ -89,6 +89,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     // Keep the current selection if there is one; otherwise open the first workspace.
     setCurrent((existing) => existing ?? ws[0] ?? null);
     setLoadedFor(userId);
+    return ws;
   }, []);
 
   useEffect(() => {
@@ -99,7 +100,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [user, authLoading, loadWorkspaces]);
 
   const refresh = useCallback(async () => {
-    if (user) await loadWorkspaces(user.id);
+    if (!user) return [];
+    return loadWorkspaces(user.id);
   }, [user, loadWorkspaces]);
 
   const loading = authLoading || (!!user && loadedFor !== user.id);

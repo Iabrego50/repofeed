@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Bookmark, Check, ChevronsUpDown, CircleHelp, Compass, Clapperboard, CreditCard, FileText, GraduationCap, Layers, LifeBuoy, LogOut, Mail, Plus, Presentation, Search, Settings, Shield, TrendingUp } from "lucide-react";
 import { SUPPORT_MAILTO } from "@/lib/site.ts";
@@ -12,6 +12,7 @@ import OfflineBanner from "@/components/offline-banner.tsx";
 import PlanNotices from "@/components/plan-notices.tsx";
 import CommandPalette, { openSearch } from "@/components/shell/command-palette.tsx";
 import Guide, { openGuide } from "@/components/guide/guide.tsx";
+import { Spinner } from "@/components/ui/spinner.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,7 +146,56 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export default function AppLayout() {
+/** View-only members: full-bleed feed, no app chrome beyond a slim top bar. */
+function ViewerLayout() {
+  const { current } = useWorkspace();
+  const { signout } = useAuth();
+  const user = useUser();
+  const { pathname } = useLocation();
+
+  if (pathname !== "/feed") {
+    return <Navigate to="/feed" replace />;
+  }
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+      <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2">
+        <div aria-label="repofeed" className="shrink-0">
+          <Logo />
+        </div>
+        {current && (
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground" title={current.name}>
+            {current.name}
+          </p>
+        )}
+        {!current && <span className="flex-1" />}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="Account menu"
+            className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-md hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <UserAvatar name={user.name ?? user.email} src={user.avatar} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="truncate text-xs font-medium text-muted-foreground">
+              {user.email}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => void signout()} className="cursor-pointer">
+              <LogOut className="size-4" /> Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+      <OfflineBanner />
+      <main className="dark min-h-0 flex-1 overflow-y-auto">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function EditorLayout() {
   const { isEditor } = useWorkspace();
   const { signout } = useAuth();
   const user = useUser();
@@ -159,14 +209,16 @@ export default function AppLayout() {
   const tabs: NavItem[] = [
     WATCH[0],
     WATCH[2],
-    ...(isEditor ? [{ to: "/studies/new", label: "New", icon: Plus }, MAKE[0], MAKE[1]] : [WATCH[1]]),
+    { to: "/studies/new", label: "New", icon: Plus },
+    MAKE[0],
+    MAKE[1],
   ];
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
       <CommandPalette />
       <Guide />
-      <aside className="hidden w-[15.5rem] shrink-0 flex-col gap-5 border-r border-border bg-sidebar px-3 py-4 lg:flex">
+      <aside className="hidden w-[15.5rem] shrink-0 flex-col gap-5 border-r border-border bg-sidebar px-3 py-4 lg:flex" data-testid="app-sidebar">
         <NavLink to="/feed" className="cursor-pointer px-1.5" aria-label="Go to the feed">
           <Logo />
         </NavLink>
@@ -181,22 +233,18 @@ export default function AppLayout() {
           <NavGroup label="Make" items={visible(MAKE)} />
           <NavGroup label="Manage" items={visible(MANAGE)} />
         </nav>
-        {isEditor && (
-          <NavLink
-            to="/studies/new"
-            data-tour="new-study"
-            className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <Plus className="size-4" /> New study
-          </NavLink>
-        )}
+        <NavLink
+          to="/studies/new"
+          data-tour="new-study"
+          className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <Plus className="size-4" /> New study
+        </NavLink>
         <div className="mt-auto flex flex-col gap-0.5">
           {isAdmin && <NavRow item={{ to: "/admin/analytics", label: "Analytics", icon: TrendingUp }} />}
-          {isEditor && (
-            <button type="button" onClick={openGuide} className={cn(ROW, "w-full")}>
-              <GraduationCap className="size-4" /> Product tour
-            </button>
-          )}
+          <button type="button" onClick={openGuide} className={cn(ROW, "w-full")}>
+            <GraduationCap className="size-4" /> Product tour
+          </button>
           <NavRow item={{ to: "/help", label: "Help Center", icon: LifeBuoy }} />
           <div className="mt-2 flex items-center gap-2.5 border-t border-border px-1.5 pt-3">
             <UserAvatar name={user.name ?? user.email} src={user.avatar} />
@@ -238,26 +286,20 @@ export default function AppLayout() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="truncate text-xs font-medium text-muted-foreground">{user.email}</DropdownMenuLabel>
-              {isEditor && (
-                <DropdownMenuItem onSelect={() => navigate("/settings")} className="cursor-pointer">
-                  <Settings className="size-4" /> Workspace and people
-                </DropdownMenuItem>
-              )}
-              {isEditor && (
-                <DropdownMenuItem onSelect={() => navigate("/billing")} className="cursor-pointer">
-                  <CreditCard className="size-4" /> Plan and billing
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onSelect={() => navigate("/settings")} className="cursor-pointer">
+                <Settings className="size-4" /> Workspace and people
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate("/billing")} className="cursor-pointer">
+                <CreditCard className="size-4" /> Plan and billing
+              </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem onSelect={() => navigate("/admin/analytics")} className="cursor-pointer">
                   <TrendingUp className="size-4" /> Analytics
                 </DropdownMenuItem>
               )}
-              {isEditor && (
-                <DropdownMenuItem onSelect={openGuide} className="cursor-pointer">
-                  <GraduationCap className="size-4" /> Product tour
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onSelect={openGuide} className="cursor-pointer">
+                <GraduationCap className="size-4" /> Product tour
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => navigate("/help")} className="cursor-pointer">
                 <LifeBuoy className="size-4" /> Help Center
               </DropdownMenuItem>
@@ -270,34 +312,53 @@ export default function AppLayout() {
         </header>
         <OfflineBanner />
         <PlanNotices />
-        <main className={cn("min-h-0 flex-1 overflow-y-auto lg:pb-0", tabs.length > 1 && "pb-14", onFeed && "dark")}>
+        <main className={cn("min-h-0 flex-1 overflow-y-auto pb-14 lg:pb-0", onFeed && "dark")}>
           <Outlet />
         </main>
-        {tabs.length > 1 && (
-          <nav
-            aria-label="Main"
-            className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
-          >
-            {tabs.map((n) => (
-              <NavLink
-                key={n.to}
-                to={n.to}
-                data-tour={n.to === "/studies/new" ? "new-study" : tourName(n.to)}
-                end={n.to === "/feed" || n.to === "/studies"}
-                className={({ isActive }) =>
-                  cn(
-                    "flex min-h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
-                    isActive && (n.match ? n.match(pathname, window.location.search) : true) && "text-primary",
-                  )
-                }
-              >
-                <n.icon className="size-5" />
-                {n.label}
-              </NavLink>
-            ))}
-          </nav>
-        )}
+        <nav
+          aria-label="Main"
+          data-testid="mobile-bottom-nav"
+          className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        >
+          {tabs.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              data-tour={n.to === "/studies/new" ? "new-study" : tourName(n.to)}
+              end={n.to === "/feed" || n.to === "/studies"}
+              className={({ isActive }) =>
+                cn(
+                  "flex min-h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+                  isActive && (n.match ? n.match(pathname, window.location.search) : true) && "text-primary",
+                )
+              }
+            >
+              <n.icon className="size-5" />
+              {n.label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
     </div>
   );
+}
+
+export default function AppLayout() {
+  const { isEditor, loading, current } = useWorkspace();
+
+  // Wait for role before choosing chrome so invitees never flash the editor sidebar.
+  if (loading || !current) {
+    return (
+      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background" data-testid="layout-loading">
+        <Logo />
+        <Spinner className="size-6 text-primary" />
+      </div>
+    );
+  }
+
+  if (!isEditor) {
+    return <ViewerLayout />;
+  }
+
+  return <EditorLayout />;
 }

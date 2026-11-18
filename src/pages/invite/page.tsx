@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { signInPath } from "@/app-paths.ts";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
@@ -16,6 +17,7 @@ export default function InvitePage() {
   const token = routeToken || searchParams.get("token");
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const { refresh, setCurrent } = useWorkspace();
   const [accepting, setAccepting] = useState(false);
 
   const { data: invite, isLoading: isLoadingInvite, error } = useQuery({
@@ -26,8 +28,12 @@ export default function InvitePage() {
 
   const acceptMutation = useMutation({
     mutationFn: () => api.billing.actions.acceptInvite({ token: token! }),
-    onSuccess: () => {
+    onSuccess: async (workspaceId: string) => {
       toast.success("Joined workspace!");
+      // Load membership before /feed so AppLayout can pick the viewer shell without a sidebar flash.
+      const list = await refresh();
+      const joined = list.find((w) => w.id === workspaceId || w._id === workspaceId);
+      if (joined) setCurrent(joined);
       navigate("/feed");
     },
     onError: (err: any) => {
