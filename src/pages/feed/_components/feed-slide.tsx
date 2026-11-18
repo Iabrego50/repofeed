@@ -48,6 +48,9 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
   const isShare = mode.kind === "share";
   // Guests on a share link can't open Explore, so their topic tags are plain text.
   const linkTopics = !isShare;
+  // Guests may react (share_react) and comment; save/export stay member-only.
+  const canReact = true;
+  const canSave = !isShare;
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const playing = active && !paused;
@@ -106,7 +109,6 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
         setPaused((p) => !p);
         return;
       }
-      // Share viewers: open the read-only panel, but no react/save.
       if (key === "c") {
         onOpenPanel("discussion");
         return;
@@ -115,14 +117,14 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
         onOpenPanel("evidence");
         return;
       }
-      if (isShare) return;
-      if (key === "l") react("true");
-      else if (key === "1" || key === "2" || key === "3") react(REACTIONS[Number(key) - 1].kind);
-      else if (key === "s") save();
+      if (canReact && key === "l") react("true");
+      else if (canReact && (key === "1" || key === "2" || key === "3")) {
+        react(REACTIONS[Number(key) - 1].kind);
+      } else if (canSave && key === "s") save();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, react, save, onOpenPanel, isShare]);
+  }, [active, react, save, onOpenPanel, canReact, canSave]);
 
   return (
     <div className="relative flex h-full w-full snap-start snap-always items-center justify-center bg-black">
@@ -183,7 +185,7 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
                 )}
               </div>
             )}
-            {!isShare && (
+            {canReact && (
               <div role="group" aria-label="Your reaction" data-tour={active ? "reactions" : undefined} className="pointer-events-auto mt-3 flex flex-wrap gap-1.5">
                 {REACTIONS.map((r) => (
                   <button
@@ -194,7 +196,7 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
                     onClick={() => react(r.kind)}
                     title={`${r.label} (${r.key})`}
                     className={cn(
-                      "flex min-h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-xs font-semibold backdrop-blur transition-colors focus-visible:outline-2 focus-visible:outline-white",
+                      "flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-xs font-semibold backdrop-blur transition-colors focus-visible:outline-2 focus-visible:outline-white",
                       mine === r.kind ? "border-transparent bg-white text-black" : "border-white/25 bg-black/40 text-white hover:bg-black/60",
                     )}
                   >
@@ -205,28 +207,19 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
             )}
           </div>
           <div className="pointer-events-auto" data-tour={active ? "scene-actions" : undefined}>
-            {isShare ? (
-              <SceneActions
-                commentCount={reel.commentCount ?? 0}
-                onComment={() => onOpenPanel("discussion")}
-                onEvidence={() => onOpenPanel("evidence")}
-                onShare={() => void share()}
-              />
-            ) : (
-              <SceneActions
-                hearted={mine === "true"}
-                hearts={reel.reactions?.heart ?? 0}
-                heartPending={reactMutation.isPending}
-                onHeart={() => react("true")}
-                commentCount={reel.commentCount ?? 0}
-                onComment={() => onOpenPanel("discussion")}
-                saved={!!reel.saved}
-                savePending={saveMutation.isPending}
-                onSave={() => save()}
-                onEvidence={() => onOpenPanel("evidence")}
-                onShare={() => void share()}
-              />
-            )}
+            <SceneActions
+              hearted={mine === "true"}
+              hearts={reel.reactions?.heart ?? 0}
+              heartPending={reactMutation.isPending}
+              onHeart={canReact ? () => react("true") : undefined}
+              commentCount={reel.commentCount ?? 0}
+              onComment={() => onOpenPanel("discussion")}
+              saved={!!reel.saved}
+              savePending={saveMutation.isPending}
+              onSave={canSave ? () => save() : undefined}
+              onEvidence={() => onOpenPanel("evidence")}
+              onShare={() => void share()}
+            />
           </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 z-30 h-1 bg-white/15">

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { FeedModeContext } from "./feed-mode";
+import { FeedModeContext, type FeedMode } from "./feed-mode";
 import { useFeedActions, useReelComments } from "./use-feed-data";
 
 const bag = vi.hoisted(() => ({
@@ -10,6 +10,9 @@ const bag = vi.hoisted(() => ({
   deleteComment: vi.fn(),
   react: vi.fn(),
   guestReact: vi.fn(),
+  guestAddComment: vi.fn(),
+  addComment: vi.fn(),
+  ensureGuest: vi.fn(),
 }));
 
 beforeEach(() => {
@@ -18,6 +21,9 @@ beforeEach(() => {
   bag.deleteComment.mockReset();
   bag.react.mockReset();
   bag.guestReact.mockReset();
+  bag.guestAddComment.mockReset();
+  bag.addComment.mockReset();
+  bag.ensureGuest.mockReset();
 });
 
 vi.mock("@/lib/api/complete", () => ({
@@ -28,9 +34,21 @@ vi.mock("@/lib/api/complete", () => ({
       deleteComment: (...args: unknown[]) => bag.deleteComment(...args),
       react: (...args: unknown[]) => bag.react(...args),
       guestReact: (...args: unknown[]) => bag.guestReact(...args),
+      guestAddComment: (...args: unknown[]) => bag.guestAddComment(...args),
+      addComment: (...args: unknown[]) => bag.addComment(...args),
     },
   },
 }));
+
+function shareMode(overrides?: Partial<Extract<FeedMode, { kind: "share" }>>): FeedMode {
+  return {
+    kind: "share",
+    token: "tok",
+    secret: null,
+    ensureGuest: (...args: unknown[]) => bag.ensureGuest(...args),
+    ...overrides,
+  };
+}
 
 function Probe({ reelId }: { reelId: string }) {
   const comments = useReelComments(reelId);
@@ -38,12 +56,12 @@ function Probe({ reelId }: { reelId: string }) {
 }
 
 describe("useReelComments", () => {
-  it("loads share_comments for share viewers (read-only panel)", async () => {
+  it("loads share_comments for share viewers", async () => {
     bag.comments.mockResolvedValue([{ body: "hello from share" }]);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <FeedModeContext.Provider value={{ kind: "share", token: "tok" }}>
+        <FeedModeContext.Provider value={shareMode()}>
           <Probe reelId="r1" />
         </FeedModeContext.Provider>
       </QueryClientProvider>,
@@ -70,7 +88,7 @@ describe("useReelComments", () => {
 });
 
 function WriteProbe() {
-  const { react, deleteComment } = useFeedActions();
+  const { react, deleteComment, addComment } = useFeedActions();
   return (
     <>
       <button
@@ -82,6 +100,16 @@ function WriteProbe() {
         }
       >
         react
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          void addComment({ reelId: "r1", kind: "note", body: "hi" }).catch((e: Error) => {
+            (window as unknown as { __err?: string }).__err = e.message;
+          })
+        }
+      >
+        comment
       </button>
       <button
         type="button"
@@ -98,22 +126,87 @@ function WriteProbe() {
 }
 
 describe("useFeedActions share writes", () => {
-  it("refuses guest write RPCs for share-link viewers", async () => {
+  it("joins then posts a comment when there is no stored secret", async () => {
+    bag.ensureGuest.mockResolvedValue("fresh-secret");
+    bag.guestAddComment.mockResolvedValue({
+      _id: "c1",
+      id: "c1",
+      body: "hi",
+      author: { name: "Priya" },
+    });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <FeedModeContext.Provider value={{ kind: "share", token: "tok" }}>
+        <FeedModeContext.Provider value={shareMode({ secret: null })}>
+          <WriteProbe />
+        </FeedModeContext.Provider>
+      </QueryClientProvider>,
+    );
+    screen.getByRole("button", { name: /comment/i }).click();
+    await waitFor(() => {
+      expect(bag.ensureGuest).toHaveBeenCalled();
+      expect(bag.guestAddComment).toHaveBeenCalledWith({
+        reelId: "r1",
+        kind: "note",
+        body: "hi",
+        token: "tok",
+        secret: "fresh-secret",
+      });
+    });
+    expect(bag.addComment).not.toHaveBeenCalled();
+  });
+
+  it("skips the name prompt when a guest secret is already stored", async () => {
+    bag.ensureGuest.mockResolvedValue("stored-secret");
+    bag.guestAddComment.mockResolvedValue({ _id: "c1", id: "c1", body: "hi" });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FeedModeContext.Provider value={shareMode({ secret: "stored-secret" })}>
+          <WriteProbe />
+        </FeedModeContext.Provider>
+      </QueryClientProvider>,
+    );
+    screen.getByRole("button", { name: /comment/i }).click();
+    await waitFor(() => {
+      expect(bag.guestAddComment).toHaveBeenCalledWith(
+        expect.objectContaining({ secret: "stored-secret" }),
+      );
+    });
+  });
+
+  it("allows guest reactions via share_react", async () => {
+    bag.ensureGuest.mockResolvedValue("sec");
+    bag.guestReact.mockResolvedValue("true");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FeedModeContext.Provider value={shareMode()}>
           <WriteProbe />
         </FeedModeContext.Provider>
       </QueryClientProvider>,
     );
     screen.getByRole("button", { name: /react/i }).click();
     await waitFor(() => {
-      expect((window as unknown as { __err?: string }).__err).toMatch(/only watch/i);
+      expect(bag.guestReact).toHaveBeenCalledWith({
+        reelId: "r1",
+        kind: "true",
+        token: "tok",
+        secret: "sec",
+      });
     });
-    expect(bag.guestReact).not.toHaveBeenCalled();
     expect(bag.react).not.toHaveBeenCalled();
+  });
 
+  it("refuses delete for share-link viewers", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FeedModeContext.Provider value={shareMode()}>
+          <WriteProbe />
+        </FeedModeContext.Provider>
+      </QueryClientProvider>,
+    );
     (window as unknown as { __err?: string }).__err = undefined;
     screen.getByRole("button", { name: /delete/i }).click();
     await waitFor(() => {

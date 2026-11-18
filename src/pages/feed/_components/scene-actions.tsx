@@ -10,7 +10,7 @@ function ActionHint({ children }: { children: ReactNode }) {
   );
 }
 
-/** Right-rail scene actions. Share-link viewers omit heart/save (read-only panel only). */
+/** Right-rail scene actions. Share guests may react; save stays member-only. */
 export default function SceneActions({
   hearted = false,
   hearts = 0,
@@ -29,7 +29,7 @@ export default function SceneActions({
   hearted?: boolean;
   hearts?: number;
   heartPending?: boolean;
-  /** Omit on share-link viewers — reactions write. */
+  /** Omit to hide the heart control. */
   onHeart?: () => void;
   commentCount?: number;
   onComment: () => void;

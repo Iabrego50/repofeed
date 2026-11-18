@@ -124,14 +124,14 @@ export default function ReelFeed({
 
   const quietRecordView = useCallback(
     (reelId: string, completed: boolean) => {
-      // Share viewers are watch-only; never call guest view/write RPCs.
+      // Don't prompt guests for a name just to record a view.
       if (mode.kind === "share") return;
       void recordView(reelId, completed, getSessionId()).catch(() => undefined);
     },
     [mode, recordView],
   );
 
-  // Share recipients get the same discussion/evidence panel as members (read-only).
+  // Share recipients get the same discussion/evidence panel; export stays member-only.
   const showPanels = mode.kind === "member" || mode.kind === "share";
   const canExport = mode.kind === "member";
 
