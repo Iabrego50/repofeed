@@ -131,7 +131,9 @@ export default function ReelFeed({
     [mode, recordView],
   );
 
-  const showPanels = mode.kind === "member";
+  // Share recipients get the same discussion/evidence panel as members (read-only).
+  const showPanels = mode.kind === "member" || mode.kind === "share";
+  const canExport = mode.kind === "member";
 
   useEffect(() => {
     if (!reels || reels.length === 0 || feedOpenSent.current) return;
@@ -198,14 +200,19 @@ export default function ReelFeed({
                       scrollTo(i + 1);
                     }}
                     onOpenPanel={openPanel}
-                    onExport={() => setExporting({
-                      title: r.title,
-                      track: r.track,
-                      trackIndex: r.trackIndex,
-                      studyTitle: r.studyTitle,
-                      scenes: r.scenes || [],
-                      footage: r.footage,
-                    })}
+                    onExport={
+                      canExport
+                        ? () =>
+                            setExporting({
+                              title: r.title,
+                              track: r.track,
+                              trackIndex: r.trackIndex,
+                              studyTitle: r.studyTitle,
+                              scenes: r.scenes || [],
+                              footage: r.footage,
+                            })
+                        : undefined
+                    }
                   />
                 ) : (
                   <div className="h-full w-full snap-start bg-black" aria-hidden />
@@ -253,7 +260,7 @@ export default function ReelFeed({
         )}
       </AnimatePresence>
 
-      {showPanels && <ExportDialog reel={exporting} onClose={() => setExporting(null)} />}
+      {canExport && <ExportDialog reel={exporting} onClose={() => setExporting(null)} />}
     </div>
   );
 }

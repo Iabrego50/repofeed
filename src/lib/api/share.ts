@@ -281,18 +281,66 @@ export async function reelShareLink(args: { reelId: string }): Promise<string> {
   return createShareLink({ studyId: reel.study_id });
 }
 
+/** Panel-safe comment shape from share_comments (ids / emails may be omitted by the RPC). */
+type ShareCommentRow = Partial<DbComment> & {
+  id: string;
+  reel_id: string;
+  kind: DbComment["kind"];
+  body: string;
+  created_at: string;
+};
+
+/** Strip researcher identifiers; keep only what the read-only panel needs. */
+function mapShareComment(row: ShareCommentRow) {
+  const displayName = row.users?.name?.trim() || "Team member";
+  return mapComment({
+    id: row.id,
+    reel_id: row.reel_id,
+    study_id: "",
+    user_id: null,
+    guest_id: null,
+    parent_id: row.parent_id ?? null,
+    kind: row.kind,
+    body: row.body,
+    resolved: row.resolved ?? false,
+    created_at: row.created_at,
+    updated_at: row.updated_at ?? row.created_at,
+    users: { name: displayName, email: null, avatar: null },
+  });
+}
+
+type ShareFindingRow = Partial<DbFinding> & {
+  id: string;
+  type: string;
+  text: string;
+  created_at: string;
+};
+
+function mapShareFinding(row: ShareFindingRow) {
+  return mapFinding({
+    id: row.id,
+    study_id: "",
+    type: row.type,
+    text: row.text,
+    speaker: row.speaker,
+    number: row.number,
+    label: row.label,
+    created_at: row.created_at,
+  });
+}
+
 export async function shareComments(args: { token: string; reelId: string; secret?: string }) {
-  const rows = await rpcJson<DbComment[]>("share_comments", {
+  const rows = await rpcJson<ShareCommentRow[]>("share_comments", {
     p_token: args.token,
     p_reel_id: args.reelId,
   });
-  return (rows || []).map(mapComment);
+  return (rows || []).map(mapShareComment);
 }
 
 export async function shareEvidence(args: { token: string; reelId: string }) {
-  const rows = await rpcJson<DbFinding[]>("share_evidence", {
+  const rows = await rpcJson<ShareFindingRow[]>("share_evidence", {
     p_token: args.token,
     p_reel_id: args.reelId,
   });
-  return (rows || []).map(mapFinding);
+  return (rows || []).map(mapShareFinding);
 }

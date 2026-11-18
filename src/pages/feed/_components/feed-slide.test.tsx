@@ -73,14 +73,14 @@ function renderSlide(mode: "member" | "share") {
 }
 
 describe("FeedSlide access", () => {
-  it("is watch-only on share links: no react, comment, save, evidence, or explore links", () => {
+  it("share links: discussion/evidence only — no react, save, or explore links", () => {
     renderSlide("share");
     expect(screen.queryByRole("button", { name: "React" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/open comments/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/more about checkout/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: /your reaction/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
     expect(screen.getByText("#checkout")).toBeInTheDocument();
     expect(screen.getByLabelText(/pause scene|play scene/i)).toBeInTheDocument();
   });
@@ -89,6 +89,8 @@ describe("FeedSlide access", () => {
     renderSlide("member");
     expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/more about checkout/i)).toBeInTheDocument();
   });
 });

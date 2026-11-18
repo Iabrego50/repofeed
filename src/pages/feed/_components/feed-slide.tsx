@@ -21,7 +21,8 @@ interface FeedSlideProps {
   isNew: boolean;
   onEnded: () => void;
   onOpenPanel: (tab: PanelTab) => void;
-  onExport: () => void;
+  /** Members only — omit for share-link viewers. */
+  onExport?: () => void;
 }
 
 /** The three ways to answer a finding. Insights counts each one per scene. */
@@ -105,13 +106,19 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
         setPaused((p) => !p);
         return;
       }
-      // Share viewers: play/pause only.
+      // Share viewers: open the read-only panel, but no react/save.
+      if (key === "c") {
+        onOpenPanel("discussion");
+        return;
+      }
+      if (key === "e") {
+        onOpenPanel("evidence");
+        return;
+      }
       if (isShare) return;
       if (key === "l") react("true");
       else if (key === "1" || key === "2" || key === "3") react(REACTIONS[Number(key) - 1].kind);
       else if (key === "s") save();
-      else if (key === "c") onOpenPanel("discussion");
-      else if (key === "e") onOpenPanel("evidence");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -197,8 +204,15 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
               </div>
             )}
           </div>
-          {!isShare && (
-            <div className="pointer-events-auto" data-tour={active ? "scene-actions" : undefined}>
+          <div className="pointer-events-auto" data-tour={active ? "scene-actions" : undefined}>
+            {isShare ? (
+              <SceneActions
+                commentCount={reel.commentCount ?? 0}
+                onComment={() => onOpenPanel("discussion")}
+                onEvidence={() => onOpenPanel("evidence")}
+                onShare={() => void share()}
+              />
+            ) : (
               <SceneActions
                 hearted={mine === "true"}
                 hearts={reel.reactions?.heart ?? 0}
@@ -212,8 +226,8 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
                 onEvidence={() => onOpenPanel("evidence")}
                 onShare={() => void share()}
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 z-30 h-1 bg-white/15">
           <div className="h-full bg-white transition-[width] duration-100" style={{ width: `${active ? progress * 100 : 0}%` }} />

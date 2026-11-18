@@ -16,8 +16,18 @@ export function useReelComments(reelId: string, enabled = true) {
     enabled: enabled && mode.kind === "member",
   });
 
-  // Share viewers are watch-only — no comment panel, so skip the guest comments RPC.
-  return mode.kind === "member" ? memberComments : undefined;
+  const { data: shareComments } = useQuery({
+    queryKey: ["share", "comments", mode.kind === "share" ? mode.token : null, reelId],
+    queryFn: () => {
+      if (mode.kind !== "share") throw new Error("Not a share session");
+      return api.share.comments({ token: mode.token, reelId });
+    },
+    enabled: enabled && mode.kind === "share" && !!reelId,
+  });
+
+  if (mode.kind === "member") return memberComments;
+  if (mode.kind === "share") return shareComments;
+  return undefined;
 }
 
 export function useReelEvidence(reelId: string, enabled = true) {
@@ -29,7 +39,18 @@ export function useReelEvidence(reelId: string, enabled = true) {
     enabled: enabled && mode.kind === "member",
   });
 
-  return mode.kind === "member" ? memberEvidence : undefined;
+  const { data: shareEvidence } = useQuery({
+    queryKey: ["share", "evidence", mode.kind === "share" ? mode.token : null, reelId],
+    queryFn: () => {
+      if (mode.kind !== "share") throw new Error("Not a share session");
+      return api.share.evidence({ token: mode.token, reelId });
+    },
+    enabled: enabled && mode.kind === "share" && !!reelId,
+  });
+
+  if (mode.kind === "member") return memberEvidence;
+  if (mode.kind === "share") return shareEvidence;
+  return undefined;
 }
 
 /** Mode-aware writes. Share-link viewers never write. */

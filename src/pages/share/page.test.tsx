@@ -83,8 +83,9 @@ describe("Share page", () => {
     expect(screen.getByText(/made with repofeed/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "React" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/open comments/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
+    // Read-only panel entry points for discussion / evidence.
+    expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
     expect(screen.queryByText(/welcome/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/your name/i)).not.toBeInTheDocument();
     expect(bag.join).not.toHaveBeenCalled();

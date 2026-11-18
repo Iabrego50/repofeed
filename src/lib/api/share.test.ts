@@ -187,10 +187,36 @@ describe("guest share links", () => {
     });
     const shown = await shareComments({ token: "tok", reelId: "r1" });
     expect(shown.map((c) => c.body)).toEqual(["spam"]);
+    expect(shown[0]?.author?.name).toBe("Priya");
+    expect(shown[0]?.author?.email).toBeUndefined();
+    expect(shown[0]?.userId).toBeNull();
+    expect(shown[0]?.guestId).toBeNull();
+    expect(shown[0]?.studyId).toBe("");
     expect(fake().lastCall("share_comments")?.payload).toEqual({
       p_token: "tok",
       p_reel_id: "r1",
     });
+  });
+
+  it("shareComments falls back to Team member and strips missing author emails", async () => {
+    fake().queue("rpc:share_comments", {
+      data: [
+        {
+          id: "c3",
+          reel_id: "r1",
+          parent_id: null,
+          kind: "note",
+          body: "anon note",
+          resolved: false,
+          created_at: "2026-01-01T00:00:00.000Z",
+          users: { name: null, email: "leak@example.com", avatar: "https://x/a.png" },
+        },
+      ],
+    });
+    const shown = await shareComments({ token: "tok", reelId: "r1" });
+    expect(shown[0]?.author).toEqual({ name: "Team member" });
+    expect(shown[0]?.userId).toBeNull();
+    expect(shown[0]?.guestId).toBeNull();
   });
 
   it("revoking the link or unpublishing hides the feed", async () => {

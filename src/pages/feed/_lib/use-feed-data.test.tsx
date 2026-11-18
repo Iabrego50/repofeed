@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedModeContext } from "./feed-mode";
 import { useFeedActions, useReelComments } from "./use-feed-data";
 
@@ -11,6 +11,14 @@ const bag = vi.hoisted(() => ({
   react: vi.fn(),
   guestReact: vi.fn(),
 }));
+
+beforeEach(() => {
+  bag.comments.mockReset();
+  bag.getComments.mockReset();
+  bag.deleteComment.mockReset();
+  bag.react.mockReset();
+  bag.guestReact.mockReset();
+});
 
 vi.mock("@/lib/api/complete", () => ({
   api: {
@@ -30,7 +38,8 @@ function Probe({ reelId }: { reelId: string }) {
 }
 
 describe("useReelComments", () => {
-  it("does not load comments for share viewers", async () => {
+  it("loads share_comments for share viewers (read-only panel)", async () => {
+    bag.comments.mockResolvedValue([{ body: "hello from share" }]);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
@@ -39,9 +48,24 @@ describe("useReelComments", () => {
         </FeedModeContext.Provider>
       </QueryClientProvider>,
     );
-    expect(await screen.findByText("none")).toBeInTheDocument();
-    expect(bag.comments).not.toHaveBeenCalled();
+    expect(await screen.findByText("hello from share")).toBeInTheDocument();
+    expect(bag.comments).toHaveBeenCalledWith({ token: "tok", reelId: "r1" });
     expect(bag.getComments).not.toHaveBeenCalled();
+  });
+
+  it("loads member comments for workspace members", async () => {
+    bag.getComments.mockResolvedValue([{ body: "member note" }]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FeedModeContext.Provider value={{ kind: "member" }}>
+          <Probe reelId="r1" />
+        </FeedModeContext.Provider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("member note")).toBeInTheDocument();
+    expect(bag.getComments).toHaveBeenCalledWith({ reelId: "r1" });
+    expect(bag.comments).not.toHaveBeenCalled();
   });
 });
 
