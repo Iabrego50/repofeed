@@ -10,7 +10,7 @@ function ActionHint({ children }: { children: ReactNode }) {
   );
 }
 
-/** Right-rail reactions matching the signed-in feed slide. */
+/** Right-rail scene actions. Share-link viewers omit heart/save (read-only panel only). */
 export default function SceneActions({
   hearted = false,
   hearts = 0,
@@ -29,7 +29,8 @@ export default function SceneActions({
   hearted?: boolean;
   hearts?: number;
   heartPending?: boolean;
-  onHeart: () => void;
+  /** Omit on share-link viewers — reactions write. */
+  onHeart?: () => void;
   commentCount?: number;
   onComment: () => void;
   saved?: boolean;
@@ -46,29 +47,31 @@ export default function SceneActions({
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <button
-        type="button"
-        onClick={() => {
-          onHeart();
-          onDismissHints?.();
-        }}
-        disabled={heartPending}
-        aria-label={hearted ? "Remove reaction" : "React"}
-        aria-pressed={hearted}
-        className="relative flex cursor-pointer flex-col items-center gap-1 text-white"
-      >
-        {hints?.react && <ActionHint>{hints.react}</ActionHint>}
-        {heartPending ? (
-          <div className="flex size-12 items-center justify-center rounded-full bg-black/50">
-            <Loader2 className="size-6 animate-spin" />
-          </div>
-        ) : (
-          <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
-            <Heart className={cn("size-6", hearted && "fill-[#ff5a6e] text-[#ff5a6e]")} />
-          </div>
-        )}
-        {hearts > 0 && <span className="text-xs font-medium">{hearts}</span>}
-      </button>
+      {onHeart && (
+        <button
+          type="button"
+          onClick={() => {
+            onHeart();
+            onDismissHints?.();
+          }}
+          disabled={heartPending}
+          aria-label={hearted ? "Remove reaction" : "React"}
+          aria-pressed={hearted}
+          className="relative flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 text-white"
+        >
+          {hints?.react && <ActionHint>{hints.react}</ActionHint>}
+          {heartPending ? (
+            <div className="flex size-12 items-center justify-center rounded-full bg-black/50">
+              <Loader2 className="size-6 animate-spin" />
+            </div>
+          ) : (
+            <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
+              <Heart className={cn("size-6", hearted && "fill-[#ff5a6e] text-[#ff5a6e]")} />
+            </div>
+          )}
+          {hearts > 0 && <span className="text-xs font-medium">{hearts}</span>}
+        </button>
+      )}
 
       <button
         type="button"
@@ -77,7 +80,7 @@ export default function SceneActions({
           onDismissHints?.();
         }}
         aria-label="Open comments"
-        className="relative flex cursor-pointer flex-col items-center gap-1 text-white"
+        className="relative flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 text-white"
       >
         {hints?.comment && <ActionHint>{hints.comment}</ActionHint>}
         <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
@@ -95,7 +98,7 @@ export default function SceneActions({
           disabled={savePending}
           aria-label={saved ? "Remove from saved" : "Save scene"}
           aria-pressed={saved}
-          className="flex cursor-pointer flex-col items-center gap-1 text-white"
+          className="flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 text-white"
         >
           {savePending ? (
             <div className="flex size-12 items-center justify-center rounded-full bg-black/50">
@@ -123,7 +126,7 @@ export default function SceneActions({
           onDismissHints?.();
         }}
         aria-label="Open sources"
-        className="relative flex cursor-pointer flex-col items-center gap-1 text-white"
+        className="relative flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 text-white"
       >
         {hints?.evidence && <ActionHint>{hints.evidence}</ActionHint>}
         <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
@@ -136,7 +139,7 @@ export default function SceneActions({
           type="button"
           onClick={onShare}
           aria-label="Copy link to this scene"
-          className="flex cursor-pointer flex-col items-center gap-1 text-white"
+          className="flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 text-white"
         >
           <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
             <Link2 className="size-6" />

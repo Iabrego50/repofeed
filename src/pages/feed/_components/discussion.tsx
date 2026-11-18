@@ -178,17 +178,22 @@ function CommentCard({
   reelId,
   level,
   onAddComment,
+  readOnly,
 }: {
   comment: CommentWithReplies;
   reelId: string;
   level: number;
   onAddComment?: (args: AddCommentArgs) => void;
+  readOnly?: boolean;
 }) {
   const [replying, setReplying] = useState(false);
   const local = Boolean(onAddComment);
   const isShare = useFeedMode().kind === "share";
-  // Share guests have no delete RPC; hide the control so the viewer UI stays clean.
-  const canDelete = !local && !isShare;
+  // Share recipients are viewers — no reply/delete/write controls.
+  const canReply = !readOnly && !isShare;
+  const canDelete = !readOnly && !local && !isShare;
+  const authorName =
+    comment.author?.name?.trim() || (isShare || readOnly ? "Team member" : "User");
 
   const deleteMutation = {
     mutate: () => console.log("Delete not implemented"),
@@ -207,15 +212,13 @@ function CommentCard({
     >
       <div className="flex items-start gap-2">
         <UserAvatar
-          name={comment.author?.name || "User"}
-          src={comment.author?.avatar}
+          name={authorName}
+          src={readOnly || isShare ? undefined : comment.author?.avatar}
           className="size-8 shrink-0"
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium">
-              {comment.author?.name || "User"}
-            </p>
+            <p className="truncate text-sm font-medium">{authorName}</p>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-semibold",
@@ -231,35 +234,39 @@ function CommentCard({
             </time>
           </div>
           <p className="mt-1 whitespace-pre-wrap text-sm">{comment.body}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setReplying(!replying)}
-            >
-              <CornerDownRight className="size-3" />
-              Reply
-            </Button>
-            {canDelete && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => deleteMutation.mutate()}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? (
-                  <Loader2 className="size-3 animate-spin" />
-                ) : (
-                  <Trash2 className="size-3" />
-                )}
-                Delete
-              </Button>
-            )}
-          </div>
+          {(canReply || canDelete) && (
+            <div className="mt-2 flex items-center gap-2">
+              {canReply && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReplying(!replying)}
+                >
+                  <CornerDownRight className="size-3" />
+                  Reply
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3" />
+                  )}
+                  Delete
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {replying && (
+      {canReply && replying && (
         <div className="ml-10">
           <Composer
             reelId={reelId}
@@ -280,6 +287,7 @@ function CommentCard({
               reelId={reelId}
               level={level + 1}
               onAddComment={onAddComment}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -303,6 +311,9 @@ export default function Discussion({
 }: DiscussionProps) {
   const local = localComments !== undefined;
   const fetched = useReelComments(reelId, !local);
+  const isShare = useFeedMode().kind === "share";
+  // Share-link recipients are viewers — list only, no composer/reply/kind picker.
+  const readOnly = isShare;
 
   if (!local && fetched === undefined) {
     return (
@@ -319,21 +330,25 @@ export default function Discussion({
 
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
-      <Composer reelId={reelId} onAddComment={onAddComment} />
+      {!readOnly && <Composer reelId={reelId} onAddComment={onAddComment} />}
       {footer}
 
       {topLevel.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <MessageSquare />
-            </EmptyMedia>
-            <EmptyTitle>Nobody has said anything yet</EmptyTitle>
-            <EmptyDescription>
-              Does this match what you’ve seen? Leave a note, ask a question, or log an action.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        readOnly ? (
+          <p className="text-sm text-muted-foreground">No discussion yet.</p>
+        ) : (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <MessageSquare />
+              </EmptyMedia>
+              <EmptyTitle>Nobody has said anything yet</EmptyTitle>
+              <EmptyDescription>
+                Does this match what you’ve seen? Leave a note, ask a question, or log an action.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )
       ) : (
         <div className="space-y-4">
           {topLevel.map((comment) => (
@@ -343,6 +358,7 @@ export default function Discussion({
               reelId={reelId}
               level={0}
               onAddComment={onAddComment}
+              readOnly={readOnly}
             />
           ))}
         </div>
