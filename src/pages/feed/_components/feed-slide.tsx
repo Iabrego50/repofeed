@@ -8,7 +8,7 @@ import type { ReactionType } from "@/schema/validators.ts";
 import { cn } from "@/lib/utils.ts";
 import { toast } from "sonner";
 import { api } from "@/lib/api/complete";
-import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
+import { isNativePlatform } from "@/lib/native";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import { SHAREABLE_ORIGIN } from "@/lib/site.ts";
 import { track } from "@/lib/analytics";
@@ -46,10 +46,9 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
   const queryClient = useQueryClient();
   const { react: reactOnFeed } = useFeedActions();
   const mode = useFeedMode();
-  const { nativeViewerMode } = useNativeViewer();
   const isShare = mode.kind === "share";
-  // Guests and native viewers stay on the feed — no Explore topic links.
-  const linkTopics = !isShare && !nativeViewerMode;
+  // Guests and native (Explore scene feed) keep topic tags as plain text.
+  const linkTopics = !isShare && !isNativePlatform();
   // Guests may react (share_react) and comment; save/export stay member-only.
   const canReact = true;
   const canSave = !isShare;

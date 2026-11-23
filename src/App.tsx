@@ -13,7 +13,8 @@ import PublicEntry from "./pages/landing/public-entry.tsx";
 import DocumentMeta from "./components/document-meta.tsx";
 import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
-import { FEED_PATH, signInPath } from "./app-paths.ts";
+import { EXPLORE_PATH, FEED_PATH, signInPath } from "./app-paths.ts";
+import { appHomePath } from "./lib/native-access.ts";
 import { resolveReturnTo } from "./pages/auth/return-to.ts";
 import { isNativePlatform } from "@/lib/native";
 
@@ -75,13 +76,20 @@ function FullScreenLoader() {
 function GuestOnly({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [params] = useSearchParams();
-  const returnTo = resolveReturnTo({ returnTo: params.get("returnTo") });
+  const raw = resolveReturnTo({ returnTo: params.get("returnTo") });
+  // On native, /feed deep-links and defaults land on Explore (merged scene feed).
+  const returnTo =
+    isNativePlatform() && (raw === FEED_PATH || raw.startsWith(`${FEED_PATH}?`))
+      ? raw.replace(FEED_PATH, EXPLORE_PATH)
+      : isNativePlatform() && raw === "/"
+        ? EXPLORE_PATH
+        : raw;
   if (loading) return <FullScreenLoader />;
   if (user) return <Navigate to={returnTo} replace />;
   return <>{children}</>;
 }
 
-/** Signed-in users with no workspace go to onboarding (or join on native viewers). */
+/** Signed-in users with no workspace go to onboarding (or join on native non-admins). */
 function RequireWorkspace() {
   const { workspaces, loading } = useWorkspace();
   const { nativeViewerMode, loading: adminLoading } = useNativeViewer();
@@ -94,14 +102,12 @@ function RequireWorkspace() {
   return <Outlet />;
 }
 
-/** View-only members stay on /feed; editor-only routes (e.g. deck) redirect. */
+/** Deck/editor routes: blocked for everyone on native; web members stay on feed. */
 function EditorsOnly() {
   const { isEditor, loading, current } = useWorkspace();
-  const { nativeViewerMode, nativeAdminAccess, loading: adminLoading } = useNativeViewer();
-  if (loading || !current || (isNativePlatform() && adminLoading)) return <FullScreenLoader />;
-  // Native non-admins are always viewers in the app, even if they are editors on web.
-  if (nativeViewerMode) return <Navigate to={FEED_PATH} replace />;
-  if (!isEditor && !nativeAdminAccess) return <Navigate to={FEED_PATH} replace />;
+  if (isNativePlatform()) return <Navigate to={EXPLORE_PATH} replace />;
+  if (loading || !current) return <FullScreenLoader />;
+  if (!isEditor) return <Navigate to={FEED_PATH} replace />;
   return <Outlet />;
 }
 
@@ -114,13 +120,36 @@ function WelcomeGate({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Native non-admins are feed-only: Insights, deck, Explore, Studies, Settings,
- * and Billing all bounce to the feed. Web and native admins are unchanged.
+ * On native (everyone, including admins): only Explore (scene feed) is allowed.
+ * Insights, deck, Studies, Settings, Billing → Explore. Web unchanged.
  */
-function NativeViewerBlock() {
-  const { nativeViewerMode, loading } = useNativeViewer();
-  if (isNativePlatform() && loading) return <FullScreenLoader />;
-  if (nativeViewerMode) return <Navigate to={FEED_PATH} replace />;
+function NativeExploreOnly() {
+  if (isNativePlatform()) return <Navigate to={EXPLORE_PATH} replace />;
+  return <Outlet />;
+}
+
+/** Web keeps /feed; native sends /feed?… → /explore?… (merged home). */
+function FeedRoute() {
+  const [params] = useSearchParams();
+  if (isNativePlatform()) {
+    const q = params.toString();
+    return <Navigate to={q ? `${EXPLORE_PATH}?${q}` : EXPLORE_PATH} replace />;
+  }
+  return <FeedPage />;
+}
+
+/**
+ * Web: topic/search Explore library.
+ * Native: the scrollable team scene feed (former /feed) — sole content surface.
+ */
+function ExploreRoute() {
+  if (isNativePlatform()) return <FeedPage />;
+  return <ExplorePage />;
+}
+
+/** Public demo Insights/deck: on native, only Explore remains. */
+function NativeDemoRedirect({ to }: { to: string }) {
+  if (isNativePlatform()) return <Navigate to={to} replace />;
   return <Outlet />;
 }
 
@@ -181,13 +210,15 @@ export default function App() {
               <Route path="/share/:token" element={<SharePage />} />
               <Route path="/for/:slug" element={<Landing />} />
               <Route path="/demo" element={<DemoPage />} />
-              <Route path="/demo/insights" element={<DemoInsightsPage />} />
+              <Route element={<NativeDemoRedirect to="/demo/explore" />}>
+                <Route path="/demo/insights" element={<DemoInsightsPage />} />
+                <Route path="/demo/deck" element={<DemoDeckPage />} />
+              </Route>
               <Route path="/demo/explore" element={<DemoExplorePage />} />
-              <Route path="/demo/deck" element={<DemoDeckPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/" element={<PublicEntry loader={<FullScreenLoader />} />} />
-              <Route path="/dashboard" element={<Navigate to={FEED_PATH} replace />} />
+              <Route path="/dashboard" element={<Navigate to={appHomePath()} replace />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               <Route element={<Gate />}>
                 <Route
@@ -207,14 +238,14 @@ export default function App() {
                   </Route>
                   <Route element={<AppLayout />}>
                     <Route element={<ShellOutlet />}>
-                      <Route path="/feed" element={<FeedPage />} />
+                      <Route path="/feed" element={<FeedRoute />} />
+                      <Route path="/explore" element={<ExploreRoute />} />
                       <Route path="/help" element={<HelpPage />} />
-                      <Route element={<NativeViewerBlock />}>
+                      <Route element={<NativeExploreOnly />}>
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="/studies" element={<StudiesPage />} />
                         <Route path="/studies/new" element={<NewStudyPage />} />
                         <Route path="/studies/:studyId" element={<StudyPage />} />
-                        <Route path="/explore" element={<ExplorePage />} />
                         <Route path="/insights" element={<InsightsPage />} />
                         <Route path="/billing" element={<BillingPage />} />
                       </Route>

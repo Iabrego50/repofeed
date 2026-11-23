@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import PublicShell from "@/components/public-shell.tsx";
 import ExploreView from "@/pages/explore/_components/explore-view.tsx";
+import { isNativePlatform } from "@/lib/native";
 import { SAMPLE_STUDY } from "../_lib/sample.ts";
 import {
   DEMO_SUGGESTED_QUESTIONS,
@@ -24,9 +25,11 @@ export default function DemoExplorePage() {
           <Button asChild variant="secondary" className="h-11">
             <Link to="/demo" aria-label="Demo feed"><Play className="size-4" /> <span className="hidden sm:inline">Demo feed</span></Link>
           </Button>
-          <Button asChild variant="secondary" className="h-11">
-            <Link to="/demo/insights">Insights</Link>
-          </Button>
+          {!isNativePlatform() && (
+            <Button asChild variant="secondary" className="h-11">
+              <Link to="/demo/insights">Insights</Link>
+            </Button>
+          )}
         </>
       }
     >

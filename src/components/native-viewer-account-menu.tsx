@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { LogOut, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, Trash2, TrendingUp } from "lucide-react";
 import { useAuth, useUser } from "@/hooks/use-auth.ts";
+import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import UserAvatar from "@/components/user-avatar.tsx";
 import DeleteAccount from "@/pages/settings/_components/delete-account.tsx";
 import {
@@ -20,12 +22,14 @@ import {
 } from "@/components/ui/dialog.tsx";
 
 /**
- * Bare essentials for native non-admin viewers: sign out + delete account.
- * Team/join-code settings stay on the desktop researcher web app.
+ * Native shell account menu: sign out + delete account for everyone.
+ * Admins also get Analytics (server-gated). No Insights/deck/Settings.
  */
 export default function NativeViewerAccountMenu() {
   const { signout } = useAuth();
   const user = useUser();
+  const navigate = useNavigate();
+  const { nativeAdminAccess } = useNativeViewer();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
@@ -43,6 +47,15 @@ export default function NativeViewerAccountMenu() {
             {user.email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {nativeAdminAccess && (
+            <DropdownMenuItem
+              onSelect={() => navigate("/admin/analytics")}
+              className="cursor-pointer"
+              data-testid="native-admin-analytics"
+            >
+              <TrendingUp className="size-4" /> Analytics
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={() => void signout()} className="cursor-pointer">
             <LogOut className="size-4" /> Sign out
           </DropdownMenuItem>

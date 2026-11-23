@@ -3,8 +3,11 @@
 /** Marketing site root. Always the landing page, signed-in or not. */
 export const LANDING_PATH = "/";
 
-/** In-app feed. Signed-in default after sign-in when there is no returnTo. */
+/** In-app feed (web). On native Capacitor the home surface is Explore. */
 export const FEED_PATH = "/feed";
+
+/** Explore home. On native this mounts the scrollable scene feed. */
+export const EXPLORE_PATH = "/explore";
 
 export const PUBLIC_APP_PATHS = [
   "/",

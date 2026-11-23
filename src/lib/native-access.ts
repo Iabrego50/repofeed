@@ -1,16 +1,23 @@
+import { EXPLORE_PATH, FEED_PATH } from "@/app-paths.ts";
 import { isNativePlatform } from "@/lib/native";
 
 /**
- * Viewer-only shell on Capacitor: hide creator/billing chrome.
- * Admins (`users.is_admin` from the server) keep full native access.
- * Never treat a client-only flag as authoritative for admin APIs —
- * those routes already 404 unless `is_admin` is true in the DB.
+ * Non-admin on Capacitor: join-code onboarding, no desktop team settings.
+ * Explore-only chrome applies to everyone on native (including admins).
  */
 export function isNativeViewerMode(isAdmin: boolean | null | undefined): boolean {
   return isNativePlatform() && isAdmin !== true;
 }
 
-/** Creator chrome on native when the signed-in user is an admin. */
+/**
+ * Product admin on native. Extra: Analytics link in the profile menu only —
+ * no Insights, deck, or creator chrome. Server still gates `/api/admin/*`.
+ */
 export function isNativeAdminAccess(isAdmin: boolean | null | undefined): boolean {
   return isNativePlatform() && isAdmin === true;
+}
+
+/** Home path after sign-in: Explore on native, Feed on web. */
+export function appHomePath(): string {
+  return isNativePlatform() ? EXPLORE_PATH : FEED_PATH;
 }

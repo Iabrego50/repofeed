@@ -117,24 +117,25 @@ Required if Google (or any other third-party) sign-in is offered in the iOS app.
 4. Set GitHub / Vercel env `VITE_ENABLE_APPLE_AUTH=true` and redeploy / rebuild the iOS app.
 5. The sign-in screen shows **Continue with Apple** only when that flag is exactly `true` (harmless until configured).
 
-## 7. Native viewer shell (and admin exception)
+## 7. Native Explore-only shell
 
-The Capacitor iOS app is a **feed-only viewer** for non-admins. Team/settings/config live on the desktop web app for researchers. Web (`repofeed.ai`) is unchanged.
+The Capacitor iOS app is an **Explore-only** client for **everyone** (including admins). The scrollable team scene feed lives at `/explore` (native merges former `/feed` into Explore). Team settings, Insights, and decks stay on the desktop web app. Web (`repofeed.ai`) is unchanged.
 
-When `Capacitor.isNativePlatform()` and the signed-in user is **not** an admin:
+When `Capacitor.isNativePlatform()`:
 
-- `/` skips the marketing landing → sign-in, then Feed
-- No workspace → **Enter team code** (`/join`) once; after joining, `/join` redirects to the feed
-- **No Settings screen** — no Insights, deck, Explore, Studies, or Billing
-- Profile/menu icon only: **Sign out** and **Delete account** (App Store 5.1.1(v))
-- Feed interactions stay: react, comment, share, save, team switcher, New/unread badges
-- Researchers manage join codes, invites, and removing viewers under **Workspace settings** on the web
+- `/` skips marketing → sign-in → **Explore** (scene feed)
+- `/feed`, `/insights`, `/insights/deck`, Studies, Settings, Billing → redirect to `/explore`
+- Public demo: Insights/deck links hidden; `/demo/insights` and `/demo/deck` redirect to `/demo/explore`
+- **No Settings screen** — profile menu: **Sign out**, **Delete account** (App Store 5.1.1(v))
+- Interactions: react, comment, share, save, team switcher, New/unread badges
+- Non-admins with no team → **Enter team code** (`/join`) once
+- Researchers manage join codes, invites, and removing viewers on the web
 
 When `public.users.is_admin = true` (server flag; same gate as `/api/admin/*`):
 
-- Full creator chrome on native (studies, upload, team settings, join code + invites)
-- **Analytics** (`/admin/analytics`) is a primary bottom-tab / Settings entry
-- Viewer-only rules do **not** apply
+- Same Explore-only chrome as everyone else
+- Extra: **Analytics** link in the profile menu only (`/admin/analytics`)
+- No Insights, deck, Studies, or creator tabs on native
 
 Never trust a client-only “admin” toggle for privileged APIs — those routes already 404 unless `is_admin` is true in Postgres.
 

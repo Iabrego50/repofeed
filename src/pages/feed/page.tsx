@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
+import { isNativePlatform } from "@/lib/native";
 import { cn } from "@/lib/utils.ts";
 import FeedTour from "@/components/feed-tour.tsx";
 import ReelFeed from "./_components/reel-feed.tsx";
@@ -108,7 +109,8 @@ export default function FeedPage() {
     () => (studies ?? []).filter((s) => s.status === "published"),
     [studies],
   );
-  const showCreateCta = isEditor && !nativeViewerMode;
+  // Native Explore-only shell: never offer create-study CTAs (even for web editors/admins).
+  const showCreateCta = isEditor && !nativeViewerMode && !isNativePlatform();
   if (!current) return null;
 
   const chips: Array<{ key: string; label: string; active: boolean; onClick: () => void; isNew?: boolean }> = [

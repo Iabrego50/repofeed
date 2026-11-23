@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api/complete";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
-import { FEED_PATH } from "@/app-paths.ts";
+import { appHomePath } from "@/lib/native-access.ts";
 import Logo from "@/components/logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -27,7 +27,7 @@ export default function JoinPage() {
 
   // Native viewers who already belong to a team should not re-enter join codes here.
   if (!workspacesLoading && !adminLoading && nativeViewerMode && hasTeam) {
-    return <Navigate to={FEED_PATH} replace />;
+    return <Navigate to={appHomePath()} replace />;
   }
 
   if (workspacesLoading || adminLoading) {
@@ -52,7 +52,7 @@ export default function JoinPage() {
       const joined = list.find((w) => w._id === workspaceId || w.id === workspaceId);
       if (joined) setCurrent(joined);
       toast.success("You’re on the team");
-      navigate(FEED_PATH, { replace: true });
+      navigate(appHomePath(), { replace: true });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Couldn’t join that team");
     } finally {
@@ -97,8 +97,8 @@ export default function JoinPage() {
 
         {hasTeam ? (
           <p className="text-center text-sm text-muted-foreground">
-            <Link to={FEED_PATH} className="font-medium text-foreground underline-offset-4 hover:underline">
-              Back to feed
+            <Link to={appHomePath()} className="font-medium text-foreground underline-offset-4 hover:underline">
+              Back to Explore
             </Link>
           </p>
         ) : null}

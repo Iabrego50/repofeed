@@ -179,8 +179,8 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 
-/** Native non-admin viewers: feed only (Settings/Insights/deck/Explore redirect away). */
-const NATIVE_VIEWER_PATHS = new Set(["/feed"]);
+/** Native (everyone): Explore scene feed only — no Insights/deck/Settings chrome. */
+const NATIVE_HOME_PATHS = new Set(["/explore"]);
 
 /** View-only members: full-bleed feed, no app chrome beyond a slim top bar. */
 function ViewerLayout({ native = false }: { native?: boolean }) {
@@ -197,14 +197,14 @@ function ViewerLayout({ native = false }: { native?: boolean }) {
   const unreadCount = unreadIds?.length ?? 0;
 
   if (native) {
-    if (!NATIVE_VIEWER_PATHS.has(pathname)) {
-      return <Navigate to="/feed" replace />;
+    if (!NATIVE_HOME_PATHS.has(pathname)) {
+      return <Navigate to="/explore" replace />;
     }
   } else if (pathname !== "/feed") {
     return <Navigate to="/feed" replace />;
   }
 
-  const onFeed = pathname === "/feed";
+  const onFeed = native ? pathname === "/explore" : pathname === "/feed";
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
@@ -260,7 +260,7 @@ function ViewerLayout({ native = false }: { native?: boolean }) {
   );
 }
 
-function EditorLayout({ forceCreator = false }: { forceCreator?: boolean }) {
+function EditorLayout() {
   const { isEditor } = useWorkspace();
   const { signout } = useAuth();
   const user = useUser();
@@ -268,27 +268,16 @@ function EditorLayout({ forceCreator = false }: { forceCreator?: boolean }) {
   const { pathname } = useLocation();
   const { data: profile } = useQuery({ queryKey: ["users", "me"], queryFn: () => api.users.current() });
   const isAdmin = Boolean((profile as { is_admin?: boolean } | null | undefined)?.is_admin);
-  const canMake = isEditor || forceCreator;
-  const visible = (items: NavItem[]) => items.filter((n) => !n.editorOnly || canMake);
+  const visible = (items: NavItem[]) => items.filter((n) => !n.editorOnly || isEditor);
   const onFeed = pathname === "/feed";
-  const nativeAdmin = isNativePlatform() && isAdmin;
-  // Five tabs at most on a phone; workspace settings move to the account menu there.
-  // Native admins get Analytics as a primary tab (server still gates /api/admin/*).
-  const tabs: NavItem[] = nativeAdmin
-    ? [
-        WATCH[0],
-        MAKE[0],
-        { to: "/studies/new", label: "New", icon: Plus },
-        { to: "/settings", label: "Team", icon: Settings },
-        { to: "/admin/analytics", label: "Analytics", icon: TrendingUp },
-      ]
-    : [
-        WATCH[0],
-        WATCH[2],
-        { to: "/studies/new", label: "New", icon: Plus },
-        MAKE[0],
-        MAKE[1],
-      ];
+  // Web phone tabs: Feed, Explore, New, Studies, Insights. Native never uses EditorLayout.
+  const tabs: NavItem[] = [
+    WATCH[0],
+    WATCH[2],
+    { to: "/studies/new", label: "New", icon: Plus },
+    MAKE[0],
+    MAKE[1],
+  ];
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
@@ -421,7 +410,7 @@ function EditorLayout({ forceCreator = false }: { forceCreator?: boolean }) {
 
 export default function AppLayout() {
   const { isEditor, loading, current } = useWorkspace();
-  const { nativeViewerMode, nativeAdminAccess, loading: adminLoading } = useNativeViewer();
+  const { loading: adminLoading } = useNativeViewer();
 
   // Wait for role (and native admin flag) before choosing chrome so invitees never flash the editor sidebar.
   if (loading || !current || (isNativePlatform() && adminLoading)) {
@@ -433,14 +422,10 @@ export default function AppLayout() {
     );
   }
 
-  // Capacitor non-admins: viewer shell only (Settings + join team + feed).
-  if (nativeViewerMode) {
+  // Capacitor (everyone, including admins): Explore scene feed only.
+  // Admins get Analytics in the profile menu — no Insights/deck/Studies chrome.
+  if (isNativePlatform()) {
     return <ViewerLayout native />;
-  }
-
-  // Native admins keep full creator chrome even if their workspace role is member.
-  if (nativeAdminAccess) {
-    return <EditorLayout forceCreator />;
   }
 
   if (!isEditor) {
