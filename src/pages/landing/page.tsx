@@ -266,22 +266,6 @@ export default function Landing() {
               Need slides anyway? One click drafts a readout deck from the same findings, and it downloads as PowerPoint
               you can edit.
             </p>
-            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[0.9375rem] font-semibold">
-              <Link
-                to="/demo/insights"
-                onClick={() => track("cta_click", { location: "insights", variant: variant.slug || "home", target: "/demo/insights" })}
-                className="cursor-pointer underline underline-offset-4"
-              >
-                See the sample Insights page
-              </Link>
-              <Link
-                to="/demo/deck"
-                onClick={() => track("cta_click", { location: "deck", variant: variant.slug || "home", target: "/demo/deck" })}
-                className="cursor-pointer underline underline-offset-4"
-              >
-                Generate a sample deck
-              </Link>
-            </div>
           </div>
           <div className="overflow-hidden rounded-xl bg-card shadow-sheet">
             <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
