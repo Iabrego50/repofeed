@@ -36,7 +36,22 @@ vi.mock("@/hooks/use-auth.ts", () => ({
 vi.mock("@/lib/api/complete", () => ({
   api: {
     users: { current: async () => ({ onboardedAt: "2026-01-01T00:00:00.000Z" }) },
+    studyViews: { unreadIds: async () => [] },
   },
+}));
+
+vi.mock("@/hooks/use-native-viewer.ts", () => ({
+  useNativeViewer: () => ({
+    isAdmin: false,
+    nativeViewerMode: false,
+    nativeAdminAccess: false,
+    loading: false,
+    profile: null,
+  }),
+}));
+
+vi.mock("@/lib/native", () => ({
+  isNativePlatform: () => false,
 }));
 
 vi.mock("@/components/shell/command-palette.tsx", () => ({

@@ -117,11 +117,45 @@ Required if Google (or any other third-party) sign-in is offered in the iOS app.
 4. Set GitHub / Vercel env `VITE_ENABLE_APPLE_AUTH=true` and redeploy / rebuild the iOS app.
 5. The sign-in screen shows **Continue with Apple** only when that flag is exactly `true` (harmless until configured).
 
-## 7. Payments on iOS (guideline 3.1.1)
+## 7. Native viewer shell (and admin exception)
+
+The Capacitor iOS app is a **viewer-first** client. Web (`repofeed.ai`) is unchanged.
+
+When `Capacitor.isNativePlatform()` and the signed-in user is **not** an admin:
+
+- `/` skips the marketing landing → sign-in, then Feed
+- No workspace → **Enter team code** (`/join`) instead of create-workspace onboarding
+- Creator surfaces are hidden (upload, studies, insights, billing, analytics)
+- Settings keeps sign out, delete account, and **Join another team**
+
+When `public.users.is_admin = true` (server flag; same gate as `/api/admin/*`):
+
+- Full creator chrome on native (studies, upload, team settings, join code + invites)
+- **Analytics** (`/admin/analytics`) is a primary bottom-tab / Settings entry
+- Viewer-only rules do **not** apply
+
+Never trust a client-only “admin” toggle for privileged APIs — those routes already 404 unless `is_admin` is true in Postgres.
+
+### Team join codes
+
+Migration files (apply via MCP after review — not applied by the TestFlight workflow):
+
+| File | Purpose |
+| --- | --- |
+| `supabase/migrations/20261123130000_workspace_join_codes.sql` | `workspaces.join_code`, generate/redeem/regenerate RPCs, rate limit |
+| `supabase/migrations/20261123130100_member_study_views.sql` | `member_study_views`, mark seen + unread study ids |
+
+Creators copy/regenerate the code (and optionally email it) under **Workspace settings → Team join code** on web. Viewers redeem in the app at `/join`. Redeem adds them as role `member`. Long UUID invite links still work for web.
+
+### New study indicators
+
+Unread published studies (after the member joined) show a **New** chip on the feed filter and a count badge in the native viewer header. Viewing a study (filter or deep-linked reel) clears that study via `mark_study_seen`. Push/APNs is out of scope.
+
+## 8. Payments on iOS (guideline 3.1.1)
 
 The native iOS build **does not** show Stripe checkout, upgrade buttons, or portal CTAs. Plan screens show neutral copy: “Manage your plan on repofeed.ai” (no buy link). Existing subscribers keep access via the same Supabase/Stripe-backed plan checks. Web behavior is unchanged.
 
-## 8. Account deletion (guideline 5.1.1(v))
+## 9. Account deletion (guideline 5.1.1(v))
 
 Settings → **Delete account** → type `DELETE` → calls `POST /api/account/delete`, which deletes the Auth user (app rows cascade).
 
@@ -132,7 +166,7 @@ Apply the migration when ready (not applied by this PR):
 # adds public.delete_own_account() for optional RPC use
 ```
 
-## 9. App Store metadata checklist
+## 10. App Store metadata checklist
 
 | Field | Suggested value |
 | --- | --- |
@@ -150,7 +184,7 @@ Provide at least:
 - **iPhone 6.5"** if still prompted by ASC
 - **iPad 13"** if you keep tablet support (this app targets iPhone + iPad)
 
-Capture Feed, Studies, Insights, and Sign-in. Prefer real product UI, not marketing mockups alone.
+Capture Feed (viewer), Join team code, Settings / delete account, and Sign-in. For admin TestFlight builds, also capture Studies and Analytics. Prefer real product UI, not marketing mockups alone.
 
 ### Privacy nutrition labels (based on current product)
 
@@ -171,7 +205,7 @@ Do **not** claim “Data Not Collected” if accounts and uploads exist. Adjust 
 
 `ITSAppUsesNonExemptEncryption` is `false` in Info.plist (HTTPS only). Answer the export compliance questions accordingly in App Store Connect.
 
-## 10. Local Capacitor commands
+## 11. Local Capacitor commands
 
 ```bash
 pnpm build
@@ -181,9 +215,10 @@ npx cap open ios   # optional, if you have Xcode
 
 App ID / name live in `capacitor.config.ts` (`ai.repofeed.app`, `repofeed`). Icons: `ios/App/App/Assets.xcassets/AppIcon.appiconset` (1024² from `public/icon/icon-512.png`). Launch screen uses the Splash imageset.
 
-## 11. First App Store submission tips
+## 12. First App Store submission tips
 
-1. Ship a TestFlight build that reviewers can sign into (provide demo account in Review Notes).
-2. Review Notes should mention: subscriptions are managed on the website; in-app purchase is not offered; account deletion is under Settings.
+1. Ship a TestFlight build that reviewers can sign into (provide demo account in Review Notes). Prefer a **viewer** demo account with a join code, plus note that admins see creator tools.
+2. Review Notes should mention: subscriptions are managed on the website; in-app purchase is not offered; account deletion is under Settings; the app is primarily a research feed viewer.
 3. If Google sign-in is enabled in the binary, Apple sign-in must be visible and working.
 4. Do not merge this work until secrets and the ASC app record exist; the workflow will fail closed without them.
+5. Do **not** push `ios-v*` tags from agents — trigger TestFlight builds yourself when ready.

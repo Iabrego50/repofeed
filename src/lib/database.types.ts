@@ -1362,6 +1362,39 @@ export type Database = {
           }
         ]
       }
+      member_study_views: {
+        Row: {
+          user_id: string
+          study_id: string
+          seen_at: string
+        }
+        Insert: {
+          user_id: string
+          study_id: string
+          seen_at?: string
+        }
+        Update: {
+          user_id?: string
+          study_id?: string
+          seen_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_study_views_study_id_fkey"
+            columns: ["study_id"]
+            isOneToOne: false
+            referencedRelation: "studies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_study_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       workspaces: {
         Row: {
           id: string
@@ -1375,6 +1408,7 @@ export type Database = {
           paid_plan: string | null
           lapsed_plan: string | null
           seat_overage: boolean
+          join_code: string
           created_at: string
           updated_at: string
         }
@@ -1390,6 +1424,7 @@ export type Database = {
           paid_plan?: string | null
           lapsed_plan?: string | null
           seat_overage?: boolean
+          join_code?: string
           created_at?: string
           updated_at?: string
         }
@@ -1405,6 +1440,7 @@ export type Database = {
           paid_plan?: string | null
           lapsed_plan?: string | null
           seat_overage?: boolean
+          join_code?: string
           created_at?: string
           updated_at?: string
         }
@@ -1447,6 +1483,36 @@ export type Database = {
           workspace_uuid: string
         }
         Returns: boolean
+      }
+      redeem_join_code: {
+        Args: {
+          p_code: string
+        }
+        Returns: string
+      }
+      get_workspace_join_code: {
+        Args: {
+          p_workspace_id: string
+        }
+        Returns: string
+      }
+      regenerate_workspace_join_code: {
+        Args: {
+          p_workspace_id: string
+        }
+        Returns: string
+      }
+      mark_study_seen: {
+        Args: {
+          p_study_id: string
+        }
+        Returns: undefined
+      }
+      unread_study_ids: {
+        Args: {
+          p_workspace_id: string
+        }
+        Returns: string[]
       }
       record_reel_view: {
         Args: {

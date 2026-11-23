@@ -126,6 +126,33 @@ export async function sendStudyPublishedEmail(args: {
   }
 }
 
+export async function sendJoinCodeEmail(args: {
+  to: string;
+  workspaceName: string;
+  joinCode: string;
+  senderName: string;
+}) {
+  const html = `<!doctype html><html><body style="margin:0;background:#eef2f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1b2333">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden">
+<tr><td style="background:#070b14;padding:18px 24px;color:#eef3fb;font-weight:700;font-size:16px">repofeed<span style="color:#2f9bff">.ai</span></td></tr>
+<tr><td style="padding:28px 24px">
+<h1 style="margin:0 0 12px;font-size:20px;color:#0b1220">Join ${escapeHtml(args.workspaceName)}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#3a4558">${escapeHtml(args.senderName)} shared a team join code so you can watch research in the repofeed app.</p>
+<p style="margin:0 0 8px;font-size:13px;color:#7a8599;letter-spacing:.04em;text-transform:uppercase">Your join code</p>
+<p style="margin:0 0 20px;font-size:28px;font-weight:700;letter-spacing:.18em;color:#0b1220">${escapeHtml(args.joinCode)}</p>
+<p style="margin:0 0 8px"><a href="${escapeHtml(SITE_URL)}/join" style="display:inline-block;background:#2f9bff;color:#04101f;text-decoration:none;font-weight:700;font-size:15px;padding:12px 20px;border-radius:10px">Enter code on the web</a></p>
+<p style="margin:16px 0 0;font-size:13px;line-height:1.5;color:#7a8599">In the iOS app: sign in → Enter team code → paste this code.</p>
+</td></tr></table></td></tr></table></body></html>`;
+
+  await getResend().emails.send({
+    from: EMAIL_FROM,
+    to: args.to,
+    subject: `${args.senderName} invited you to ${args.workspaceName} on repofeed`,
+    html,
+  });
+}
+
 export async function sendFeedbackEmail(args: {
   workspaceId: string;
   reelId: string;

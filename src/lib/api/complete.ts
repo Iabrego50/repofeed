@@ -4,6 +4,8 @@ import * as feedModule from "./feed-complete";
 import * as generationModule from "./generation-jobs";
 import * as shareModule from "./share";
 import * as footageModule from "./footage";
+import * as joinCodesModule from "./join-codes";
+import * as studyViewsModule from "./study-views";
 import { supabase } from "../supabase";
 import * as billingClient from "../billing/client";
 import { jsonAuthHeaders } from "./bearer";
@@ -48,6 +50,14 @@ export const api = {
     listInvites: workspacesModule.listInvites,
     peekInvite: workspacesModule.peekInvite,
     revokeInvite: workspacesModule.revokeInvite,
+    redeemJoinCode: joinCodesModule.redeemJoinCode,
+    getJoinCode: joinCodesModule.getWorkspaceJoinCode,
+    regenerateJoinCode: joinCodesModule.regenerateWorkspaceJoinCode,
+    emailJoinCode: joinCodesModule.emailJoinCode,
+  },
+  studyViews: {
+    unreadIds: studyViewsModule.listUnreadStudyIds,
+    markSeen: studyViewsModule.markStudySeen,
   },
   feed: {
     list: feedModule.listReels,

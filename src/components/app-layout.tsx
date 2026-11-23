@@ -1,10 +1,12 @@
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Bookmark, Check, ChevronsUpDown, CircleHelp, Compass, Clapperboard, CreditCard, FileText, GraduationCap, Layers, LifeBuoy, LogOut, Mail, Plus, Presentation, Search, Settings, Shield, TrendingUp } from "lucide-react";
+import { BarChart3, Bookmark, Check, ChevronsUpDown, CircleHelp, Compass, Clapperboard, CreditCard, FileText, GraduationCap, Layers, LifeBuoy, LogOut, Mail, Plus, Presentation, Search, Settings, Shield, TrendingUp, Users } from "lucide-react";
 import { SUPPORT_MAILTO } from "@/lib/site.ts";
 import { api } from "@/lib/api/complete";
 import { useAuth, useUser } from "@/hooks/use-auth.ts";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
+import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
+import { isNativePlatform } from "@/lib/native";
 import { cn } from "@/lib/utils.ts";
 import Logo from "@/components/logo.tsx";
 import UserAvatar from "@/components/user-avatar.tsx";
@@ -80,6 +82,7 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
 
 function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const { workspaces, current, setCurrent, isEditor } = useWorkspace();
+  const { nativeViewerMode } = useNativeViewer();
   const navigate = useNavigate();
   if (!current) return null;
   return (
@@ -112,17 +115,25 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
         <DropdownMenuItem onSelect={() => navigate("/settings")} className="cursor-pointer">
           <Settings className="size-4" /> Workspace settings
         </DropdownMenuItem>
-        {isEditor && (
+        {isEditor && !nativeViewerMode && (
           <DropdownMenuItem onSelect={() => navigate("/billing")} className="cursor-pointer">
             <CreditCard className="size-4" /> Plan and billing
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onSelect={() => navigate("/feed?tour=1")} className="cursor-pointer">
-          <CircleHelp className="size-4" /> Feed tour
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => navigate("/welcome")} className="cursor-pointer">
-          <Plus className="size-4" /> New workspace
-        </DropdownMenuItem>
+        {!nativeViewerMode && (
+          <DropdownMenuItem onSelect={() => navigate("/feed?tour=1")} className="cursor-pointer">
+            <CircleHelp className="size-4" /> Feed tour
+          </DropdownMenuItem>
+        )}
+        {nativeViewerMode ? (
+          <DropdownMenuItem onSelect={() => navigate("/join")} className="cursor-pointer">
+            <Users className="size-4" /> Join another team
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onSelect={() => navigate("/welcome")} className="cursor-pointer">
+            <Plus className="size-4" /> New workspace
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
           Help and support
@@ -146,29 +157,57 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 
+const NATIVE_VIEWER_PATHS = new Set(["/feed", "/settings", "/help"]);
+
 /** View-only members: full-bleed feed, no app chrome beyond a slim top bar. */
-function ViewerLayout() {
+function ViewerLayout({ native = false }: { native?: boolean }) {
   const { current } = useWorkspace();
   const { signout } = useAuth();
   const user = useUser();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { data: unreadIds } = useQuery({
+    queryKey: ["studyViews", "unread", current?._id],
+    queryFn: () => api.studyViews.unreadIds({ workspaceId: current!._id }),
+    enabled: !!current && native,
+    refetchInterval: 60_000,
+  });
+  const unreadCount = unreadIds?.length ?? 0;
 
-  if (pathname !== "/feed") {
+  if (native) {
+    if (!NATIVE_VIEWER_PATHS.has(pathname)) {
+      return <Navigate to="/feed" replace />;
+    }
+  } else if (pathname !== "/feed") {
     return <Navigate to="/feed" replace />;
   }
+
+  const onFeed = pathname === "/feed";
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <header className="safe-top flex shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2">
         <div aria-label="repofeed" className="shrink-0">
-          <Logo />
+          <Logo withText={!native} />
         </div>
-        {current && (
+        {native ? (
+          <WorkspaceSwitcher compact />
+        ) : current ? (
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground" title={current.name}>
             {current.name}
           </p>
+        ) : (
+          <span className="flex-1" />
         )}
-        {!current && <span className="flex-1" />}
+        {native && unreadCount > 0 && onFeed && (
+          <span
+            data-testid="feed-unread-badge"
+            className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground"
+            title="New studies"
+          >
+            {unreadCount > 9 ? "9+" : unreadCount} new
+          </span>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label="Account menu"
@@ -181,6 +220,17 @@ function ViewerLayout() {
               {user.email}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {native && (
+              <>
+                <DropdownMenuItem onSelect={() => navigate("/settings")} className="cursor-pointer">
+                  <Settings className="size-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate("/join")} className="cursor-pointer">
+                  <Users className="size-4" /> Join another team
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onSelect={() => void signout()} className="cursor-pointer">
               <LogOut className="size-4" /> Sign out
             </DropdownMenuItem>
@@ -188,14 +238,14 @@ function ViewerLayout() {
         </DropdownMenu>
       </header>
       <OfflineBanner />
-      <main className="dark min-h-0 flex-1 overflow-y-auto">
+      <main className={cn("min-h-0 flex-1 overflow-y-auto", onFeed && "dark")}>
         <Outlet />
       </main>
     </div>
   );
 }
 
-function EditorLayout() {
+function EditorLayout({ forceCreator = false }: { forceCreator?: boolean }) {
   const { isEditor } = useWorkspace();
   const { signout } = useAuth();
   const user = useUser();
@@ -203,16 +253,27 @@ function EditorLayout() {
   const { pathname } = useLocation();
   const { data: profile } = useQuery({ queryKey: ["users", "me"], queryFn: () => api.users.current() });
   const isAdmin = Boolean((profile as { is_admin?: boolean } | null | undefined)?.is_admin);
-  const visible = (items: NavItem[]) => items.filter((n) => !n.editorOnly || isEditor);
+  const canMake = isEditor || forceCreator;
+  const visible = (items: NavItem[]) => items.filter((n) => !n.editorOnly || canMake);
   const onFeed = pathname === "/feed";
+  const nativeAdmin = isNativePlatform() && isAdmin;
   // Five tabs at most on a phone; workspace settings move to the account menu there.
-  const tabs: NavItem[] = [
-    WATCH[0],
-    WATCH[2],
-    { to: "/studies/new", label: "New", icon: Plus },
-    MAKE[0],
-    MAKE[1],
-  ];
+  // Native admins get Analytics as a primary tab (server still gates /api/admin/*).
+  const tabs: NavItem[] = nativeAdmin
+    ? [
+        WATCH[0],
+        MAKE[0],
+        { to: "/studies/new", label: "New", icon: Plus },
+        { to: "/settings", label: "Team", icon: Settings },
+        { to: "/admin/analytics", label: "Analytics", icon: TrendingUp },
+      ]
+    : [
+        WATCH[0],
+        WATCH[2],
+        { to: "/studies/new", label: "New", icon: Plus },
+        MAKE[0],
+        MAKE[1],
+      ];
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
@@ -345,15 +406,26 @@ function EditorLayout() {
 
 export default function AppLayout() {
   const { isEditor, loading, current } = useWorkspace();
+  const { nativeViewerMode, nativeAdminAccess, loading: adminLoading } = useNativeViewer();
 
-  // Wait for role before choosing chrome so invitees never flash the editor sidebar.
-  if (loading || !current) {
+  // Wait for role (and native admin flag) before choosing chrome so invitees never flash the editor sidebar.
+  if (loading || !current || (isNativePlatform() && adminLoading)) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background" data-testid="layout-loading">
         <Logo />
         <Spinner className="size-6 text-primary" />
       </div>
     );
+  }
+
+  // Capacitor non-admins: viewer shell only (Settings + join team + feed).
+  if (nativeViewerMode) {
+    return <ViewerLayout native />;
+  }
+
+  // Native admins keep full creator chrome even if their workspace role is member.
+  if (nativeAdminAccess) {
+    return <EditorLayout forceCreator />;
   }
 
   if (!isEditor) {
