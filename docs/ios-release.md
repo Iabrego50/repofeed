@@ -62,7 +62,7 @@ Settings → Secrets and variables → Actions. Add:
 | `VITE_ENABLE_GOOGLE_AUTH` | `true` only if Google is live in Supabase |
 | `VITE_ENABLE_APPLE_AUTH` | `true` only after Apple provider is configured |
 
-The workflow is `.github/workflows/ios-testflight.yml`. It builds with Vite, runs `npx cap sync ios`, imports the Distribution cert into a temporary keychain, installs the App Store profile, archives with **manual** signing (`Apple Distribution` + `repofeed AppStore`), and uploads to TestFlight via the ASC API key. Build number = `max(latest TestFlight + 1, github.run_number)`.
+The workflow is `.github/workflows/ios-testflight.yml` on **`macos-26`** (Xcode 26+ / iOS 26 SDK — required by App Store Connect). It builds with Vite, runs `npx cap sync ios`, imports the Distribution cert into a temporary keychain, installs the App Store profile, archives with **manual** signing (`Apple Distribution` + `repofeed AppStore`), and uploads to TestFlight via the ASC API key. Build number = `max(latest TestFlight + 1, github.run_number)`.
 
 ## 4. Run a TestFlight build
 
