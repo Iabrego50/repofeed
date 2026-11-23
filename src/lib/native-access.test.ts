@@ -5,7 +5,7 @@ vi.mock("@/lib/native", () => ({
 }));
 
 import { isNativePlatform } from "@/lib/native";
-import { isNativeAdminAccess, isNativeViewerMode } from "./native-access";
+import { appHomePath, isNativeAdminAccess, isNativeViewerMode } from "./native-access";
 
 describe("native-access", () => {
   afterEach(() => {
@@ -16,6 +16,7 @@ describe("native-access", () => {
     expect(isNativeViewerMode(false)).toBe(false);
     expect(isNativeViewerMode(true)).toBe(false);
     expect(isNativeAdminAccess(true)).toBe(false);
+    expect(appHomePath()).toBe("/feed");
   });
 
   it("applies viewer-only on native for non-admins only", () => {
@@ -25,5 +26,6 @@ describe("native-access", () => {
     expect(isNativeViewerMode(true)).toBe(false);
     expect(isNativeAdminAccess(true)).toBe(true);
     expect(isNativeAdminAccess(false)).toBe(false);
+    expect(appHomePath()).toBe("/explore");
   });
 });

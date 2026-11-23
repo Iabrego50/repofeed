@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { signInPath } from "@/app-paths.ts";
+import { appHomePath } from "@/lib/native-access.ts";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
@@ -34,7 +35,7 @@ export default function InvitePage() {
       const list = await refresh();
       const joined = list.find((w) => w.id === workspaceId || w._id === workspaceId);
       if (joined) setCurrent(joined);
-      navigate("/feed");
+      navigate(appHomePath());
     },
     onError: (err: any) => {
       toast.error(err.message || "You weren’t added to the workspace. Ask for a fresh invite link.");

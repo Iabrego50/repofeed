@@ -90,6 +90,7 @@ function renderLayout(path: string) {
             <Route path="/settings" element={<div>Settings page</div>} />
             <Route path="/help" element={<div>Help page</div>} />
             <Route path="/studies" element={<div>Studies page</div>} />
+            <Route path="/insights" element={<div>Insights page</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -158,16 +159,15 @@ describe("AppLayout viewer vs editor", () => {
     expect(screen.queryByText("Feed page")).not.toBeInTheDocument();
   });
 
-  it("native viewers stay on the feed with a profile menu and no Settings route", async () => {
+  it("native shell stays on Explore with a profile menu and no Settings route", async () => {
     bag.nativeViewerMode = true;
     bag.isEditor = false;
     bag.current = { _id: "ws1", id: "ws1", name: "Shared Workspace", role: "member" };
     renderLayout("/settings");
     await waitFor(() => {
-      expect(screen.getByText("Feed page")).toBeInTheDocument();
+      expect(screen.getByText("Explore page")).toBeInTheDocument();
     });
     expect(screen.queryByText("Settings page")).not.toBeInTheDocument();
     expect(screen.getByTestId("native-account-menu")).toBeInTheDocument();
-    expect(screen.queryByTestId("native-settings-icon")).not.toBeInTheDocument();
   });
 });

@@ -22,6 +22,7 @@ import {
   type DemoInteractionState,
 } from "./_lib/demo-interactions.ts";
 import { track } from "@/lib/analytics";
+import { isNativePlatform } from "@/lib/native";
 
 const REELS = buildDemoReels();
 
@@ -196,12 +197,14 @@ export default function DemoPage() {
             >
               <Compass className="size-3.5" /> Explore
             </Link>
-            <Link
-              to="/demo/insights"
-              className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
-            >
-              <BarChart3 className="size-3.5" /> Insights
-            </Link>
+            {!isNativePlatform() && (
+              <Link
+                to="/demo/insights"
+                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
+              >
+                <BarChart3 className="size-3.5" /> Insights
+              </Link>
+            )}
             <span className="rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
               {onEnd ? "Done" : `${activeIdx + 1} / ${REELS.length}`}
             </span>
@@ -273,21 +276,25 @@ export default function DemoPage() {
                 <Compass className="size-4" /> Search these insights
               </Link>
             </Button>
-            <Button
-              asChild
-              variant="secondary"
-              size="sm"
-              className="h-10 w-full font-semibold"
-            >
-              <Link to="/demo/insights">
-                <BarChart3 className="size-4" /> See the Insights dashboard
-              </Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="h-10 w-full font-semibold">
-              <Link to="/demo/deck">
-                <Presentation className="size-4" /> Make a PowerPoint deck
-              </Link>
-            </Button>
+            {!isNativePlatform() && (
+              <>
+                <Button
+                  asChild
+                  variant="secondary"
+                  size="sm"
+                  className="h-10 w-full font-semibold"
+                >
+                  <Link to="/demo/insights">
+                    <BarChart3 className="size-4" /> See the Insights dashboard
+                  </Link>
+                </Button>
+                <Button asChild variant="secondary" size="sm" className="h-10 w-full font-semibold">
+                  <Link to="/demo/deck">
+                    <Presentation className="size-4" /> Make a PowerPoint deck
+                  </Link>
+                </Button>
+              </>
+            )}
             <SignInButton
               size="sm"
               className="h-10 w-full font-semibold"
@@ -385,16 +392,20 @@ function EndCard({ onRestart }: { onRestart: () => void }) {
           <Compass className="size-4" /> Search these insights
         </Link>
       </Button>
-      <Button asChild variant="secondary" className="h-11">
-        <Link to="/demo/insights">
-          <BarChart3 className="size-4" /> See who watched, in Insights
-        </Link>
-      </Button>
-      <Button asChild variant="secondary" className="h-11">
-        <Link to="/demo/deck">
-          <Presentation className="size-4" /> Make a PowerPoint deck
-        </Link>
-      </Button>
+      {!isNativePlatform() && (
+        <>
+          <Button asChild variant="secondary" className="h-11">
+            <Link to="/demo/insights">
+              <BarChart3 className="size-4" /> See who watched, in Insights
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" className="h-11">
+            <Link to="/demo/deck">
+              <Presentation className="size-4" /> Make a PowerPoint deck
+            </Link>
+          </Button>
+        </>
+      )}
       <Button
         variant="ghost"
         onClick={onRestart}

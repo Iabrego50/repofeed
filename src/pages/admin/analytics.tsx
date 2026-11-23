@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { jsonAuthHeaders } from "@/lib/api/bearer";
+import { appHomePath } from "@/lib/native-access.ts";
 import NotFound from "@/pages/NotFound.tsx";
 import Logo from "@/components/logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -102,7 +103,7 @@ export default function AdminAnalyticsPage() {
     <div className="h-dvh overflow-y-auto bg-background">
       <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-[88rem] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-6">
-          <Link to="/feed" aria-label="Back to the app" className="flex cursor-pointer items-center gap-2 text-muted-foreground hover:text-foreground">
+          <Link to={appHomePath()} aria-label="Back to the app" className="flex cursor-pointer items-center gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" />
             <Logo withText={false} />
           </Link>

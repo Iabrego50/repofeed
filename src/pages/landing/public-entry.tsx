@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { useAuth } from "@/lib/auth";
 import { isNativePlatform } from "@/lib/native";
-import { FEED_PATH, signInPath } from "@/app-paths.ts";
+import { EXPLORE_PATH, signInPath } from "@/app-paths.ts";
 import PublicShell from "@/components/public-shell.tsx";
 
 const Landing = lazy(() => import("./page.tsx"));
@@ -13,7 +13,7 @@ const HelpPage = lazy(() => import("@/pages/help/page.tsx"));
 
 /**
  * `/` is the marketing landing on web.
- * On native Capacitor, skip marketing: signed-out → sign-in, signed-in → feed.
+ * On native Capacitor, skip marketing: signed-out → sign-in, signed-in → Explore.
  * Signed-out visitors opening a member reel link (`/?reel=…`) go to the public,
  * no-sign-up version when the study's sharing is on. `/help` shows the public Help Center.
  */
@@ -39,11 +39,11 @@ export default function PublicEntry({ loader }: { loader: React.ReactNode }) {
     );
   }
 
-  // Native app: no landing page — auth gate then feed.
+  // Native app: no landing page — auth gate then Explore (scene feed).
   if (isNativePlatform()) {
     if (authLoading) return <>{loader}</>;
-    if (user) return <Navigate to={FEED_PATH} replace />;
-    return <Navigate to={signInPath(FEED_PATH)} replace />;
+    if (user) return <Navigate to={EXPLORE_PATH} replace />;
+    return <Navigate to={signInPath(EXPLORE_PATH)} replace />;
   }
 
   if (!reelId) {
