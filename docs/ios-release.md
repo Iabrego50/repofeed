@@ -119,14 +119,16 @@ Required if Google (or any other third-party) sign-in is offered in the iOS app.
 
 ## 7. Native viewer shell (and admin exception)
 
-The Capacitor iOS app is a **viewer-first** client. Web (`repofeed.ai`) is unchanged.
+The Capacitor iOS app is a **feed-only viewer** for non-admins. Team/settings/config live on the desktop web app for researchers. Web (`repofeed.ai`) is unchanged.
 
 When `Capacitor.isNativePlatform()` and the signed-in user is **not** an admin:
 
 - `/` skips the marketing landing → sign-in, then Feed
-- No workspace → **Enter team code** (`/join`) instead of create-workspace onboarding
-- Creator surfaces are hidden (upload, studies, insights, billing, analytics)
-- Settings keeps sign out, delete account, and **Join another team**
+- No workspace → **Enter team code** (`/join`) once; after joining, `/join` redirects to the feed
+- **No Settings screen** — no Insights, deck, Explore, Studies, or Billing
+- Profile/menu icon only: **Sign out** and **Delete account** (App Store 5.1.1(v))
+- Feed interactions stay: react, comment, share, save, team switcher, New/unread badges
+- Researchers manage join codes, invites, and removing viewers under **Workspace settings** on the web
 
 When `public.users.is_admin = true` (server flag; same gate as `/api/admin/*`):
 

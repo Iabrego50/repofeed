@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const bag = vi.hoisted(() => ({
   isEditor: true,
   loading: false,
+  nativeViewerMode: false,
   current: { _id: "ws1", id: "ws1", name: "Acme Research", role: "owner" as string },
 }));
 
@@ -25,6 +26,7 @@ vi.mock("@/hooks/use-auth.ts", () => ({
   useAuth: () => ({
     signout: vi.fn(),
     signOut: vi.fn(),
+    email: "tester@example.com",
   }),
   useUser: () => ({
     name: "Test User",
@@ -43,7 +45,7 @@ vi.mock("@/lib/api/complete", () => ({
 vi.mock("@/hooks/use-native-viewer.ts", () => ({
   useNativeViewer: () => ({
     isAdmin: false,
-    nativeViewerMode: false,
+    nativeViewerMode: bag.nativeViewerMode,
     nativeAdminAccess: false,
     loading: false,
     profile: null,
@@ -51,7 +53,7 @@ vi.mock("@/hooks/use-native-viewer.ts", () => ({
 }));
 
 vi.mock("@/lib/native", () => ({
-  isNativePlatform: () => false,
+  isNativePlatform: () => bag.nativeViewerMode,
 }));
 
 vi.mock("@/components/shell/command-palette.tsx", () => ({
@@ -99,6 +101,7 @@ describe("AppLayout viewer vs editor", () => {
   beforeEach(() => {
     bag.isEditor = true;
     bag.loading = false;
+    bag.nativeViewerMode = false;
     bag.current = { _id: "ws1", id: "ws1", name: "Acme Research", role: "owner" };
   });
 
@@ -153,5 +156,18 @@ describe("AppLayout viewer vs editor", () => {
     expect(screen.getByTestId("layout-loading")).toBeInTheDocument();
     expect(screen.queryByTestId("app-sidebar")).not.toBeInTheDocument();
     expect(screen.queryByText("Feed page")).not.toBeInTheDocument();
+  });
+
+  it("native viewers stay on the feed with a profile menu and no Settings route", async () => {
+    bag.nativeViewerMode = true;
+    bag.isEditor = false;
+    bag.current = { _id: "ws1", id: "ws1", name: "Shared Workspace", role: "member" };
+    renderLayout("/settings");
+    await waitFor(() => {
+      expect(screen.getByText("Feed page")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Settings page")).not.toBeInTheDocument();
+    expect(screen.getByTestId("native-account-menu")).toBeInTheDocument();
+    expect(screen.queryByTestId("native-settings-icon")).not.toBeInTheDocument();
   });
 });

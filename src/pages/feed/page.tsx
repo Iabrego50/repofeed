@@ -148,15 +148,17 @@ export default function FeedPage() {
           </button>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={openSearch}
-        aria-label="Search scenes"
-        title="Search scenes (/)"
-        className="ml-auto grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/30 text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring lg:ml-0"
-      >
-        <Search className="size-4" />
-      </button>
+      {!nativeViewerMode && (
+        <button
+          type="button"
+          onClick={openSearch}
+          aria-label="Search scenes"
+          title="Search scenes (/)"
+          className="ml-auto grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/30 text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring lg:ml-0"
+        >
+          <Search className="size-4" />
+        </button>
+      )}
     </div>
   );
 
@@ -192,7 +194,7 @@ export default function FeedPage() {
     <>
     <FeedTour
       open={Boolean(replayTour || (profile && !profile.onboardedAt))}
-      isEditor={isEditor}
+      isEditor={showCreateCta}
       onDone={() => completeTour.mutate()}
     />
     <ReelFeed

@@ -1,6 +1,6 @@
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Bookmark, Check, ChevronsUpDown, CircleHelp, Compass, Clapperboard, CreditCard, FileText, GraduationCap, Layers, LifeBuoy, LogOut, Mail, Plus, Presentation, Search, Settings, Shield, TrendingUp, Users } from "lucide-react";
+import { BarChart3, Bookmark, Check, ChevronsUpDown, CircleHelp, Compass, Clapperboard, CreditCard, FileText, GraduationCap, Layers, LifeBuoy, LogOut, Mail, Plus, Presentation, Search, Settings, Shield, TrendingUp } from "lucide-react";
 import { SUPPORT_MAILTO } from "@/lib/site.ts";
 import { api } from "@/lib/api/complete";
 import { useAuth, useUser } from "@/hooks/use-auth.ts";
@@ -10,6 +10,7 @@ import { isNativePlatform } from "@/lib/native";
 import { cn } from "@/lib/utils.ts";
 import Logo from "@/components/logo.tsx";
 import UserAvatar from "@/components/user-avatar.tsx";
+import NativeViewerAccountMenu from "@/components/native-viewer-account-menu.tsx";
 import OfflineBanner from "@/components/offline-banner.tsx";
 import PlanNotices from "@/components/plan-notices.tsx";
 import CommandPalette, { openSearch } from "@/components/shell/command-palette.tsx";
@@ -85,6 +86,35 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const { nativeViewerMode } = useNativeViewer();
   const navigate = useNavigate();
   if (!current) return null;
+  // Native viewers: team switcher only — researchers manage settings on desktop.
+  if (nativeViewerMode) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            "flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring",
+            compact && "w-auto min-w-0 max-w-[46vw] border-transparent bg-transparent",
+          )}
+          aria-label="Switch team"
+        >
+          <span className="grid size-6 shrink-0 place-items-center rounded bg-foreground text-[11px] font-bold text-background">
+            {current.name.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1 truncate font-medium">{current.name}</span>
+          <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-60">
+          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Teams</DropdownMenuLabel>
+          {workspaces?.map((w) => (
+            <DropdownMenuItem key={w._id} onSelect={() => setCurrent(w)} className="cursor-pointer">
+              <span className="min-w-0 flex-1 truncate">{w.name}</span>
+              {w._id === current?._id && <Check className="size-4" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -115,25 +145,17 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
         <DropdownMenuItem onSelect={() => navigate("/settings")} className="cursor-pointer">
           <Settings className="size-4" /> Workspace settings
         </DropdownMenuItem>
-        {isEditor && !nativeViewerMode && (
+        {isEditor && (
           <DropdownMenuItem onSelect={() => navigate("/billing")} className="cursor-pointer">
             <CreditCard className="size-4" /> Plan and billing
           </DropdownMenuItem>
         )}
-        {!nativeViewerMode && (
-          <DropdownMenuItem onSelect={() => navigate("/feed?tour=1")} className="cursor-pointer">
-            <CircleHelp className="size-4" /> Feed tour
-          </DropdownMenuItem>
-        )}
-        {nativeViewerMode ? (
-          <DropdownMenuItem onSelect={() => navigate("/join")} className="cursor-pointer">
-            <Users className="size-4" /> Join another team
-          </DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem onSelect={() => navigate("/welcome")} className="cursor-pointer">
-            <Plus className="size-4" /> New workspace
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem onSelect={() => navigate("/feed?tour=1")} className="cursor-pointer">
+          <CircleHelp className="size-4" /> Feed tour
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/welcome")} className="cursor-pointer">
+          <Plus className="size-4" /> New workspace
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
           Help and support
@@ -157,14 +179,14 @@ function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 
-const NATIVE_VIEWER_PATHS = new Set(["/feed", "/settings", "/help"]);
+/** Native non-admin viewers: feed only (Settings/Insights/deck/Explore redirect away). */
+const NATIVE_VIEWER_PATHS = new Set(["/feed"]);
 
 /** View-only members: full-bleed feed, no app chrome beyond a slim top bar. */
 function ViewerLayout({ native = false }: { native?: boolean }) {
   const { current } = useWorkspace();
   const { signout } = useAuth();
   const user = useUser();
-  const navigate = useNavigate();
   const { pathname } = useLocation();
   const { data: unreadIds } = useQuery({
     queryKey: ["studyViews", "unread", current?._id],
@@ -186,7 +208,7 @@ function ViewerLayout({ native = false }: { native?: boolean }) {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="safe-top flex shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2">
+      <header className="safe-top flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2">
         <div aria-label="repofeed" className="shrink-0">
           <Logo withText={!native} />
         </div>
@@ -208,34 +230,27 @@ function ViewerLayout({ native = false }: { native?: boolean }) {
             {unreadCount > 9 ? "9+" : unreadCount} new
           </span>
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label="Account menu"
-            className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-md hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            <UserAvatar name={user.name ?? user.email} src={user.avatar} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="truncate text-xs font-medium text-muted-foreground">
-              {user.email}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {native && (
-              <>
-                <DropdownMenuItem onSelect={() => navigate("/settings")} className="cursor-pointer">
-                  <Settings className="size-4" /> Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => navigate("/join")} className="cursor-pointer">
-                  <Users className="size-4" /> Join another team
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuItem onSelect={() => void signout()} className="cursor-pointer">
-              <LogOut className="size-4" /> Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {native ? (
+          <NativeViewerAccountMenu />
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Account menu"
+              className="ml-auto grid size-10 shrink-0 cursor-pointer place-items-center rounded-md hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <UserAvatar name={user.name ?? user.email} src={user.avatar} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="truncate text-xs font-medium text-muted-foreground">
+                {user.email}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => void signout()} className="cursor-pointer">
+                <LogOut className="size-4" /> Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </header>
       <OfflineBanner />
       <main className={cn("min-h-0 flex-1 overflow-y-auto", onFeed && "dark")}>

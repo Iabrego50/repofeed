@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Link2, Trash2, UserMinus, Loader2, RefreshCw, Mail, Users } from "lucide-react";
+import { Copy, Link2, Trash2, UserMinus, Loader2, RefreshCw, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -161,7 +160,7 @@ function JoinCodePanel({ workspaceId }: { workspaceId: string }) {
     <section className="rounded-2xl border border-border bg-card p-5">
       <h2 className="text-xl font-bold">Team join code</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Share this short code so people can join as viewers in the iOS app (or at /join on the web).
+        Share this short code so viewers can join the iOS app (or /join on the web). Team settings stay on desktop — researchers can remove viewers below.
       </p>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         {isLoading || !code ? (
@@ -289,7 +288,8 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { current, isEditor, isOwner, refresh } = useWorkspace();
   const { nativeViewerMode, nativeAdminAccess } = useNativeViewer();
-  const showCreatorTools = isEditor || nativeAdminAccess;
+  // Native non-admins never see team admin UI here (they are redirected away).
+  const showCreatorTools = !nativeViewerMode && (isEditor || nativeAdminAccess);
   const renameMutation = useMutation({
     mutationFn: (args: { workspaceId: string; name: string }) =>
       api.workspaces.rename(args),
@@ -307,17 +307,6 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-5 py-8 lg:py-12">
       <PageHeader eyebrow="Workspace" title={current.name} description={`You're ${current.role === "owner" ? "an owner" : current.role === "editor" ? "an editor" : "a member"} of this workspace.`} />
-      {nativeViewerMode && (
-        <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-xl font-bold">Join another team</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Have a join code from another workspace? Enter it to watch their feed too.</p>
-          <Button asChild className="mt-4 h-11 font-semibold">
-            <Link to="/join">
-              <Users className="size-4" /> Enter team code
-            </Link>
-          </Button>
-        </section>
-      )}
       {isOwner && (
         <form
           className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-end"

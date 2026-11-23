@@ -114,6 +114,17 @@ function WelcomeGate({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * Native non-admins are feed-only: Insights, deck, Explore, Studies, Settings,
+ * and Billing all bounce to the feed. Web and native admins are unchanged.
+ */
+function NativeViewerBlock() {
+  const { nativeViewerMode, loading } = useNativeViewer();
+  if (isNativePlatform() && loading) return <FullScreenLoader />;
+  if (nativeViewerMode) return <Navigate to={FEED_PATH} replace />;
+  return <Outlet />;
+}
+
+/**
  * `/help` stays public when signed out (help center). `/` is registered
  * outside this gate so the marketing landing is always public.
  * Every other nested route sends signed-out visitors to sign-in.
@@ -197,14 +208,16 @@ export default function App() {
                   <Route element={<AppLayout />}>
                     <Route element={<ShellOutlet />}>
                       <Route path="/feed" element={<FeedPage />} />
-                      <Route path="/studies" element={<StudiesPage />} />
-                      <Route path="/studies/new" element={<NewStudyPage />} />
-                      <Route path="/studies/:studyId" element={<StudyPage />} />
-                      <Route path="/explore" element={<ExplorePage />} />
-                      <Route path="/insights" element={<InsightsPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/billing" element={<BillingPage />} />
                       <Route path="/help" element={<HelpPage />} />
+                      <Route element={<NativeViewerBlock />}>
+                        <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/studies" element={<StudiesPage />} />
+                        <Route path="/studies/new" element={<NewStudyPage />} />
+                        <Route path="/studies/:studyId" element={<StudyPage />} />
+                        <Route path="/explore" element={<ExplorePage />} />
+                        <Route path="/insights" element={<InsightsPage />} />
+                        <Route path="/billing" element={<BillingPage />} />
+                      </Route>
                     </Route>
                   </Route>
                 </Route>
