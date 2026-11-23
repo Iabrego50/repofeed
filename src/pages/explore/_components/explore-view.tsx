@@ -83,10 +83,6 @@ function InsightCard({
               {insight.title}
             </Link>
           </h3>
-          <p className="mt-0.5 truncate text-sm text-muted-foreground">
-            {insight.studyTitle}
-            {insight.track ? `, ${insight.track}` : ""}
-          </p>
         </div>
         <Button asChild variant="outline" size="sm" className="h-9 shrink-0">
           <Link to={href}>

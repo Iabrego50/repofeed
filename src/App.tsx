@@ -17,6 +17,7 @@ import { EXPLORE_PATH, FEED_PATH, signInPath } from "./app-paths.ts";
 import { appHomePath } from "./lib/native-access.ts";
 import { resolveReturnTo } from "./pages/auth/return-to.ts";
 import { isNativePlatform } from "@/lib/native";
+import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
 
 const AuthCallback = lazy(() => import("./pages/auth/Callback.tsx"));
 const SignInPage = lazy(() => import("./pages/auth/signin.tsx"));
@@ -105,9 +106,21 @@ function RequireWorkspace() {
 /** Deck/editor routes: blocked for everyone on native; web members stay on feed. */
 function EditorsOnly() {
   const { isEditor, loading, current } = useWorkspace();
+  const { isResearcher, loading: researcherLoading } = useIsResearcher();
   if (isNativePlatform()) return <Navigate to={EXPLORE_PATH} replace />;
-  if (loading || !current) return <FullScreenLoader />;
-  if (!isEditor) return <Navigate to={FEED_PATH} replace />;
+  if (loading || researcherLoading || !current) return <FullScreenLoader />;
+  if (!isEditor && !isResearcher) return <Navigate to={FEED_PATH} replace />;
+  return <Outlet />;
+}
+
+/**
+ * Insights, decks, and demo research tools: owners/editors or product admins.
+ * Signed-out visitors and viewer (`member`) accounts are redirected away.
+ */
+function ResearchersOnly({ fallback }: { fallback: string }) {
+  const { isResearcher, loading } = useIsResearcher();
+  if (loading) return <FullScreenLoader />;
+  if (!isResearcher) return <Navigate to={fallback} replace />;
   return <Outlet />;
 }
 
@@ -210,11 +223,13 @@ export default function App() {
               <Route path="/share/:token" element={<SharePage />} />
               <Route path="/for/:slug" element={<Landing />} />
               <Route path="/demo" element={<DemoPage />} />
-              <Route element={<NativeDemoRedirect to="/demo/explore" />}>
-                <Route path="/demo/insights" element={<DemoInsightsPage />} />
-                <Route path="/demo/deck" element={<DemoDeckPage />} />
+              <Route element={<ResearchersOnly fallback="/demo" />}>
+                <Route element={<NativeDemoRedirect to="/demo/explore" />}>
+                  <Route path="/demo/insights" element={<DemoInsightsPage />} />
+                  <Route path="/demo/deck" element={<DemoDeckPage />} />
+                </Route>
+                <Route path="/demo/explore" element={<DemoExplorePage />} />
               </Route>
-              <Route path="/demo/explore" element={<DemoExplorePage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/" element={<PublicEntry loader={<FullScreenLoader />} />} />
@@ -246,7 +261,9 @@ export default function App() {
                         <Route path="/studies" element={<StudiesPage />} />
                         <Route path="/studies/new" element={<NewStudyPage />} />
                         <Route path="/studies/:studyId" element={<StudyPage />} />
-                        <Route path="/insights" element={<InsightsPage />} />
+                        <Route element={<ResearchersOnly fallback={FEED_PATH} />}>
+                          <Route path="/insights" element={<InsightsPage />} />
+                        </Route>
                         <Route path="/billing" element={<BillingPage />} />
                       </Route>
                     </Route>

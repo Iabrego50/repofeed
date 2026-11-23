@@ -78,9 +78,6 @@ export default function ReelPanel({
       </div>
       <div className="border-b border-border px-4 py-3">
         <p className="truncate font-bold">{reel.title}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {reel.track} · {reel.studyTitle}
-        </p>
       </div>
       {tab === "discussion" ? (
         <Discussion

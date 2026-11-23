@@ -5,8 +5,6 @@ import { COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/site.ts";
 
 const LINKS = [
   { to: "/demo", label: "Demo" },
-  { to: "/demo/insights", label: "Insights demo" },
-  { to: "/demo/explore", label: "Explore demo" },
   { to: "/help", label: "Help Center" },
   { to: "/terms", label: "Terms of Service" },
   { to: "/privacy", label: "Privacy Policy" },
@@ -14,7 +12,11 @@ const LINKS = [
 
 const LINK_CLASS = "cursor-pointer text-sm text-muted-foreground transition-colors hover:text-foreground";
 
-/** Public footer with legal links and the support contact. */
+/**
+ * Public footer with legal links and the support contact.
+ * Insights/Explore demo links stay off the footer — those tools are
+ * researcher-only and surface from the demo feed when the viewer qualifies.
+ */
 export default function SiteFooter() {
   return (
     <footer className="border-t border-border bg-background">
