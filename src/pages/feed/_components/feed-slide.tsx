@@ -165,7 +165,6 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
               <span className="mb-2 inline-block rounded-sm bg-mark px-1.5 py-0.5 text-[11px] font-bold text-mark-foreground">New</span>
             )}
             <p className="truncate text-[0.9375rem] font-semibold">{reel.title}</p>
-            <p className="truncate text-xs text-white/75">{reel.studyTitle}</p>
             {(reel.topics?.length ?? 0) > 0 && (
               <div className="pointer-events-auto mt-1.5 flex flex-wrap gap-1">
                 {reel.topics.slice(0, 3).map((topic) =>

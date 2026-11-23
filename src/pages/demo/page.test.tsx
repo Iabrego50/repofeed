@@ -16,6 +16,10 @@ vi.mock("@/components/reel/reel-canvas.tsx", () => ({
   default: ({ reel }: { reel: { title: string } }) => <div>{reel.title}</div>,
 }));
 
+vi.mock("@/hooks/use-is-researcher.ts", () => ({
+  useIsResearcher: () => ({ isResearcher: false, loading: false }),
+}));
+
 function renderDemo() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -190,6 +194,15 @@ describe("Demo feed interactions", () => {
     await waitFor(() => {
       expect(screen.getByText("2 / 10")).toBeInTheDocument();
     });
+  });
+
+  it("hides researcher CTAs for signed-out / non-researcher visitors", async () => {
+    mockDesktop();
+    renderDemo();
+    expect(screen.queryByRole("link", { name: /search these insights/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /insights dashboard/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /powerpoint deck/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^explore$/i })).not.toBeInTheDocument();
   });
 
   it("shows first-scene coach marks and remembers dismissing them", async () => {

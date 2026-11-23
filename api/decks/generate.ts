@@ -33,16 +33,24 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 });
     }
 
-    // Check editor permission
+    // Researchers: workspace owner/editor, or product admin.
     const { data: member } = await supabase
       .from('workspace_members')
       .select('role')
       .eq('workspace_id', workspaceId)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (!member || !['owner', 'editor'].includes(member.role)) {
-      return new Response(JSON.stringify({ error: 'Only editors can generate decks' }), { status: 403 });
+    const isEditor = member && ['owner', 'editor'].includes(member.role);
+    if (!isEditor) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!profile?.is_admin) {
+        return new Response(JSON.stringify({ error: 'Only editors can generate decks' }), { status: 403 });
+      }
     }
 
     const insightsSummary = await summary({ workspaceId, studyId }, supabase);

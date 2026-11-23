@@ -369,9 +369,10 @@ describe("App routes", () => {
       "/": /Nobody reads the report/i,
       "/for/research-repository": /research repository people open/i,
       "/demo": /Demo feed|Supperly/i,
-      "/demo/insights": /Insights demo|Was the research watched/i,
-      "/demo/explore": /Search the sample study|Explore demo/i,
-      "/demo/deck": /Turn the sample study into a readout deck/i,
+      // Researcher-only demo tools: signed-out visitors are sent back to the feed.
+      "/demo/insights": /Demo feed|Supperly/i,
+      "/demo/explore": /Demo feed|Supperly/i,
+      "/demo/deck": /Demo feed|Supperly/i,
       "/help": /How can we help/i,
       "/terms": /terms of service/i,
       "/privacy": /privacy policy/i,

@@ -302,9 +302,6 @@ export class ReelPainter {
       ctx.font = `700 30px ${FONT_MONO}`;
       ctx.fillStyle = INK;
       ctx.fillText(truncate(ctx, this.reel.track.toUpperCase(), 760), 156, 219);
-      ctx.font = `500 30px ${FONT_UI}`;
-      ctx.fillStyle = INK_MUTED;
-      ctx.fillText(truncate(ctx, `${this.reel.studyTitle || ''} · repofeed.ai`, 860), 96, 272);
     });
     ctx.textBaseline = "alphabetic";
   }

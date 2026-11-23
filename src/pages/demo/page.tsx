@@ -23,6 +23,7 @@ import {
 } from "./_lib/demo-interactions.ts";
 import { track } from "@/lib/analytics";
 import { isNativePlatform } from "@/lib/native";
+import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
 
 const REELS = buildDemoReels();
 
@@ -56,6 +57,7 @@ export default function DemoPage() {
   const [posted, setPosted] = useState(false);
   const [nudgeOpen, setNudgeOpen] = useState(true);
   const isDesktop = useIsDesktop();
+  const { isResearcher } = useIsResearcher();
   const onEnd = activeIdx >= REELS.length;
   const active = REELS[Math.min(activeIdx, REELS.length - 1)];
   const activeScene = interactions[active.id];
@@ -191,13 +193,15 @@ export default function DemoPage() {
             <span className="truncate text-sm font-semibold">Demo feed</span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
-            <Link
-              to="/demo/explore"
-              className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
-            >
-              <Compass className="size-3.5" /> Explore
-            </Link>
-            {!isNativePlatform() && (
+            {isResearcher && (
+              <Link
+                to="/demo/explore"
+                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
+              >
+                <Compass className="size-3.5" /> Explore
+              </Link>
+            )}
+            {isResearcher && !isNativePlatform() && (
               <Link
                 to="/demo/insights"
                 className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
@@ -243,7 +247,7 @@ export default function DemoPage() {
               </div>
             );
           })}
-          <EndCard onRestart={() => scrollTo(0)} />
+          <EndCard onRestart={() => scrollTo(0)} showResearcherCtas={isResearcher} />
         </div>
         {activeIdx === 0 && (
           <motion.div
@@ -266,17 +270,19 @@ export default function DemoPage() {
             className="min-h-0 flex-1"
           />
           <div className="space-y-2 border-t border-border p-4">
-            <Button
-              asChild
-              variant="secondary"
-              size="sm"
-              className="h-10 w-full font-semibold"
-            >
-              <Link to="/demo/explore">
-                <Compass className="size-4" /> Search these insights
-              </Link>
-            </Button>
-            {!isNativePlatform() && (
+            {isResearcher && (
+              <Button
+                asChild
+                variant="secondary"
+                size="sm"
+                className="h-10 w-full font-semibold"
+              >
+                <Link to="/demo/explore">
+                  <Compass className="size-4" /> Search these insights
+                </Link>
+              </Button>
+            )}
+            {isResearcher && !isNativePlatform() && (
               <>
                 <Button
                   asChild
@@ -371,7 +377,13 @@ function WorkspaceNudge({ onDismiss }: { onDismiss: () => void }) {
   );
 }
 
-function EndCard({ onRestart }: { onRestart: () => void }) {
+function EndCard({
+  onRestart,
+  showResearcherCtas,
+}: {
+  onRestart: () => void;
+  showResearcherCtas: boolean;
+}) {
   return (
     <div className="flex h-full w-full snap-start flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_50%_30%,rgba(47,155,255,0.25),transparent_60%)] px-8 text-center">
       <Logo />
@@ -387,12 +399,14 @@ function EndCard({ onRestart }: { onRestart: () => void }) {
         className="h-12 px-6 text-base font-semibold"
         signInText="Get started free"
       />
-      <Button asChild variant="secondary" className="h-11">
-        <Link to="/demo/explore">
-          <Compass className="size-4" /> Search these insights
-        </Link>
-      </Button>
-      {!isNativePlatform() && (
+      {showResearcherCtas && (
+        <Button asChild variant="secondary" className="h-11">
+          <Link to="/demo/explore">
+            <Compass className="size-4" /> Search these insights
+          </Link>
+        </Button>
+      )}
+      {showResearcherCtas && !isNativePlatform() && (
         <>
           <Button asChild variant="secondary" className="h-11">
             <Link to="/demo/insights">

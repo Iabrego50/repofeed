@@ -88,15 +88,19 @@ describe("FeedSlide access", () => {
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
     expect(screen.getByText("#checkout")).toBeInTheDocument();
+    expect(screen.getByText("Cart drop-off")).toBeInTheDocument();
+    expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/pause scene|play scene/i)).toBeInTheDocument();
   });
 
-  it("shows Save, reactions, and Explore topic links for members", () => {
+  it("shows Save, reactions, and Explore topic links for members — no study meta line", () => {
     renderSlide("member");
     expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/more about checkout/i)).toBeInTheDocument();
+    expect(screen.getByText("Cart drop-off")).toBeInTheDocument();
+    expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
   });
 });

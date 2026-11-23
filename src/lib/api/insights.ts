@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isResearcherRole } from "../researcher.js";
 
 type DbClient = Pick<SupabaseClient, "from">;
 
@@ -6,6 +7,32 @@ async function resolveClient(client?: DbClient): Promise<DbClient> {
   if (client) return client;
   const { supabase } = await import("../supabase.js");
   return supabase;
+}
+
+/** Owners/editors or product admins may read Insights; viewers and guests may not. */
+async function assertResearcher(workspaceId: string, client: DbClient): Promise<void> {
+  const { supabase } = await import("../supabase.js");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: member } = await client
+    .from("workspace_members")
+    .select("role")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (member && isResearcherRole(member.role)) return;
+
+  const { data: profile } = await client
+    .from("users")
+    .select("is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.is_admin) return;
+
+  throw new Error("Not authorized");
 }
 
 export interface ReelRow {
@@ -90,6 +117,8 @@ export async function summary(
   client?: DbClient,
 ): Promise<InsightSummary> {
   const supabase = await resolveClient(client);
+  // Browser calls omit `client`; API routes pass a server client after their own auth.
+  if (!client) await assertResearcher(workspaceId, supabase);
   // Get published studies in scope
   let studiesQuery = supabase
     .from('studies')
@@ -244,6 +273,7 @@ export async function watchers({ reelId }: { reelId: string }, client?: DbClient
     .single();
   if (reelError) throw reelError;
   if (!reel) return [];
+  if (!client) await assertResearcher(String(reel.workspace_id), supabase);
 
   // Get team views with joined user data
   const { data: views, error: viewsError } = await supabase
@@ -319,6 +349,7 @@ export async function exportComments(
   client?: DbClient,
 ): Promise<ExportedComment[]> {
   const supabase = await resolveClient(client);
+  if (!client) await assertResearcher(workspaceId, supabase);
   // Get published studies in scope
   let studiesQuery = supabase
     .from('studies')
