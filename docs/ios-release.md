@@ -23,7 +23,7 @@ This guide gets **repofeed** (`ai.repofeed.app`) onto TestFlight and through App
 ## 2. Create an App Store Connect API key
 
 1. App Store Connect → **Users and Access** → **Integrations** → **App Store Connect API**.
-2. **Generate** a key with **App Manager** (or Admin) access.
+2. **Generate** a key with **Admin** access. Cloud-managed **distribution** signing on CI requires Admin — App Manager fails export with “Cloud signing permission error”.
 3. Download the `.p8` once. Note:
    - **Key ID**
    - **Issuer ID** (top of the page)
@@ -45,7 +45,7 @@ Settings → Secrets and variables → Actions. Add:
 | `VITE_ENABLE_GOOGLE_AUTH` | `true` only if Google is live in Supabase |
 | `VITE_ENABLE_APPLE_AUTH` | `true` only after Apple provider is configured |
 
-The workflow is `.github/workflows/ios-testflight.yml`. It builds with Vite, runs `npx cap sync ios`, archives with **automatic signing** (App Store Connect API key passed to `xcodebuild` via `-authenticationKeyPath` / `-authenticationKeyID` / `-authenticationKeyIssuerID` — no local certs/profiles required), and uploads to TestFlight. Build number = `max(latest TestFlight + 1, github.run_number)`.
+The workflow is `.github/workflows/ios-testflight.yml`. It builds with Vite, runs `npx cap sync ios`, **archives unsigned** (so CI does not need registered devices / development profiles), then **exports** with automatic App Store signing via the ASC API key (`-authenticationKeyPath` / `-authenticationKeyID` / `-authenticationKeyIssuerID`), and uploads to TestFlight. Build number = `max(latest TestFlight + 1, github.run_number)`.
 
 ## 4. Run a TestFlight build
 

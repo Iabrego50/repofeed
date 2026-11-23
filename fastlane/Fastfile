@@ -20,8 +20,7 @@ platform :ios do
       in_house: false
     )
 
-    # Prefer TestFlight+1 so retries of the same workflow run stay unique;
-    # fall back to github.run_number + offset when no builds exist yet.
+    # Prefer TestFlight+1 so retries stay unique; fall back to run number + offset.
     run_number = ENV.fetch("IOS_BUILD_NUMBER", "1").to_i
     begin
       latest = latest_testflight_build_number(
@@ -41,20 +40,40 @@ platform :ios do
       xcodeproj: "ios/App/App.xcodeproj"
     )
 
-    # Automatic signing only — do NOT force Apple Distribution here; that
-    # conflicts with Xcode automatic signing on a clean CI runner.
+    # Automatic signing for export. Do not set CODE_SIGN_IDENTITY here —
+    # Apple Development needs registered devices; Apple Distribution conflicts
+    # with "signed for development" automatic mode on a clean runner.
     update_code_signing_settings(
       use_automatic_signing: true,
       path: "ios/App/App.xcodeproj",
       team_id: team_id,
-      bundle_identifier: "ai.repofeed.app",
-      code_sign_identity: "Apple Development"
+      bundle_identifier: "ai.repofeed.app"
     )
 
-    # Cloud-managed signing: xcodebuild authenticates to ASC with the API key
-    # so it can create/update profiles without local certificates.
+    FileUtils.mkdir_p("build")
+    archive_path = File.expand_path("build/repofeed.xcarchive")
+
+    # Archive UNSIGNED. A clean CI runner / team with no devices cannot create
+    # an iOS App Development profile (which automatic signing would request at
+    # archive time). Distribution signing happens only at export below.
+    UI.message("Archiving unsigned → #{archive_path}")
+    sh(
+      "set -o pipefail && xcodebuild archive " \
+      "-project ios/App/App.xcodeproj " \
+      "-scheme App " \
+      "-configuration Release " \
+      "-destination 'generic/platform=iOS' " \
+      "-archivePath '#{archive_path}' " \
+      "CODE_SIGNING_ALLOWED=NO " \
+      "CODE_SIGN_IDENTITY='' " \
+      "DEVELOPMENT_TEAM=#{team_id} " \
+      "CURRENT_PROJECT_VERSION=#{build_number} " \
+      "| xcbeautify"
+    )
+
+    # Auth args must apply to -exportArchive only (not the unsigned archive).
+    # Gym's xcargs are forwarded to export when skip_build_archive is set.
     auth_xcargs = [
-      "DEVELOPMENT_TEAM=#{team_id}",
       "-allowProvisioningUpdates",
       "-authenticationKeyPath", key_path,
       "-authenticationKeyID", key_id,
@@ -66,7 +85,8 @@ platform :ios do
       scheme: "App",
       configuration: "Release",
       export_method: "app-store",
-      clean: true,
+      skip_build_archive: true,
+      archive_path: archive_path,
       output_directory: "build",
       output_name: "repofeed.ipa",
       xcargs: auth_xcargs,
