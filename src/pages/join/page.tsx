@@ -1,21 +1,42 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api/complete";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
+import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { FEED_PATH } from "@/app-paths.ts";
 import Logo from "@/components/logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
+import { Spinner } from "@/components/ui/spinner.tsx";
 
-/** Redeem a short team join code (native viewers + web). */
+/**
+ * Redeem a short team join code.
+ * On native viewers, only when they have no team yet — researchers share codes from desktop.
+ */
 export default function JoinPage() {
   const navigate = useNavigate();
-  const { refresh, setCurrent, workspaces } = useWorkspace();
+  const { refresh, setCurrent, workspaces, loading: workspacesLoading } = useWorkspace();
+  const { nativeViewerMode, loading: adminLoading } = useNativeViewer();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const hasTeam = (workspaces?.length ?? 0) > 0;
+
+  // Native viewers who already belong to a team should not re-enter join codes here.
+  if (!workspacesLoading && !adminLoading && nativeViewerMode && hasTeam) {
+    return <Navigate to={FEED_PATH} replace />;
+  }
+
+  if (workspacesLoading || adminLoading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <Spinner className="size-6 text-primary" />
+      </div>
+    );
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -46,7 +67,7 @@ export default function JoinPage() {
           <Logo className="mx-auto mb-4" />
           <h1 className="text-2xl font-bold tracking-tight">Enter team code</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Ask a teammate for the short code from Workspace settings. You’ll join as a viewer.
+            Ask a researcher for the short code from Workspace settings on the web. You’ll join as a viewer.
           </p>
         </div>
 
@@ -74,7 +95,7 @@ export default function JoinPage() {
           </Button>
         </form>
 
-        {(workspaces?.length ?? 0) > 0 ? (
+        {hasTeam ? (
           <p className="text-center text-sm text-muted-foreground">
             <Link to={FEED_PATH} className="font-medium text-foreground underline-offset-4 hover:underline">
               Back to feed
