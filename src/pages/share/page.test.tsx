@@ -124,15 +124,16 @@ describe("Share page", () => {
     expect(await screen.findByText(/this link isn't available/i)).toBeInTheDocument();
   });
 
-  it("shows a share feed with composer entry points and no researcher tools", async () => {
+  it("shows a share feed with composer entry points and no researcher tools or study meta chrome", async () => {
     bag.feed.mockResolvedValue({ ...feedPayload, guest: null });
     renderShare("live-token");
     await waitFor(() => {
       expect(bag.feed).toHaveBeenCalledWith({ token: "live-token", secret: undefined });
     });
-    expect((await screen.findAllByText("Checkout study")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Cart drop-off")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
     expect(screen.queryByText(/this link isn't available/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/made with repofeed/i)).toBeInTheDocument();
+    expect(screen.queryByText(/made with repofeed/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();

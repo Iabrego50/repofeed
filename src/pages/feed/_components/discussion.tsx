@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { CornerDownRight, Loader2, MessageSquare, Trash2 } from "lucide-react";
 import type { CommentKind } from "@/schema/validators.ts";
@@ -267,11 +266,6 @@ function CommentCard({
             >
               {meta.label}
             </span>
-            <time className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(comment._creationTime), {
-                addSuffix: true,
-              })}
-            </time>
           </div>
           <p className="mt-1 whitespace-pre-wrap text-sm">{comment.body}</p>
           {(canReply || canDelete) && (

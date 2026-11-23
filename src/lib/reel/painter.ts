@@ -4,7 +4,6 @@ import {
   FONT_MONO,
   FONT_UI,
   INK,
-  INK_MUTED,
   NEAR_BLACK,
   REEL_H,
   REEL_W,
@@ -165,11 +164,9 @@ export class ReelPainter {
       case "quote":
         blocks.push({ lines: [], font: `900 ${FONT_DISPLAY}`, size: 220, lineHeight: 120, color: accent, emColor: accent, y: 0, delay: 0, kind: "quoteMark" });
         push(scene.text || '', `600 ${FONT_DISPLAY}`, { start: 80, min: 42, maxLines: 9, em: false, lh: 1.18 });
-        push(`— ${scene.by || ''}`, `500 ${FONT_MONO}`, { start: 32, min: 24, maxLines: 2, color: INK_MUTED, em: false, lh: 1.4, delay: 0.25 });
         break;
       case "cta":
         push(scene.text || '', `800 ${FONT_DISPLAY}`, { start: 112, min: 56, maxLines: 4, lh: 1.05, kind: "underline" });
-        push(scene.sub || '', `500 ${FONT_MONO}`, { start: 28, min: 20, maxLines: 3, color: INK_MUTED, em: false, lh: 1.5, delay: 0.3 });
         break;
     }
 
@@ -245,38 +242,6 @@ export class ReelPainter {
     ctx.fillRect(0, 0, REEL_W, REEL_H);
   }
 
-  /** Camera-style chip: "REC" + timecode for real clips, an honest "AI SCENE" label for painted stills. */
-  private drawRecChip(t: number) {
-    const footage = this.reel.footage;
-    if (!footage || !this.videoReady()) return;
-    const ctx = this.ctx;
-    const isArt = footage.media === "image";
-    const isAiVideo = footage.media === "video";
-    const secs = Math.floor(t);
-    const code = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
-    ctx.font = `700 28px ${FONT_MONO}`;
-    const label = truncate(ctx, footage.caption.trim().toUpperCase(), 560);
-    const lead = isArt ? "AI BACKDROP" : isAiVideo ? "AI VIDEO" : "REC";
-    const tail = isArt ? "" : `  ${code}`;
-    const text = label ? `${lead}  ${label}${tail}` : `${lead}${tail}`;
-    const w = ctx.measureText(text).width + 92;
-    const x = SAFE.left;
-    const y = 1500;
-    ctx.fillStyle = "rgba(8, 8, 10, 0.6)";
-    roundRect(ctx, x, y, w, 60, 30);
-    // Blinking red dot for recordings; a steady accent dot for AI scenes.
-    ctx.globalAlpha = isArt || Math.floor(t * 1.6) % 2 === 0 ? 1 : 0.35;
-    ctx.fillStyle = isArt ? this.accent : "#FF3B30";
-    ctx.beginPath();
-    ctx.arc(x + 34, y + 30, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = INK;
-    ctx.textBaseline = "middle";
-    this.withTextShadow(() => ctx.fillText(text, x + 60, y + 31));
-    ctx.textBaseline = "alphabetic";
-  }
-
   private drawChrome(t: number) {
     const ctx = this.ctx;
     const { starts, durations } = this.timeline;
@@ -295,15 +260,9 @@ export class ReelPainter {
         roundRect(ctx, x, 146, seg * p, 8, 4);
       }
     }
+    // Accent tick only — no track name / study meta chrome on the scene.
     ctx.fillStyle = this.accent;
     ctx.fillRect(96, 214, 44, 8);
-    ctx.textBaseline = "middle";
-    this.withTextShadow(() => {
-      ctx.font = `700 30px ${FONT_MONO}`;
-      ctx.fillStyle = INK;
-      ctx.fillText(truncate(ctx, this.reel.track.toUpperCase(), 760), 156, 219);
-    });
-    ctx.textBaseline = "alphabetic";
   }
 
   private withTextShadow(draw: () => void) {
@@ -413,7 +372,6 @@ export class ReelPainter {
     this.ctx.save();
     this.drawBackground(reduced ? 0 : time);
     this.drawChrome(time);
-    this.drawRecChip(time);
     // One scene only — never crossfade outgoing + incoming copy on the same frame.
     const layout = this.layoutScene(index);
     this.drawTextScrim(layout);
@@ -446,13 +404,6 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.beginPath();
   ctx.roundRect(x, y, Math.max(0, w), h, r);
   ctx.fill();
-}
-
-function truncate(ctx: CanvasRenderingContext2D, text: string, max: number): string {
-  if (ctx.measureText(text).width <= max) return text;
-  let s = text;
-  while (s.length > 1 && ctx.measureText(`${s}…`).width > max) s = s.slice(0, -1);
-  return `${s}…`;
 }
 
 let fontsReady: Promise<void> | null = null;

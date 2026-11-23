@@ -13,7 +13,7 @@ function ActionHint({ children }: { children: ReactNode }) {
 /** Right-rail scene actions. Share guests may react; save stays member-only. */
 export default function SceneActions({
   hearted = false,
-  hearts = 0,
+  hearts: _hearts = 0,
   heartPending = false,
   onHeart,
   commentCount = 0,
@@ -69,7 +69,6 @@ export default function SceneActions({
               <Heart className={cn("size-6", hearted && "fill-[#ff5a6e] text-[#ff5a6e]")} />
             </div>
           )}
-          {hearts > 0 && <span className="text-xs font-medium">{hearts}</span>}
         </button>
       )}
 
@@ -79,16 +78,13 @@ export default function SceneActions({
           onComment();
           onDismissHints?.();
         }}
-        aria-label="Open comments"
+        aria-label={commentCount > 0 ? `Open comments (${commentCount})` : "Open comments"}
         className="relative flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 text-white"
       >
         {hints?.comment && <ActionHint>{hints.comment}</ActionHint>}
         <div className="flex size-12 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70">
           <MessageCircle className="size-6" />
         </div>
-        {commentCount > 0 && (
-          <span className="text-xs font-medium">{commentCount}</span>
-        )}
       </button>
 
       {onSave && (
