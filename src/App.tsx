@@ -2,7 +2,9 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
+import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { useServiceWorker } from "@/hooks/use-service-worker.ts";
+import { useNativeApp } from "@/hooks/use-native-app.ts";
 import { DefaultProviders } from "./components/providers/default.tsx";
 import { AppErrorBoundary } from "./components/app-error-boundary.tsx";
 import SpaAnalytics from "./components/spa-analytics.tsx";
@@ -13,6 +15,7 @@ import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
 import { FEED_PATH, signInPath } from "./app-paths.ts";
 import { resolveReturnTo } from "./pages/auth/return-to.ts";
+import { isNativePlatform } from "@/lib/native";
 
 const AuthCallback = lazy(() => import("./pages/auth/Callback.tsx"));
 const SignInPage = lazy(() => import("./pages/auth/signin.tsx"));
@@ -38,6 +41,7 @@ const HelpPage = lazy(() => import("./pages/help/page.tsx"));
 const TermsPage = lazy(() => import("./pages/legal/terms.tsx"));
 const PrivacyPage = lazy(() => import("./pages/legal/privacy.tsx"));
 const AdminAnalyticsPage = lazy(() => import("./pages/admin/analytics.tsx"));
+const JoinPage = lazy(() => import("./pages/join/page.tsx"));
 
 function PageLoader() {
   return (
@@ -77,20 +81,36 @@ function GuestOnly({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** Signed-in users with no workspace go to onboarding. */
+/** Signed-in users with no workspace go to onboarding (or join on native viewers). */
 function RequireWorkspace() {
   const { workspaces, loading } = useWorkspace();
-  if (loading || workspaces === undefined) return <FullScreenLoader />;
-  if (workspaces.length === 0) return <Navigate to="/welcome" replace />;
+  const { nativeViewerMode, loading: adminLoading } = useNativeViewer();
+  if (loading || workspaces === undefined || (isNativePlatform() && adminLoading)) {
+    return <FullScreenLoader />;
+  }
+  if (workspaces.length === 0) {
+    return <Navigate to={nativeViewerMode ? "/join" : "/welcome"} replace />;
+  }
   return <Outlet />;
 }
 
 /** View-only members stay on /feed; editor-only routes (e.g. deck) redirect. */
 function EditorsOnly() {
   const { isEditor, loading, current } = useWorkspace();
-  if (loading || !current) return <FullScreenLoader />;
-  if (!isEditor) return <Navigate to={FEED_PATH} replace />;
+  const { nativeViewerMode, nativeAdminAccess, loading: adminLoading } = useNativeViewer();
+  if (loading || !current || (isNativePlatform() && adminLoading)) return <FullScreenLoader />;
+  // Native non-admins are always viewers in the app, even if they are editors on web.
+  if (nativeViewerMode) return <Navigate to={FEED_PATH} replace />;
+  if (!isEditor && !nativeAdminAccess) return <Navigate to={FEED_PATH} replace />;
   return <Outlet />;
+}
+
+/** Native non-admins should not create workspaces in-app. */
+function WelcomeGate({ children }: { children: React.ReactNode }) {
+  const { nativeViewerMode, loading } = useNativeViewer();
+  if (isNativePlatform() && loading) return <FullScreenLoader />;
+  if (nativeViewerMode) return <Navigate to="/join" replace />;
+  return <>{children}</>;
 }
 
 /**
@@ -117,11 +137,17 @@ function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
   return <AppErrorBoundary resetKey={pathname}>{children}</AppErrorBoundary>;
 }
 
+function NativeShell() {
+  useNativeApp();
+  return null;
+}
+
 export default function App() {
   useServiceWorker();
   return (
     <DefaultProviders>
       <BrowserRouter>
+        <NativeShell />
         <RouteErrorBoundary>
           <DocumentMeta />
           <SpaAnalytics />
@@ -153,7 +179,17 @@ export default function App() {
               <Route path="/dashboard" element={<Navigate to={FEED_PATH} replace />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               <Route element={<Gate />}>
-                <Route path="/welcome" element={<div className="h-dvh overflow-y-auto"><Welcome /></div>} />
+                <Route
+                  path="/welcome"
+                  element={
+                    <WelcomeGate>
+                      <div className="h-dvh overflow-y-auto">
+                        <Welcome />
+                      </div>
+                    </WelcomeGate>
+                  }
+                />
+                <Route path="/join" element={<div className="h-dvh overflow-y-auto"><JoinPage /></div>} />
                 <Route element={<RequireWorkspace />}>
                   <Route element={<EditorsOnly />}>
                     <Route path="/insights/deck" element={<DeckPage />} />

@@ -1,11 +1,19 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { isNativePlatform } from "@/lib/native";
 
 export function useServiceWorker() {
   const toastShown = useRef(false);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+
+    // Native Capacitor WebViews should not use the PWA service worker —
+    // it fights Cap sync updates and shows a web-style "new version" toast.
+    if (isNativePlatform()) {
+      navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+      return;
+    }
 
     // In dev, a service worker caches Vite's HMR token and breaks hot reload
     if (!import.meta.env.PROD) {

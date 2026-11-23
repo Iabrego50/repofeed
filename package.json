@@ -11,10 +11,19 @@
     "check:api": "node scripts/check-api-esm.mjs",
     "lint": "eslint . --max-warnings=0",
     "prettier-fix": "prettier --write .",
-    "prettier-check": "prettier --check ."
+    "prettier-check": "prettier --check .",
+    "cap:sync": "cap sync",
+    "ios:sync": "pnpm build && cap sync ios"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource-variable/newsreader": "^5.3.0",
@@ -65,7 +74,6 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.0",
-    "@capacitor/core": "^8.6.0",
     "@capacitor/ios": "^8.6.0",
     "@edge-runtime/vm": "^5.0.0",
     "@electric-sql/pglite": "^0.3.16",

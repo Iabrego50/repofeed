@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Link2, Trash2, UserMinus, Loader2 } from "lucide-react";
+import { Copy, Link2, Trash2, UserMinus, Loader2, RefreshCw, Mail, Users } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -12,8 +13,10 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select.
 import PageHeader from "@/components/page-header.tsx";
 import UserAvatar from "@/components/user-avatar.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
+import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { SHAREABLE_ORIGIN } from "@/lib/site.ts";
 import EmailUpdates from "./_components/email-updates.tsx";
+import DeleteAccount from "./_components/delete-account.tsx";
 
 const inviteUrl = (token: string) => `${SHAREABLE_ORIGIN}/invite/${token}`;
 
@@ -23,10 +26,10 @@ function inviteExpiryLabel(expiresAt: unknown): string {
   return formatDistanceToNow(date, { addSuffix: true });
 }
 
-async function copy(text: string) {
+async function copy(text: string, success = "Invite link copied") {
   try {
     await navigator.clipboard.writeText(text);
-    toast.success("Invite link copied");
+    toast.success(success);
   } catch {
     toast.error("Couldn't copy. Select the link and copy it manually.");
   }
@@ -135,6 +138,104 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   );
 }
 
+function JoinCodePanel({ workspaceId }: { workspaceId: string }) {
+  const queryClient = useQueryClient();
+  const { data: code, isLoading } = useQuery({
+    queryKey: ["workspaces", "joinCode", workspaceId],
+    queryFn: () => api.workspaces.getJoinCode({ workspaceId }),
+  });
+  const regenerate = useMutation({
+    mutationFn: () => api.workspaces.regenerateJoinCode({ workspaceId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["workspaces", "joinCode", workspaceId] });
+      toast.success("New join code created — the old one no longer works");
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Couldn't regenerate");
+    },
+  });
+  const [email, setEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <h2 className="text-xl font-bold">Team join code</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Share this short code so people can join as viewers in the iOS app (or at /join on the web).
+      </p>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        {isLoading || !code ? (
+          <Skeleton className="h-12 w-full max-w-xs rounded-xl" />
+        ) : (
+          <Input
+            readOnly
+            value={code}
+            className="h-12 max-w-xs font-mono text-lg tracking-[0.2em]"
+            aria-label="Team join code"
+            onFocus={(e) => e.currentTarget.select()}
+          />
+        )}
+        <div className="flex gap-1">
+          <Button
+            variant="secondary"
+            className="h-11"
+            disabled={!code}
+            onClick={() => {
+              if (!code) return;
+              void copy(code, "Join code copied");
+            }}
+          >
+            <Copy className="size-4" /> Copy
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-11"
+            disabled={regenerate.isPending}
+            onClick={() => regenerate.mutate()}
+          >
+            {regenerate.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            Regenerate
+          </Button>
+        </div>
+      </div>
+      <form
+        className="mt-5 grid gap-3 border-t border-border pt-5 sm:grid-cols-[1fr_auto] sm:items-end"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!email.trim()) return;
+          setEmailBusy(true);
+          try {
+            await api.workspaces.emailJoinCode({ workspaceId, email: email.trim() });
+            toast.success(`Invite email sent to ${email.trim()}`);
+            setEmail("");
+          } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Couldn't send email");
+          } finally {
+            setEmailBusy(false);
+          }
+        }}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="join-email">Email the code</Label>
+          <Input
+            id="join-email"
+            type="email"
+            className="h-11"
+            placeholder="teammate@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={emailBusy}
+          />
+        </div>
+        <Button type="submit" className="h-11 font-semibold" disabled={emailBusy || !email.trim()}>
+          {emailBusy ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+          Send invite
+        </Button>
+      </form>
+    </section>
+  );
+}
+
 function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
   const queryClient = useQueryClient();
   const { data: members } = useQuery({
@@ -187,6 +288,8 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { current, isEditor, isOwner, refresh } = useWorkspace();
+  const { nativeViewerMode, nativeAdminAccess } = useNativeViewer();
+  const showCreatorTools = isEditor || nativeAdminAccess;
   const renameMutation = useMutation({
     mutationFn: (args: { workspaceId: string; name: string }) =>
       api.workspaces.rename(args),
@@ -204,6 +307,17 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-5 py-8 lg:py-12">
       <PageHeader eyebrow="Workspace" title={current.name} description={`You're ${current.role === "owner" ? "an owner" : current.role === "editor" ? "an editor" : "a member"} of this workspace.`} />
+      {nativeViewerMode && (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-xl font-bold">Join another team</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Have a join code from another workspace? Enter it to watch their feed too.</p>
+          <Button asChild className="mt-4 h-11 font-semibold">
+            <Link to="/join">
+              <Users className="size-4" /> Enter team code
+            </Link>
+          </Button>
+        </section>
+      )}
       {isOwner && (
         <form
           className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-end"
@@ -225,9 +339,11 @@ export default function SettingsPage() {
           <Button type="submit" className="h-11" disabled={name === null || name.trim() === current.name}>Save</Button>
         </form>
       )}
-      {isEditor && <Invites workspaceId={current._id} isOwner={isOwner} />}
+      {showCreatorTools && <JoinCodePanel workspaceId={current._id} />}
+      {showCreatorTools && <Invites workspaceId={current._id} isOwner={isOwner} />}
       <EmailUpdates workspaceId={current._id} />
       <Members workspaceId={current._id} isOwner={isOwner} />
+      <DeleteAccount />
     </div>
   );
 }

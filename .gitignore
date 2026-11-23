@@ -30,3 +30,12 @@ tsconfig*.tsbuildinfo
 # Environment variables
 .env*
 !.env.example
+
+# iOS / Fastlane artifacts
+/build
+*.ipa
+*.dSYM.zip
+/fastlane/report.xml
+/fastlane/Preview.html
+/fastlane/screenshots
+/resources

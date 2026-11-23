@@ -50,6 +50,7 @@
     { "source": "/privacy", "destination": "/index.html" },
     { "source": "/help", "destination": "/index.html" },
     { "source": "/welcome", "destination": "/index.html" },
+    { "source": "/join", "destination": "/index.html" },
     { "source": "/feed", "destination": "/index.html" },
     { "source": "/dashboard", "destination": "/index.html" },
     { "source": "/studies", "destination": "/index.html" },
@@ -139,6 +140,10 @@
     },
     {
       "source": "/welcome",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/join",
       "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
     },
     {

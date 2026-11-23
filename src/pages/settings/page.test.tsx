@@ -11,6 +11,16 @@ vi.mock("@/hooks/use-workspace.ts", () => ({
   }),
 }));
 
+vi.mock("@/hooks/use-native-viewer.ts", () => ({
+  useNativeViewer: () => ({
+    isAdmin: false,
+    nativeViewerMode: false,
+    nativeAdminAccess: false,
+    loading: false,
+    profile: null,
+  }),
+}));
+
 vi.mock("@/lib/api/complete", () => ({
   api: {
     workspaces: {
@@ -37,6 +47,9 @@ vi.mock("@/lib/api/complete", () => ({
       listMembers: vi.fn(async () => []),
       revokeInvite: vi.fn(async () => undefined),
       rename: vi.fn(async () => undefined),
+      getJoinCode: vi.fn(async () => "7K3M9PQ2"),
+      regenerateJoinCode: vi.fn(async () => "ABCD2345"),
+      emailJoinCode: vi.fn(async () => undefined),
     },
     billing: {
       actions: {
@@ -47,6 +60,10 @@ vi.mock("@/lib/api/complete", () => ({
 }));
 
 vi.mock("./_components/email-updates.tsx", () => ({
+  default: () => null,
+}));
+
+vi.mock("./_components/delete-account.tsx", () => ({
   default: () => null,
 }));
 

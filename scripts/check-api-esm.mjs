@@ -28,6 +28,7 @@ const API_ENTRIES = [
   "api/admin/ad-spend.ts",
   "api/insights/ask.ts",
   "api/insights/topics.ts",
+  "api/account/delete.ts",
 ];
 
 export function isTypeOnlyImport(statement) {

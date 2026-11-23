@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, Clapperboard, Search } from "lucide-react";
@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
+import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { cn } from "@/lib/utils.ts";
 import FeedTour from "@/components/feed-tour.tsx";
 import ReelFeed from "./_components/reel-feed.tsx";
@@ -18,6 +19,7 @@ const CHIP_ON = "border-transparent bg-white text-black hover:text-black";
 
 export default function FeedPage() {
   const { current, isEditor } = useWorkspace();
+  const { nativeViewerMode } = useNativeViewer();
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const replayTour = params.get("tour") === "1";
@@ -55,6 +57,14 @@ export default function FeedPage() {
     queryFn: () => api.studies.list({ workspaceId: current!._id }),
     enabled: !!current,
   });
+
+  const { data: unreadIds } = useQuery({
+    queryKey: ["studyViews", "unread", current?._id],
+    queryFn: () => api.studyViews.unreadIds({ workspaceId: current!._id }),
+    enabled: !!current,
+    refetchInterval: 60_000,
+  });
+  const unreadSet = useMemo(() => new Set(unreadIds ?? []), [unreadIds]);
   
   const { data: feedReels } = useQuery({
     queryKey: ["feed", "list", current?._id, studyFilter],
@@ -71,15 +81,46 @@ export default function FeedPage() {
     },
     enabled: !!current && savedView,
   });
+
+  // Clear the New badge when the viewer filters into a study (or opens a deep-linked reel from one).
+  useEffect(() => {
+    if (!studyFilter || !unreadSet.has(studyFilter)) return;
+    void api.studyViews.markSeen({ studyId: studyFilter }).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["studyViews", "unread", current?._id] });
+    });
+  }, [studyFilter, unreadSet, queryClient, current?._id]);
+
+  useEffect(() => {
+    const reelId = params.get("reel");
+    if (!reelId || !feedReels) return;
+    const hit = (feedReels as Array<{ _id?: string; id?: string; studyId?: string; study_id?: string }>).find(
+      (r) => r._id === reelId || r.id === reelId,
+    );
+    const studyId = hit?.studyId ?? hit?.study_id;
+    if (!studyId || !unreadSet.has(studyId)) return;
+    void api.studyViews.markSeen({ studyId }).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["studyViews", "unread", current?._id] });
+    });
+  }, [params, feedReels, unreadSet, queryClient, current?._id]);
   
   const reels = savedView ? savedReels : feedReels;
-  const published = useMemo(() => studies?.filter((s: any) => s.status === "published") ?? [], [studies]);
+  const published = useMemo(
+    () => (studies ?? []).filter((s) => s.status === "published"),
+    [studies],
+  );
+  const showCreateCta = isEditor && !nativeViewerMode;
   if (!current) return null;
 
-  const chips: Array<{ key: string; label: string; active: boolean; onClick: () => void }> = [
+  const chips: Array<{ key: string; label: string; active: boolean; onClick: () => void; isNew?: boolean }> = [
     { key: "all", label: "All studies", active: !savedView && !studyFilter, onClick: () => setParams({}) },
     ...(published.length > 1
-      ? published.map((s: any) => ({ key: s._id, label: s.title, active: studyFilter === s._id, onClick: () => setParams({ study: s._id }) }))
+      ? published.map((s) => ({
+          key: s._id,
+          label: s.title,
+          active: studyFilter === s._id,
+          onClick: () => setParams({ study: s._id }),
+          isNew: unreadSet.has(s._id),
+        }))
       : []),
   ];
 
@@ -96,7 +137,14 @@ export default function FeedPage() {
         </button>
         {chips.map((c) => (
           <button key={c.key} type="button" onClick={c.onClick} aria-pressed={c.active} className={cn(CHIP, c.active && CHIP_ON)}>
-            <span className="block max-w-[140px] truncate sm:max-w-[200px]">{c.label}</span>
+            <span className="flex max-w-[140px] items-center gap-1.5 truncate sm:max-w-[200px]">
+              {c.label}
+              {c.isNew ? (
+                <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-primary-foreground">
+                  New
+                </span>
+              ) : null}
+            </span>
           </button>
         ))}
       </div>
@@ -129,10 +177,10 @@ export default function FeedPage() {
         <EmptyMedia variant="icon"><Clapperboard /></EmptyMedia>
         <EmptyTitle>No scenes in your feed yet</EmptyTitle>
         <EmptyDescription>
-          {isEditor ? "Create a study from your research files and publish it to fill the feed." : "When an editor publishes a study, its scenes show up here."}
+          {showCreateCta ? "Create a study from your research files and publish it to fill the feed." : "When an editor publishes a study, its scenes show up here."}
         </EmptyDescription>
       </EmptyHeader>
-      {isEditor && (
+      {showCreateCta && (
         <EmptyContent>
           <Button asChild className="h-11"><Link to="/studies/new">Create a study</Link></Button>
         </EmptyContent>

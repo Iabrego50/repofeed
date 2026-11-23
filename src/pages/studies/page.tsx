@@ -12,6 +12,7 @@ import PermissionDenied from "@/components/permission-denied.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { usePlan } from "@/hooks/use-plan.ts";
 import { cn } from "@/lib/utils.ts";
+import { isNativeIos } from "@/lib/native";
 import type { StudyStatus } from "@/schema/validators.ts";
 import StatusBadge from "./_components/status-badge.tsx";
 import StudyActions from "./_components/study-actions.tsx";
@@ -58,15 +59,24 @@ function StudyList({ studies, archived }: { studies: Study[]; archived: boolean 
 
 function FreeUsageNote({ used }: { used: number }) {
   const full = used >= FREE_LIMIT;
+  // App Store 3.1.1: no upgrade purchase CTAs in the iOS binary.
+  const iosStoreBuild = isNativeIos();
   return (
     <p className={cn("mt-4 rounded-xl border px-4 py-3 text-sm", full ? "border-warning/50 bg-warning/10 text-warning" : "border-border text-muted-foreground")}>
-      {used} of {FREE_LIMIT} free studies used{full ? ". Archive one or " : ". The demo study doesn't count. "}
-      {full ? (
-        <Link to="/billing" className="cursor-pointer font-semibold underline underline-offset-2">upgrade for unlimited studies</Link>
+      {used} of {FREE_LIMIT} free studies used
+      {iosStoreBuild ? (
+        full ? ". Archive one to free a slot. Manage your plan on repofeed.ai." : ". The demo study doesn't count."
       ) : (
-        <Link to="/billing" className="cursor-pointer underline underline-offset-2">See plans</Link>
+        <>
+          {full ? ". Archive one or " : ". The demo study doesn't count. "}
+          {full ? (
+            <Link to="/billing" className="cursor-pointer font-semibold underline underline-offset-2">upgrade for unlimited studies</Link>
+          ) : (
+            <Link to="/billing" className="cursor-pointer underline underline-offset-2">See plans</Link>
+          )}
+          .
+        </>
       )}
-      .
     </p>
   );
 }
