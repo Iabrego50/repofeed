@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useSearchP
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useServiceWorker } from "@/hooks/use-service-worker.ts";
+import { useNativeApp } from "@/hooks/use-native-app.ts";
 import { DefaultProviders } from "./components/providers/default.tsx";
 import { AppErrorBoundary } from "./components/app-error-boundary.tsx";
 import SpaAnalytics from "./components/spa-analytics.tsx";
@@ -117,11 +118,17 @@ function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
   return <AppErrorBoundary resetKey={pathname}>{children}</AppErrorBoundary>;
 }
 
+function NativeShell() {
+  useNativeApp();
+  return null;
+}
+
 export default function App() {
   useServiceWorker();
   return (
     <DefaultProviders>
       <BrowserRouter>
+        <NativeShell />
         <RouteErrorBoundary>
           <DocumentMeta />
           <SpaAnalytics />

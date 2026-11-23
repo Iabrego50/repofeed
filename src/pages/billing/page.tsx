@@ -13,6 +13,8 @@ import ConfirmChangeDialog from "./_components/confirm-change-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { track } from "@/lib/analytics";
+import { isNativeIos } from "@/lib/native";
+import { PLANS, formatPrice } from "@/lib/plans";
 
 export default function BillingPage() {
   const navigate = useNavigate();
@@ -58,6 +60,8 @@ export default function BillingPage() {
   }
 
   const loading = planLoading || loadingUsage;
+  // App Store 3.1.1: no Stripe purchase CTAs inside the iOS binary.
+  const iosStoreBuild = isNativeIos();
 
   const currentUsage = usage
     ? {
@@ -67,6 +71,7 @@ export default function BillingPage() {
     : { studies: 0, editors: 0 };
 
   const handlePlanSelect = (selectedPlan: "pro" | "team", interval: Interval) => {
+    if (iosStoreBuild) return;
     if (unavailable) {
       toast.error("Billing is coming soon");
       return;
@@ -133,6 +138,37 @@ export default function BillingPage() {
         <div className="flex justify-center py-12">
           <Spinner />
         </div>
+      ) : iosStoreBuild ? (
+        <div className="rounded-xl border border-border bg-card p-8">
+          <h2 className="text-xl font-bold">Your plan</h2>
+          <p className="mt-2 text-muted-foreground">
+            This workspace is on{" "}
+            <span className="font-semibold text-foreground">
+              {PLANS.find((p) => p.id === plan)?.name ?? plan}
+            </span>
+            {plan !== "free" && (
+              <>
+                {" "}
+                ({formatPrice(PLANS.find((p) => p.id === plan)?.price.month ?? 0)}
+                /editor/mo on the web)
+              </>
+            )}
+            .
+          </p>
+          <p className="mt-4 max-w-md text-muted-foreground">
+            Manage your plan on repofeed.ai
+          </p>
+          <dl className="mt-8 grid grid-cols-2 gap-3 sm:max-w-md">
+            <div className="rounded-xl border border-border bg-background px-4 py-3">
+              <dt className="text-sm text-muted-foreground">Active studies</dt>
+              <dd className="text-2xl font-bold">{currentUsage.studies}</dd>
+            </div>
+            <div className="rounded-xl border border-border bg-background px-4 py-3">
+              <dt className="text-sm text-muted-foreground">Editors</dt>
+              <dd className="text-2xl font-bold">{currentUsage.editors}</dd>
+            </div>
+          </dl>
+        </div>
       ) : unavailable ? (
         <div className="rounded-xl border border-border bg-card p-8">
           <h2 className="text-xl font-bold">Billing is coming soon</h2>
@@ -173,7 +209,7 @@ export default function BillingPage() {
         </>
       )}
 
-      {confirmPlan && (
+      {confirmPlan && !iosStoreBuild && (
         <ConfirmChangeDialog
           open={!!confirmPlan}
           onClose={() => setConfirmPlan(null)}

@@ -159,7 +159,7 @@ function ViewerLayout() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2">
+      <header className="safe-top flex shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2">
         <div aria-label="repofeed" className="shrink-0">
           <Logo />
         </div>
@@ -265,7 +265,7 @@ function EditorLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-1 border-b border-border bg-card px-2 py-1.5 lg:hidden">
+        <header className="safe-top flex items-center gap-1 border-b border-border bg-card px-2 py-1.5 lg:hidden">
           <NavLink to="/feed" aria-label="Go to the feed" className="cursor-pointer px-1">
             <Logo withText={false} />
           </NavLink>

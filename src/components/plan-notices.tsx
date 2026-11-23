@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertTriangle, CreditCard, UserX, X } from "lucide-react";
+import { AlertTriangle, CreditCard, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { usePlan } from "@/hooks/use-plan.ts";
 import { getErrorMessage } from "@/lib/errors.ts";
 import { api } from "@/lib/api";
+import { isNativeIos } from "@/lib/native";
 
 const PLAN_LABEL = {
   free: 'Free',
@@ -43,7 +44,10 @@ function OwnerNotices() {
 
   if (!current || !usage) return null;
 
+  const iosStoreBuild = isNativeIos();
+
   const openPortal = async () => {
+    if (iosStoreBuild) return;
     setBusy(true);
     try {
       const { url } = await api.billing.portal({
@@ -64,26 +68,40 @@ function OwnerNotices() {
         <Banner
           icon={<AlertTriangle className="size-4" />}
           actions={
-            <>
+            iosStoreBuild ? undefined : (
               <Button size="sm" className="h-9" disabled={busy} onClick={() => void openPortal()}>
                 {busy ? <Spinner /> : <CreditCard className="size-4" />} Update card
               </Button>
-            </>
+            )
           }
         >
-          <strong>Your {PLAN_LABEL[usage.lapsedPlan as keyof typeof PLAN_LABEL]} plan has ended.</strong> This usually means the last payment didn't go through, or the plan was cancelled. Update your card to restore {PLAN_LABEL[usage.lapsedPlan as keyof typeof PLAN_LABEL]} features.
+          {iosStoreBuild ? (
+            <>
+              <strong>Your {PLAN_LABEL[usage.lapsedPlan as keyof typeof PLAN_LABEL]} plan has ended.</strong> Manage your plan on repofeed.ai
+            </>
+          ) : (
+            <>
+              <strong>Your {PLAN_LABEL[usage.lapsedPlan as keyof typeof PLAN_LABEL]} plan has ended.</strong> This usually means the last payment didn't go through, or the plan was cancelled. Update your card to restore {PLAN_LABEL[usage.lapsedPlan as keyof typeof PLAN_LABEL]} features.
+            </>
+          )}
         </Banner>
       )}
       {usage.seatOverage && (
         <Banner
           icon={<UserX className="size-4" />}
           actions={
-            <Button asChild size="sm" variant="secondary" className="h-9">
-              <Link to="/billing">See plans</Link>
-            </Button>
+            iosStoreBuild ? undefined : (
+              <Button asChild size="sm" variant="secondary" className="h-9">
+                <Link to="/billing">See plans</Link>
+              </Button>
+            )
           }
         >
-          This workspace has {usage.editors} editors, but its plan includes 1. Owners can still edit; other editors can only watch and comment until you upgrade to Team or change their role. Nobody has been removed.
+          {iosStoreBuild
+            ? `This workspace has ${usage.editors} editors, but its plan includes 1. Manage your plan on repofeed.ai`
+            : "This workspace has " +
+              usage.editors +
+              " editors, but its plan includes 1. Owners can still edit; other editors can only watch and comment until you upgrade to Team or change their role. Nobody has been removed."}
         </Banner>
       )}
     </>

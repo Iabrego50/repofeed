@@ -16,6 +16,8 @@ import { FEED_PATH } from "@/app-paths.ts";
 import { resolveReturnTo } from "./return-to.ts";
 
 const googleEnabled = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === "true";
+/** Sign in with Apple — enable after configuring the Apple provider in Supabase (App Store 4.8). */
+const appleEnabled = import.meta.env.VITE_ENABLE_APPLE_AUTH === "true";
 const RESEND_SECONDS = 30;
 
 export default function SignInPage() {
@@ -41,13 +43,19 @@ export default function SignInPage() {
     if (sent) codeRef.current?.focus();
   }, [sent]);
 
-  const onGoogle = async () => {
+  const onOAuth = async (provider: "google" | "apple") => {
     setBusy(true);
     setError(null);
     try {
-      await signIn("google");
+      await signIn(provider);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't start Google sign-in");
+      setError(
+        err instanceof Error
+          ? err.message
+          : provider === "apple"
+            ? "Couldn't start Apple sign-in"
+            : "Couldn't start Google sign-in",
+      );
       setBusy(false);
     }
   };
@@ -129,8 +137,8 @@ export default function SignInPage() {
       <main className="relative m-auto w-full max-w-md px-5 pb-16">
         <h1 className="text-3xl font-bold tracking-tight">Sign in to repofeed.ai</h1>
         <p className="mt-3 text-muted-foreground">
-          {googleEnabled
-            ? "New here or coming back, it’s the same step. Use Google, or we’ll email you a link and a sign-in code. There’s no password to remember."
+          {googleEnabled || appleEnabled
+            ? "New here or coming back, it’s the same step. Use a sign-in button below, or we’ll email you a link and a sign-in code. There’s no password to remember."
             : "New here or coming back, it’s the same step. We’ll email you a link and a sign-in code, and there’s no password to remember."}
         </p>
         {sent ? (
@@ -180,11 +188,24 @@ export default function SignInPage() {
           </div>
         ) : (
           <div className="mt-8 space-y-4">
-            {googleEnabled && (
+            {(googleEnabled || appleEnabled) && (
               <>
-                <Button size="lg" className="h-12 w-full font-semibold" onClick={() => void onGoogle()} disabled={busy}>
-                  Continue with Google
-                </Button>
+                {appleEnabled && (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 w-full font-semibold"
+                    onClick={() => void onOAuth("apple")}
+                    disabled={busy}
+                  >
+                    Continue with Apple
+                  </Button>
+                )}
+                {googleEnabled && (
+                  <Button size="lg" className="h-12 w-full font-semibold" onClick={() => void onOAuth("google")} disabled={busy}>
+                    Continue with Google
+                  </Button>
+                )}
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="h-px flex-1 bg-border" />
                   or email
@@ -207,7 +228,7 @@ export default function SignInPage() {
                   disabled={busy}
                 />
               </div>
-              <Button type="submit" variant={googleEnabled ? "outline" : "default"} size="lg" className="h-12 w-full font-semibold" disabled={busy}>
+              <Button type="submit" variant={googleEnabled || appleEnabled ? "outline" : "default"} size="lg" className="h-12 w-full font-semibold" disabled={busy}>
                 {busy ? "Sending…" : "Email me a sign-in link"}
               </Button>
             </form>

@@ -16,6 +16,7 @@ const API_ENTRIES = [
   "api/decks/generate.ts",
   "api/admin/ai-models.ts",
   "api/admin/analytics.ts",
+  "api/account/delete.ts",
 ];
 
 function isForbiddenApiImport(specifier: string, statement: string) {

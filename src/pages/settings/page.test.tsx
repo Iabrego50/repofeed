@@ -50,6 +50,10 @@ vi.mock("./_components/email-updates.tsx", () => ({
   default: () => null,
 }));
 
+vi.mock("./_components/delete-account.tsx", () => ({
+  default: () => null,
+}));
+
 import SettingsPage from "./page";
 
 describe("SettingsPage invites", () => {

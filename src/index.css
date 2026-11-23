@@ -346,3 +346,23 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Capacitor native shell — notch / home indicator / less browser-like chrome */
+html.native-app,
+html.native-app body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.native-ios {
+  /* Soften rubber-band bounce that fights our own scroll containers */
+  overscroll-behavior-y: none;
+}
+
+html.native-app .safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+html.native-app .safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}

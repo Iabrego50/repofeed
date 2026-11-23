@@ -14,6 +14,7 @@ import UserAvatar from "@/components/user-avatar.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { SHAREABLE_ORIGIN } from "@/lib/site.ts";
 import EmailUpdates from "./_components/email-updates.tsx";
+import DeleteAccount from "./_components/delete-account.tsx";
 
 const inviteUrl = (token: string) => `${SHAREABLE_ORIGIN}/invite/${token}`;
 
@@ -228,6 +229,7 @@ export default function SettingsPage() {
       {isEditor && <Invites workspaceId={current._id} isOwner={isOwner} />}
       <EmailUpdates workspaceId={current._id} />
       <Members workspaceId={current._id} isOwner={isOwner} />
+      <DeleteAccount />
     </div>
   );
 }

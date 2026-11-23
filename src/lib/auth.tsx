@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import { Browser } from '@capacitor/browser';
 import { getBrowserSupabase } from './supabase';
 import { FEED_PATH } from '@/app-paths.ts';
 import { resolveReturnTo } from '@/pages/auth/return-to.ts';
 import { completeSignup } from './analytics';
+import { authRedirectOrigin, isNativePlatform } from './native';
 
 function authCallbackUrl(): string {
-  const origin = window.location.origin;
+  const origin = authRedirectOrigin().replace(/\/$/, '');
   const returnTo = resolveReturnTo({
     returnTo: new URLSearchParams(window.location.search).get('returnTo'),
   });
@@ -123,10 +125,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (provider: 'google' | 'azure' | 'apple') => {
     const client = getBrowserSupabase();
     if (!client) return unavailableAuth();
-    await client.auth.signInWithOAuth({
+    const native = isNativePlatform();
+    const { data, error } = await client.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: authCallbackUrl() },
+      options: {
+        redirectTo: authCallbackUrl(),
+        // System browser + appUrlOpen completes the PKCE exchange on iOS.
+        skipBrowserRedirect: native,
+      },
     });
+    if (error) throw error;
+    if (native && data?.url) {
+      await Browser.open({ url: data.url, presentationStyle: 'popover' });
+    }
   };
 
   const signInWithOtp = async (email: string) => {
