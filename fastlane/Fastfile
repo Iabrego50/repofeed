@@ -7,29 +7,59 @@ platform :ios do
   lane :beta do
     setup_ci if ENV["CI"]
 
+    key_id = ENV.fetch("APP_STORE_CONNECT_KEY_ID")
+    issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
+    key_path = ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")
+    team_id = ENV.fetch("APPLE_TEAM_ID")
+
     api_key = app_store_connect_api_key(
-      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
-      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
-      key_filepath: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH"),
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_filepath: key_path,
       duration: 1200,
       in_house: false
     )
 
-    build_number = ENV.fetch("IOS_BUILD_NUMBER", "1")
-    team_id = ENV.fetch("APPLE_TEAM_ID")
+    # Prefer TestFlight+1 so retries of the same workflow run stay unique;
+    # fall back to github.run_number + offset when no builds exist yet.
+    run_number = ENV.fetch("IOS_BUILD_NUMBER", "1").to_i
+    begin
+      latest = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: "ai.repofeed.app",
+        initial_build_number: 0
+      )
+      build_number = [latest.to_i + 1, run_number].max.to_s
+    rescue StandardError => e
+      UI.important("Could not read latest TestFlight build (#{e.message}); using run number + offset")
+      build_number = (run_number + 1000).to_s
+    end
+    UI.message("Using iOS build number #{build_number}")
 
     increment_build_number(
       build_number: build_number,
       xcodeproj: "ios/App/App.xcodeproj"
     )
 
+    # Automatic signing only — do NOT force Apple Distribution here; that
+    # conflicts with Xcode automatic signing on a clean CI runner.
     update_code_signing_settings(
       use_automatic_signing: true,
       path: "ios/App/App.xcodeproj",
       team_id: team_id,
       bundle_identifier: "ai.repofeed.app",
-      code_sign_identity: "Apple Distribution"
+      code_sign_identity: "Apple Development"
     )
+
+    # Cloud-managed signing: xcodebuild authenticates to ASC with the API key
+    # so it can create/update profiles without local certificates.
+    auth_xcargs = [
+      "DEVELOPMENT_TEAM=#{team_id}",
+      "-allowProvisioningUpdates",
+      "-authenticationKeyPath", key_path,
+      "-authenticationKeyID", key_id,
+      "-authenticationKeyIssuerID", issuer_id
+    ].join(" ")
 
     build_app(
       project: "ios/App/App.xcodeproj",
@@ -39,7 +69,7 @@ platform :ios do
       clean: true,
       output_directory: "build",
       output_name: "repofeed.ipa",
-      xcargs: "DEVELOPMENT_TEAM=#{team_id} -allowProvisioningUpdates",
+      xcargs: auth_xcargs,
       export_options: {
         method: "app-store",
         signingStyle: "automatic",
