@@ -84,7 +84,6 @@ export default function SharePage() {
     <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/70 to-transparent px-3 py-3 lg:max-w-[calc(100dvh*9/16)] lg:mx-auto">
       <div className="flex items-center gap-2 text-white">
         <Logo withText={false} />
-        <span className="truncate text-sm font-semibold">{data?.studyTitle ?? ""}</span>
       </div>
     </div>
   );
@@ -105,12 +104,6 @@ export default function SharePage() {
             </Empty>
           }
         />
-        <Link
-          to="/signin"
-          className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1.5 text-[11px] font-medium text-white/80 backdrop-blur transition-colors hover:bg-black/70 hover:text-white lg:bottom-6"
-        >
-          Made with repofeed
-        </Link>
       </div>
       <NamePrompt
         open={prompting}

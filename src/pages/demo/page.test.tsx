@@ -65,18 +65,18 @@ describe("Demo feed interactions", () => {
     cleanup();
   });
 
-  it("hearts and saves a scene locally and updates counts", async () => {
+  it("hearts and saves a scene locally without showing count chrome", async () => {
     const user = userEvent.setup();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     renderDemo();
 
     const react = screen.getAllByRole("button", { name: /^react$/i })[0];
-    expect(react).toHaveTextContent("9");
+    expect(react).not.toHaveTextContent(/\d/);
     await user.click(react);
     expect(react).toHaveAttribute("aria-pressed", "true");
-    expect(react).toHaveTextContent("10");
+    expect(react).not.toHaveTextContent(/\d/);
     await user.click(screen.getByRole("button", { name: /remove reaction/i }));
-    expect(react).toHaveTextContent("9");
+    expect(react).toHaveAttribute("aria-pressed", "false");
 
     const save = screen.getAllByRole("button", { name: /save scene/i })[0];
     await user.click(save);
