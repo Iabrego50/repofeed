@@ -78,10 +78,23 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          IOS_APPSTORE_PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
           IOS_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           set -euo pipefail
-          for key in APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APPLE_TEAM_ID APP_STORE_CONNECT_API_KEY_PATH VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
+          for key in \
+            APP_STORE_CONNECT_KEY_ID \
+            APP_STORE_CONNECT_ISSUER_ID \
+            APPLE_TEAM_ID \
+            APP_STORE_CONNECT_API_KEY_PATH \
+            IOS_DIST_CERT_P12_BASE64 \
+            IOS_DIST_CERT_PASSWORD \
+            IOS_APPSTORE_PROFILE_BASE64 \
+            VITE_SUPABASE_URL \
+            VITE_SUPABASE_ANON_KEY
+          do
             if [ -z "${!key:-}" ]; then
               echo "Missing required secret/env: $key" >&2
               exit 1

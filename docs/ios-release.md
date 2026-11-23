@@ -23,11 +23,25 @@ This guide gets **repofeed** (`ai.repofeed.app`) onto TestFlight and through App
 ## 2. Create an App Store Connect API key
 
 1. App Store Connect → **Users and Access** → **Integrations** → **App Store Connect API**.
-2. **Generate** a key with **Admin** access. Cloud-managed **distribution** signing on CI requires Admin — App Manager fails export with “Cloud signing permission error”.
+2. **Generate** a key with **Admin** access (used for TestFlight upload + build-number lookup).
 3. Download the `.p8` once. Note:
    - **Key ID**
    - **Issuer ID** (top of the page)
 4. Store the `.p8` securely. You will add it to GitHub as a secret (raw PEM or base64).
+
+## 2b. Distribution certificate + App Store profile (manual signing)
+
+CI uses **manual signing** (not cloud automatic signing). Create once in the Apple Developer portal:
+
+1. **Certificates** → create an **Apple Distribution** certificate → export as `.p12` with a password.
+2. **Profiles** → create an **App Store** provisioning profile for `ai.repofeed.app` (name e.g. `repofeed AppStore`) → download the `.mobileprovision`.
+3. Base64-encode both for GitHub secrets:
+   ```bash
+   base64 -i Certificates.p12 | pbcopy          # → IOS_DIST_CERT_P12_BASE64
+   base64 -i repofeed_AppStore.mobileprovision | pbcopy  # → IOS_APPSTORE_PROFILE_BASE64
+   ```
+
+If you rotate the profile, update `PROFILE_UUID` / `PROFILE_NAME` in `fastlane/Fastfile` to match.
 
 ## 3. GitHub repository secrets
 
@@ -35,35 +49,39 @@ Settings → Secrets and variables → Actions. Add:
 
 | Secret | Purpose |
 | --- | --- |
-| `APP_STORE_CONNECT_KEY_ID` | API key ID |
+| `APP_STORE_CONNECT_KEY_ID` | API key ID (Admin) |
 | `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID |
 | `APP_STORE_CONNECT_API_KEY_P8` | Full `.p8` PEM **or** base64 of the file |
 | `APPLE_TEAM_ID` | 10-character Team ID (Membership details) |
+| `IOS_DIST_CERT_P12_BASE64` | Base64 of Apple Distribution `.p12` |
+| `IOS_DIST_CERT_PASSWORD` | Password for that `.p12` |
+| `IOS_APPSTORE_PROFILE_BASE64` | Base64 of App Store `.mobileprovision` |
 | `VITE_SUPABASE_URL` | Same as production web |
 | `VITE_SUPABASE_ANON_KEY` | Same as production web |
 | `VITE_SITE_URL` | `https://repofeed.ai` |
 | `VITE_ENABLE_GOOGLE_AUTH` | `true` only if Google is live in Supabase |
 | `VITE_ENABLE_APPLE_AUTH` | `true` only after Apple provider is configured |
 
-The workflow is `.github/workflows/ios-testflight.yml`. It builds with Vite, runs `npx cap sync ios`, **archives unsigned** (so CI does not need registered devices / development profiles), then **exports** with automatic App Store signing via the ASC API key (`-authenticationKeyPath` / `-authenticationKeyID` / `-authenticationKeyIssuerID`), and uploads to TestFlight. Build number = `max(latest TestFlight + 1, github.run_number)`.
+The workflow is `.github/workflows/ios-testflight.yml`. It builds with Vite, runs `npx cap sync ios`, imports the Distribution cert into a temporary keychain, installs the App Store profile, archives with **manual** signing (`Apple Distribution` + `repofeed AppStore`), and uploads to TestFlight via the ASC API key. Build number = `max(latest TestFlight + 1, github.run_number)`.
 
 ## 4. Run a TestFlight build
 
 1. Actions → **iOS TestFlight** → **Run workflow** (or push a tag `ios-v1.0.0`).
-2. First run: Xcode automatic signing creates a distribution profile for `ai.repofeed.app` using the API key + team.
-3. When the job succeeds, open App Store Connect → TestFlight. Wait for processing, then add internal/external testers.
-4. IPA is also uploaded as a workflow artifact (`repofeed-ipa`) for debugging.
+2. When the job succeeds, open App Store Connect → TestFlight. Wait for processing, then add internal/external testers.
+3. IPA is also uploaded as a workflow artifact (`repofeed-ipa`) for debugging.
 
 Local equivalent (on a Mac with Xcode):
 
 ```bash
 pnpm build && npx cap sync ios
-# then open ios/App/App.xcworkspace, or:
 IOS_BUILD_NUMBER=42 \
 APP_STORE_CONNECT_KEY_ID=… \
 APP_STORE_CONNECT_ISSUER_ID=… \
 APP_STORE_CONNECT_API_KEY_PATH=/path/to/AuthKey.p8 \
 APPLE_TEAM_ID=… \
+IOS_DIST_CERT_P12_BASE64="$(base64 -i Certificates.p12)" \
+IOS_DIST_CERT_PASSWORD=… \
+IOS_APPSTORE_PROFILE_BASE64="$(base64 -i repofeed_AppStore.mobileprovision)" \
 fastlane ios beta
 ```
 

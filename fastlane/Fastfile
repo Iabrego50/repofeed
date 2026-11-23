@@ -1,9 +1,17 @@
 # frozen_string_literal: true
 
+require "base64"
+require "fileutils"
+require "tmpdir"
+
 default_platform(:ios)
 
+PROFILE_NAME = "repofeed AppStore"
+PROFILE_UUID = "a353e9cb-a93b-4c73-a7c4-c9de7d9b20b5"
+BUNDLE_ID = "ai.repofeed.app"
+
 platform :ios do
-  desc "Build, archive, and upload repofeed to TestFlight"
+  desc "Build, archive, and upload repofeed to TestFlight (manual signing)"
   lane :beta do
     setup_ci if ENV["CI"]
 
@@ -11,6 +19,9 @@ platform :ios do
     issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
     key_path = ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")
     team_id = ENV.fetch("APPLE_TEAM_ID")
+    cert_b64 = ENV.fetch("IOS_DIST_CERT_P12_BASE64")
+    cert_password = ENV.fetch("IOS_DIST_CERT_PASSWORD")
+    profile_b64 = ENV.fetch("IOS_APPSTORE_PROFILE_BASE64")
 
     api_key = app_store_connect_api_key(
       key_id: key_id,
@@ -25,7 +36,7 @@ platform :ios do
     begin
       latest = latest_testflight_build_number(
         api_key: api_key,
-        app_identifier: "ai.repofeed.app",
+        app_identifier: BUNDLE_ID,
         initial_build_number: 0
       )
       build_number = [latest.to_i + 1, run_number].max.to_s
@@ -40,60 +51,48 @@ platform :ios do
       xcodeproj: "ios/App/App.xcodeproj"
     )
 
-    # Automatic signing for export. Do not set CODE_SIGN_IDENTITY here —
-    # Apple Development needs registered devices; Apple Distribution conflicts
-    # with "signed for development" automatic mode on a clean runner.
+    # Decode + import Apple Distribution .p12 into the CI keychain (from setup_ci).
+    cert_path = File.join(Dir.tmpdir, "repofeed-dist.p12")
+    File.binwrite(cert_path, Base64.decode64(cert_b64))
+    import_certificate(
+      certificate_path: cert_path,
+      certificate_password: cert_password,
+      keychain_name: ENV["MATCH_KEYCHAIN_NAME"] || "fastlane_tmp_keychain",
+      keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"] || ""
+    )
+
+    # Install the App Store provisioning profile by UUID (Xcode looks here).
+    profiles_dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
+    FileUtils.mkdir_p(profiles_dir)
+    profile_path = File.join(profiles_dir, "#{PROFILE_UUID}.mobileprovision")
+    File.binwrite(profile_path, Base64.decode64(profile_b64))
+    UI.message("Installed provisioning profile → #{profile_path}")
+
     update_code_signing_settings(
-      use_automatic_signing: true,
+      use_automatic_signing: false,
       path: "ios/App/App.xcodeproj",
       team_id: team_id,
-      bundle_identifier: "ai.repofeed.app"
+      bundle_identifier: BUNDLE_ID,
+      code_sign_identity: "Apple Distribution",
+      profile_name: PROFILE_NAME,
+      build_configurations: ["Release"]
     )
-
-    FileUtils.mkdir_p("build")
-    archive_path = File.expand_path("build/repofeed.xcarchive")
-
-    # Archive UNSIGNED. A clean CI runner / team with no devices cannot create
-    # an iOS App Development profile (which automatic signing would request at
-    # archive time). Distribution signing happens only at export below.
-    UI.message("Archiving unsigned → #{archive_path}")
-    sh(
-      "set -o pipefail && xcodebuild archive " \
-      "-project ios/App/App.xcodeproj " \
-      "-scheme App " \
-      "-configuration Release " \
-      "-destination 'generic/platform=iOS' " \
-      "-archivePath '#{archive_path}' " \
-      "CODE_SIGNING_ALLOWED=NO " \
-      "CODE_SIGN_IDENTITY='' " \
-      "DEVELOPMENT_TEAM=#{team_id} " \
-      "CURRENT_PROJECT_VERSION=#{build_number} " \
-      "| xcbeautify"
-    )
-
-    # Auth args must apply to -exportArchive only (not the unsigned archive).
-    # Gym's xcargs are forwarded to export when skip_build_archive is set.
-    auth_xcargs = [
-      "-allowProvisioningUpdates",
-      "-authenticationKeyPath", key_path,
-      "-authenticationKeyID", key_id,
-      "-authenticationKeyIssuerID", issuer_id
-    ].join(" ")
 
     build_app(
       project: "ios/App/App.xcodeproj",
       scheme: "App",
       configuration: "Release",
       export_method: "app-store",
-      skip_build_archive: true,
-      archive_path: archive_path,
+      clean: true,
       output_directory: "build",
       output_name: "repofeed.ipa",
-      xcargs: auth_xcargs,
       export_options: {
         method: "app-store",
-        signingStyle: "automatic",
-        teamID: team_id
+        signingStyle: "manual",
+        teamID: team_id,
+        provisioningProfiles: {
+          BUNDLE_ID => PROFILE_NAME
+        }
       }
     )
 
