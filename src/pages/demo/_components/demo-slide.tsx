@@ -23,7 +23,7 @@ type Props = {
   onDismissHints?: () => void;
 };
 
-/** One full-height demo scene with tap-to-pause, a progress bar, and feed-style actions. */
+/** One full-height demo scene — same phone-frame chrome as the researcher FeedSlide. */
 export default function DemoSlide({
   reel,
   mounted,
@@ -47,65 +47,70 @@ export default function DemoSlide({
     return <div className="h-full w-full bg-black" aria-hidden />;
 
   return (
-    <div className="relative h-full w-full bg-black contain-paint">
-      <ReelCanvas
-        reel={reel}
-        playing={playing}
-        stillAt={0.6}
-        restartKey={active ? "on" : "off"}
-        fit="cover"
-        onEnded={onEnded}
-        onProgress={(t, total) => {
-          const bar = progressBarRef.current;
-          if (bar) bar.style.width = `${total ? (t / total) * 100 : 0}%`;
-        }}
-        className="h-full w-full"
-      />
-      <button
-        type="button"
-        onClick={() => setPaused((p) => !p)}
-        aria-label={playing ? "Pause scene" : "Play scene"}
-        className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center"
-      >
-        {active && paused && (
-          <span className="grid size-16 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
-            <Play className="size-7 translate-x-0.5" />
-          </span>
-        )}
-      </button>
-      <div className="pointer-events-none absolute inset-0 z-30 flex items-end justify-between gap-3 p-4 pb-5">
-        <div className="min-w-0 flex-1 self-end">
-          <AddToPptButton reelId={reel.id} />
+    <div className="relative flex h-full w-full items-center justify-center bg-black contain-paint">
+      <div className="relative h-full w-full overflow-hidden lg:aspect-[9/16] lg:w-auto lg:rounded-xl">
+        <ReelCanvas
+          reel={reel}
+          playing={playing}
+          stillAt={0.6}
+          restartKey={active ? "on" : "off"}
+          fit="cover"
+          onEnded={onEnded}
+          onProgress={(t, total) => {
+            const bar = progressBarRef.current;
+            if (bar) bar.style.width = `${total ? (t / total) * 100 : 0}%`;
+          }}
+          className="size-full"
+        />
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          aria-label={playing ? "Pause scene" : "Play scene"}
+          className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center"
+        >
+          {active && paused && (
+            <span className="grid size-16 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
+              <Play className="size-7 translate-x-0.5" />
+            </span>
+          )}
+        </button>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end gap-3 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-4 pb-5 pt-24 text-white">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[0.9375rem] font-semibold">{reel.title}</p>
+            <div className="pointer-events-auto mt-2">
+              <AddToPptButton reelId={reel.id} />
+            </div>
+          </div>
+          <div className="pointer-events-auto shrink-0">
+            <SceneActions
+              hearted={hearted}
+              hearts={hearts}
+              onHeart={onHeart}
+              commentCount={commentCount}
+              onComment={() => onOpenPanel("discussion")}
+              saved={saved}
+              onSave={onSave}
+              onEvidence={() => onOpenPanel("evidence")}
+              hints={
+                showHints
+                  ? {
+                      react: "React if this rings true",
+                      comment: "Ask a question",
+                      evidence: "See the evidence",
+                    }
+                  : undefined
+              }
+              onDismissHints={showHints ? onDismissHints : undefined}
+            />
+          </div>
         </div>
-        <div className="pointer-events-auto shrink-0">
-          <SceneActions
-            hearted={hearted}
-            hearts={hearts}
-            onHeart={onHeart}
-            commentCount={commentCount}
-            onComment={() => onOpenPanel("discussion")}
-            saved={saved}
-            onSave={onSave}
-            onEvidence={() => onOpenPanel("evidence")}
-            hints={
-              showHints
-                ? {
-                    react: "React if this rings true",
-                    comment: "Ask a question",
-                    evidence: "See the evidence",
-                  }
-                : undefined
-            }
-            onDismissHints={showHints ? onDismissHints : undefined}
+        <div className="absolute inset-x-0 bottom-0 z-30 h-1 bg-white/15">
+          <div
+            ref={progressBarRef}
+            className="h-full bg-white"
+            style={{ width: active ? undefined : "0%" }}
           />
         </div>
-      </div>
-      <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-white/15">
-        <div
-          ref={progressBarRef}
-          className="h-full bg-primary"
-          style={{ width: active ? undefined : "0%" }}
-        />
       </div>
     </div>
   );

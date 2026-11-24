@@ -1,5 +1,5 @@
 import type PptxGenJS from "pptxgenjs";
-import { COLORS, KICKERS, deckFileName, headlineStats, kickerFor, pct, reactionData, topByCompletion, topByViews, truncate, type Deck, type DeckSlide } from "./deck.ts";
+import { COLORS, KICKERS, deckFileName, formatDeckDate, headlineStats, kickerFor, pct, reactionData, topByCompletion, topByViews, truncate, type Deck, type DeckSlide } from "./deck.ts";
 
 const hex = (c: string) => c.replace("#", "");
 const DISPLAY = "Bricolage Grotesque";
@@ -33,7 +33,7 @@ function cover(slide: PSlide, deck: Deck, s: DeckSlide) {
   slide.addText(KICKERS[s.type].toUpperCase(), { x: 0.9, y: 2.5, w: 8, h: 0.4, fontFace: MONO, fontSize: 12, bold: true, color: hex(COLORS.coral), charSpacing: 4 });
   slide.addText(s.headline, { x: 0.9, y: 2.95, w: 8.2, h: 2.0, fontFace: DISPLAY, fontSize: 48, bold: true, color: hex(COLORS.fg), valign: "top" });
   if (s.body) slide.addText(s.body, { x: 0.9, y: 5.0, w: 8, h: 0.9, fontFace: SANS, fontSize: 18, color: hex(COLORS.muted), valign: "top" });
-  const date = new Date(deck._creationTime).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  const date = formatDeckDate(deck._creationTime);
   slide.addText(s.type === "title" ? `${deck.scopeLabel} · ${date}` : "Made with repofeed.ai", { x: 0.9, y: 6.6, w: 8, h: 0.35, fontFace: MONO, fontSize: 11, color: "5B6782" });
 }
 

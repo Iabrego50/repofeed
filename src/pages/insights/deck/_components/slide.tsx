@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Quote } from "lucide-react";
 import Logo from "@/components/logo.tsx";
 import { CompletionChart, ReactionsChart, ViewsChart } from "./slide-charts.tsx";
-import { COLORS, KICKERS, headlineStats, kickerFor, pct, type Deck, type DeckSlide } from "../_lib/deck.ts";
+import { COLORS, KICKERS, formatDeckDate, headlineStats, kickerFor, pct, type Deck, type DeckSlide } from "../_lib/deck.ts";
 
 type Props = { deck: Deck; slide: DeckSlide; index: number; total: number; animate: boolean };
 
@@ -168,7 +168,7 @@ function Spotlight({ deck, title }: { deck: Deck; title: string }) {
 
 function CoverSlide({ deck, slide }: { deck: Deck; slide: DeckSlide }) {
   const isTitle = slide.type === "title";
-  const date = new Date(deck._creationTime).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  const date = formatDeckDate(deck._creationTime);
   return (
     <div className="relative flex h-[720px] w-[1280px] flex-col justify-between overflow-hidden bg-[#070B14] p-[88px] text-[#EEF3FB]">
       <div className="absolute -bottom-56 -right-32 size-[760px] rounded-full bg-[#2F9BFF]/20 blur-3xl" />
