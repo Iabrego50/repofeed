@@ -13,6 +13,7 @@ import { track } from "@/lib/analytics";
 import type { FeedReel } from "../_lib/types";
 import type { PanelTab } from "./reel-panel";
 import SceneActions from "./scene-actions.tsx";
+import AddToPptButton from "@/pages/share/_components/add-to-ppt-button.tsx";
 
 interface FeedSlideProps {
   reel: FeedReel;
@@ -182,6 +183,9 @@ export default function FeedSlide({ reel, active, onEnded, onOpenPanel }: FeedSl
                 ))}
               </div>
             )}
+            <div className="pointer-events-auto mt-2">
+              <AddToPptButton reelId={reel._id} />
+            </div>
           </div>
           <div className="pointer-events-auto" data-tour={active ? "scene-actions" : undefined}>
             <SceneActions

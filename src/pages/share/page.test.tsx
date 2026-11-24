@@ -137,9 +137,9 @@ describe("Share page", () => {
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
-    const ppt = screen.getByLabelText(/make a powerpoint from these insights/i);
-    expect(ppt).toBeInTheDocument();
-    expect(ppt).toHaveTextContent("PowerPoint");
+    expect(await screen.findByRole("button", { name: /add to ppt/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^generate powerpoint$/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/make a powerpoint from these insights/i)).not.toBeInTheDocument();
     expect(
       await screen.findByPlaceholderText(/ask a question or leave a note/i),
     ).toBeInTheDocument();
@@ -150,7 +150,7 @@ describe("Share page", () => {
     expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
   });
 
-  it("lets a guest pick insights and preview a PowerPoint deck", async () => {
+  it("lets a guest add insights and generate a PowerPoint deck", async () => {
     const user = userEvent.setup();
     bag.feed.mockResolvedValue({
       ...feedPayload,
@@ -169,12 +169,11 @@ describe("Share page", () => {
       ],
     });
     renderShare("live-token");
-    await user.click(await screen.findByLabelText(/make a powerpoint from these insights/i));
-    expect(await screen.findByRole("heading", { name: /make a powerpoint/i })).toBeInTheDocument();
-    expect(screen.getByText(/2 selected/i)).toBeInTheDocument();
-    await user.click(screen.getByLabelText(/include shipping surprise/i));
-    expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /preview/i }));
+    const add = (await screen.findAllByRole("button", { name: /add to ppt/i }))[0];
+    await user.click(add);
+    expect(add).toHaveTextContent(/added to ppt/i);
+    expect(screen.getByRole("button", { name: /generate powerpoint \(1\)/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /generate powerpoint \(1\)/i }));
     expect(await screen.findByRole("button", { name: /\.pptx|powerpoint/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/create a new version/i)).not.toBeInTheDocument();
   });
