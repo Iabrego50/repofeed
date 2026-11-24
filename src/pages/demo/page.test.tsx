@@ -205,6 +205,20 @@ describe("Demo feed interactions", () => {
     expect(screen.queryByRole("link", { name: /^explore$/i })).not.toBeInTheDocument();
   });
 
+  it("lets visitors pick insights and preview a PowerPoint deck without signing in", async () => {
+    const user = userEvent.setup();
+    renderDemo();
+
+    const ppt = screen.getByLabelText(/make a powerpoint from these insights/i);
+    expect(ppt).toHaveTextContent("PowerPoint");
+    await user.click(ppt);
+    expect(await screen.findByRole("heading", { name: /make a powerpoint/i })).toBeInTheDocument();
+    expect(screen.getByText(/\d+ selected/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /preview/i }));
+    expect(await screen.findByRole("button", { name: /\.pptx|powerpoint/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/create a new version/i)).not.toBeInTheDocument();
+  });
+
   it("shows first-scene coach marks and remembers dismissing them", async () => {
     const user = userEvent.setup();
     renderDemo();
