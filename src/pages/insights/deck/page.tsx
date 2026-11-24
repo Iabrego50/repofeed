@@ -26,7 +26,10 @@ function toDeck(row: Record<string, unknown>): Deck {
     ...row,
     id: String(row.id),
     _id: String(row.id),
-    _creationTime: row.created_at ? Date.parse(String(row.created_at)) : Date.now(),
+    _creationTime: (() => {
+      const parsed = row.created_at ? Date.parse(String(row.created_at)) : Number.NaN;
+      return Number.isFinite(parsed) ? parsed : Date.now();
+    })(),
     scopeLabel: String(row.scope_label ?? "Research readout"),
     slides: Array.isArray(row.slides) ? (row.slides as Deck["slides"]) : [],
     reels: Array.isArray(row.reels) ? (row.reels as Deck["reels"]) : [],

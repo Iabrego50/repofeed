@@ -117,3 +117,32 @@ export const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, 
 export function deckFileName(deck: Deck): string {
   return `repofeed-readout-${deck.scopeLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
 }
+
+/**
+ * Cover slides show when the deck was made. Invalid / missing timestamps used to
+ * throw `RangeError: Invalid time value` via `toLocaleDateString` and crash the page.
+ */
+export function formatDeckDate(
+  value: unknown,
+  now: number = Date.now(),
+): string {
+  const ms =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Date.parse(value)
+        : Number.NaN;
+  const date = new Date(Number.isFinite(ms) ? ms : now);
+  if (Number.isNaN(date.getTime())) {
+    return new Date(now).toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+  return date.toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}

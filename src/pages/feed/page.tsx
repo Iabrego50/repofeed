@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, Clapperboard, Search } from "lucide-react";
@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils.ts";
 import FeedTour from "@/components/feed-tour.tsx";
 import ReelFeed from "./_components/reel-feed.tsx";
 import { openSearch } from "@/components/shell/command-palette.tsx";
+import { Presenter } from "@/pages/insights/deck/page.tsx";
+import type { Deck } from "@/pages/insights/deck/_lib/deck.ts";
+import GeneratePptButton from "@/pages/share/_components/generate-ppt-button.tsx";
+import { DeckSelectionProvider } from "@/pages/share/_lib/deck-selection.ts";
+import { useIsDesktop } from "@/hooks/use-is-desktop.ts";
 
 const CHIP =
   "min-h-8 shrink-0 cursor-pointer rounded-full border border-white/10 bg-black/30 px-3 text-[11px] font-semibold text-white/75 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring sm:min-h-9 sm:text-xs";
@@ -24,6 +29,8 @@ export default function FeedPage() {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const replayTour = params.get("tour") === "1";
+  const isDesktop = useIsDesktop();
+  const [previewDeck, setPreviewDeck] = useState<Deck | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["users", "me"],
@@ -126,6 +133,20 @@ export default function FeedPage() {
       : []),
   ];
 
+  const studyTitle =
+    (studyFilter && published.find((s) => s._id === studyFilter)?.title) ||
+    current.name ||
+    "Research readout";
+  const canExport = (reels?.length ?? 0) > 0;
+  const generateBtn = canExport ? (
+    <GeneratePptButton
+      studyTitle={studyTitle}
+      reels={reels ?? []}
+      onPreview={setPreviewDeck}
+      variant={isDesktop ? "default" : "overlay"}
+    />
+  ) : null;
+
   const toolbar = (
     <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3 lg:justify-center">
       <div className="flex min-w-0 gap-1.5 overflow-x-auto scrollbar-none sm:gap-2" role="toolbar" aria-label="Filter the feed">
@@ -150,6 +171,7 @@ export default function FeedPage() {
           </button>
         ))}
       </div>
+      {!isDesktop && generateBtn}
       {!nativeViewerMode && (
         <button
           type="button"
@@ -192,21 +214,34 @@ export default function FeedPage() {
     </Empty>
   );
 
+  if (previewDeck) {
+    return (
+      <div className="dark flex h-full min-h-0 flex-col bg-background">
+        <Presenter
+          deck={previewDeck}
+          backLabel="Feed"
+          onBack={() => setPreviewDeck(null)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <>
-    <FeedTour
-      open={Boolean(replayTour || (profile && !profile.onboardedAt))}
-      isEditor={showCreateCta}
-      onDone={() => completeTour.mutate()}
-    />
-    <ReelFeed
-      reels={reels}
-      deepLink={params.get("reel")}
-      jumpKey={params.get("reel") ? 1 : 0}
-      resetKey={savedView ? "saved" : (studyFilter ?? "all")}
-      toolbar={toolbar}
-      empty={empty}
-    />
-    </>
+    <DeckSelectionProvider>
+      <FeedTour
+        open={Boolean(replayTour || (profile && !profile.onboardedAt))}
+        isEditor={showCreateCta}
+        onDone={() => completeTour.mutate()}
+      />
+      <ReelFeed
+        reels={reels}
+        deepLink={params.get("reel")}
+        jumpKey={params.get("reel") ? 1 : 0}
+        resetKey={savedView ? "saved" : (studyFilter ?? "all")}
+        toolbar={toolbar}
+        asideFooter={isDesktop ? generateBtn : undefined}
+        empty={empty}
+      />
+    </DeckSelectionProvider>
   );
 }

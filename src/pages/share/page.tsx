@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
@@ -6,6 +6,7 @@ import { Link2Off } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import Logo from "@/components/logo.tsx";
+import { useIsDesktop } from "@/hooks/use-is-desktop.ts";
 import ReelFeed from "../feed/_components/reel-feed.tsx";
 import { FeedModeContext, type FeedMode } from "../feed/_lib/feed-mode.ts";
 import { Presenter } from "@/pages/insights/deck/page.tsx";
@@ -15,20 +16,6 @@ import GeneratePptButton from "./_components/generate-ppt-button.tsx";
 import { DeckSelectionProvider } from "./_lib/deck-selection.ts";
 
 const secretKey = (token: string) => `fieldreel.guest.${token}`;
-
-function useIsDesktop() {
-  const [desktop, setDesktop] = useState(
-    () => typeof window.matchMedia === "function" && window.matchMedia("(min-width: 1024px)").matches,
-  );
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const on = () => setDesktop(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  return desktop;
-}
 
 export default function SharePage() {
   const { token = "" } = useParams();
@@ -125,13 +112,18 @@ export default function SharePage() {
     />
   ) : null;
 
+  // Match researcher /feed toolbar chrome (full-width gradient, no phone-width clamp).
   const header = (
-    <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/70 to-transparent px-3 py-3 lg:max-w-[calc(100dvh*9/16)] lg:mx-auto">
-      <div className="flex items-center gap-2 text-white">
+    <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3">
+      <Link
+        to="/"
+        aria-label="Back to repofeed.ai"
+        className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/30 text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
+      >
         <Logo withText={false} />
-        <div className="flex-1" />
-        {!isDesktop && generateBtn}
-      </div>
+      </Link>
+      <div className="flex-1" />
+      {!isDesktop && generateBtn}
     </div>
   );
 

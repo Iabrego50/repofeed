@@ -9,23 +9,10 @@ import { useFeedActions } from "../_lib/use-feed-data.ts";
 import { useFeedMode } from "../_lib/feed-mode.ts";
 import { useFeedOrder } from "../_lib/use-feed-order.ts";
 import { useSnapFeedIndex } from "../_lib/use-snap-feed-index.ts";
+import { useIsDesktop } from "@/hooks/use-is-desktop.ts";
 import CaughtUp from "./caught-up.tsx";
 import FeedSlide from "./feed-slide.tsx";
 import ReelPanel, { type PanelTab } from "./reel-panel.tsx";
-
-function useIsDesktop() {
-  const [desktop, setDesktop] = useState(
-    () => typeof window.matchMedia === "function" && window.matchMedia("(min-width: 1024px)").matches,
-  );
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const on = () => setDesktop(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  return desktop;
-}
 
 /** How many neighbours to keep mounted so the next snap target is warm before the gesture. */
 const MOUNT_RADIUS = 2;

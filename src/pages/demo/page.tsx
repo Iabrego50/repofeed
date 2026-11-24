@@ -23,6 +23,7 @@ import {
 } from "./_lib/demo-interactions.ts";
 import { track } from "@/lib/analytics";
 import { isNativePlatform } from "@/lib/native";
+import { useIsDesktop } from "@/hooks/use-is-desktop.ts";
 import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
 import { useSnapFeedIndex } from "@/pages/feed/_lib/use-snap-feed-index.ts";
 import { Presenter } from "@/pages/insights/deck/page.tsx";
@@ -32,22 +33,6 @@ import { DeckSelectionProvider } from "@/pages/share/_lib/deck-selection.ts";
 import { SAMPLE_STUDY } from "./_lib/sample.ts";
 
 const REELS = buildDemoReels();
-
-function useIsDesktop() {
-  const [desktop, setDesktop] = useState(
-    () =>
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(min-width: 1024px)").matches,
-  );
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const on = () => setDesktop(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  return desktop;
-}
 
 /** Public sample feed so visitors can try reacting, commenting and checking evidence before signing up. */
 export default function DemoPage() {
@@ -214,21 +199,21 @@ export default function DemoPage() {
     <DeckSelectionProvider>
     <div className="dark flex h-dvh bg-background">
       <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
-        <div className="absolute inset-x-0 top-0 z-30 mx-auto flex items-center justify-between gap-3 bg-gradient-to-b from-black/75 to-transparent px-3 py-3 lg:max-w-[calc(100dvh*9/16)]">
+        <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3">
           <Link
             to="/"
             aria-label="Back to repofeed.ai"
-            className="flex min-w-0 cursor-pointer items-center gap-2 text-white"
+            className="flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
           >
-            <ArrowLeft className="size-4 shrink-0" />
+            <ArrowLeft className="size-3.5 shrink-0" />
             <Logo withText={false} />
-            <span className="truncate text-sm font-semibold">Demo feed</span>
+            <span className="truncate">Demo</span>
           </Link>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto scrollbar-none sm:gap-2">
             {isResearcher && (
               <Link
                 to="/demo/explore"
-                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
+                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white lg:hidden"
               >
                 <Compass className="size-3.5" /> Explore
               </Link>
@@ -236,20 +221,20 @@ export default function DemoPage() {
             {isResearcher && !isNativePlatform() && (
               <Link
                 to="/demo/insights"
-                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur hover:bg-black/60 lg:hidden"
+                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white lg:hidden"
               >
                 <BarChart3 className="size-3.5" /> Insights
               </Link>
             )}
             {!isDesktop && generateBtn}
-            <span className="rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
+            <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
               {onEnd ? "Done" : `${activeIdx + 1} / ${REELS.length}`}
             </span>
           </div>
         </div>
         <div
           ref={scrollerRef}
-          className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain scrollbar-none touch-pan-y lg:max-w-[calc(100dvh*9/16)]"
+          className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain scrollbar-none touch-pan-y"
           aria-label="Demo scene feed. Use arrow keys or J and K to move."
         >
           {REELS.map((r, i) => {
