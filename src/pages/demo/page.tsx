@@ -25,6 +25,10 @@ import { track } from "@/lib/analytics";
 import { isNativePlatform } from "@/lib/native";
 import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
 import { useSnapFeedIndex } from "@/pages/feed/_lib/use-snap-feed-index.ts";
+import { Presenter } from "@/pages/insights/deck/page.tsx";
+import type { Deck } from "@/pages/insights/deck/_lib/deck.ts";
+import DeckPicker from "@/pages/share/_components/deck-picker.tsx";
+import { SAMPLE_STUDY } from "./_lib/sample.ts";
 
 const REELS = buildDemoReels();
 
@@ -60,11 +64,28 @@ export default function DemoPage() {
   const [hintsReady, setHintsReady] = useState(false);
   const [posted, setPosted] = useState(false);
   const [nudgeOpen, setNudgeOpen] = useState(true);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [previewDeck, setPreviewDeck] = useState<Deck | null>(null);
   const isDesktop = useIsDesktop();
   const { isResearcher } = useIsResearcher();
   const onEnd = activeIdx >= REELS.length;
   const active = REELS[Math.min(activeIdx, REELS.length - 1)];
   const activeScene = interactions[active.id];
+  const pickerReels = useMemo(
+    () =>
+      REELS.map((r) =>
+        toFeedReel(
+          r,
+          interactions[r.id] ?? {
+            hearted: false,
+            hearts: 0,
+            saved: false,
+            comments: [],
+          },
+        ),
+      ),
+    [interactions],
+  );
 
   const [params] = useSearchParams();
   const startScene = Number(params.get("scene") ?? 0);
@@ -168,6 +189,18 @@ export default function DemoPage() {
         }
       : null;
 
+  if (previewDeck) {
+    return (
+      <div className="dark flex h-dvh flex-col bg-background">
+        <Presenter
+          deck={previewDeck}
+          backLabel="Feed"
+          onBack={() => setPreviewDeck(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="dark flex h-dvh bg-background">
       <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
@@ -198,6 +231,17 @@ export default function DemoPage() {
                 <BarChart3 className="size-3.5" /> Insights
               </Link>
             )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-9 gap-1.5 border-0 bg-white/15 text-white hover:bg-white/25"
+              onClick={() => setPickerOpen(true)}
+              aria-label="Make a PowerPoint from these insights"
+            >
+              <Presentation className="size-4" />
+              PowerPoint
+            </Button>
             <span className="rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
               {onEnd ? "Done" : `${activeIdx + 1} / ${REELS.length}`}
             </span>
@@ -340,6 +384,14 @@ export default function DemoPage() {
           </>
         )}
       </AnimatePresence>
+
+      <DeckPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        studyTitle={SAMPLE_STUDY.title}
+        reels={pickerReels}
+        onPreview={setPreviewDeck}
+      />
     </div>
   );
 }

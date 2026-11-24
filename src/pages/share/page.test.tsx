@@ -137,7 +137,9 @@ describe("Share page", () => {
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/make a powerpoint from these insights/i)).toBeInTheDocument();
+    const ppt = screen.getByLabelText(/make a powerpoint from these insights/i);
+    expect(ppt).toBeInTheDocument();
+    expect(ppt).toHaveTextContent("PowerPoint");
     expect(
       await screen.findByPlaceholderText(/ask a question or leave a note/i),
     ).toBeInTheDocument();

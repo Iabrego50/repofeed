@@ -115,7 +115,7 @@ export default function SharePage() {
             aria-label="Make a PowerPoint from these insights"
           >
             <Presentation className="size-4" />
-            <span className="hidden sm:inline">PowerPoint</span>
+            PowerPoint
           </Button>
         )}
       </div>
