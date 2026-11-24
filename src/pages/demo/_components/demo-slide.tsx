@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Play } from "lucide-react";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import type { ReelData } from "@/lib/reel/painter.ts";
@@ -39,14 +39,14 @@ export default function DemoSlide({
   onDismissHints,
 }: Props) {
   const [paused, setPaused] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const playing = active && !paused;
 
   if (!mounted)
-    return <div className="h-full w-full snap-start bg-black" aria-hidden />;
+    return <div className="h-full w-full bg-black" aria-hidden />;
 
   return (
-    <div className="relative h-full w-full snap-start snap-always bg-black">
+    <div className="relative h-full w-full bg-black contain-paint">
       <ReelCanvas
         reel={reel}
         playing={playing}
@@ -54,7 +54,10 @@ export default function DemoSlide({
         restartKey={active ? "on" : "off"}
         fit="cover"
         onEnded={onEnded}
-        onProgress={(t, total) => setProgress(total ? t / total : 0)}
+        onProgress={(t, total) => {
+          const bar = progressBarRef.current;
+          if (bar) bar.style.width = `${total ? (t / total) * 100 : 0}%`;
+        }}
         className="h-full w-full"
       />
       <button
@@ -95,8 +98,9 @@ export default function DemoSlide({
       </div>
       <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-white/15">
         <div
-          className="h-full bg-primary transition-[width] duration-100"
-          style={{ width: `${active ? progress * 100 : 0}%` }}
+          ref={progressBarRef}
+          className="h-full bg-primary"
+          style={{ width: active ? undefined : "0%" }}
         />
       </div>
     </div>
