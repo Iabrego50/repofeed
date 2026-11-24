@@ -1,5 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
+import {
+  authStorageKeyFromUrl,
+  createAuthStorage,
+  migrateNativeAuthStorage,
+} from './auth-storage';
 
 export type BrowserSupabase = SupabaseClient<Database>;
 
@@ -12,17 +17,36 @@ export function isSupabaseConfigured(): boolean {
 }
 
 let client: BrowserSupabase | undefined;
+let ready: Promise<void> | undefined;
+
+/**
+ * Ensures native Preferences has any prior WebView localStorage session before
+ * the first getSession/recover. No-op on web.
+ */
+export function ensureAuthStorageReady(): Promise<void> {
+  if (!isSupabaseConfigured()) return Promise.resolve();
+  if (!ready) {
+    const url = readEnv('VITE_SUPABASE_URL');
+    ready = migrateNativeAuthStorage(authStorageKeyFromUrl(url));
+  }
+  return ready;
+}
 
 /** Browser client, or null when env vars are missing so AuthProvider can still render. */
 export function getBrowserSupabase(): BrowserSupabase | null {
   if (!isSupabaseConfigured()) return null;
   if (!client) {
-    client = createClient<Database>(readEnv('VITE_SUPABASE_URL'), readEnv('VITE_SUPABASE_ANON_KEY'), {
+    const url = readEnv('VITE_SUPABASE_URL');
+    // Kick off native migration before callers hit getSession (AuthProvider awaits it).
+    void ensureAuthStorageReady();
+    client = createClient<Database>(url, readEnv('VITE_SUPABASE_ANON_KEY'), {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
         flowType: 'pkce',
+        storage: createAuthStorage(),
+        storageKey: authStorageKeyFromUrl(url),
       },
     });
   }

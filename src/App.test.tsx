@@ -130,6 +130,7 @@ vi.mock("@/lib/supabase", () => ({
   supabase: bag.client,
   getBrowserSupabase: () => bag.client,
   isSupabaseConfigured: () => true,
+  ensureAuthStorageReady: async () => undefined,
 }));
 
 vi.mock("@/lib/api", () => ({

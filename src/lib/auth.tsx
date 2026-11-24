@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { Browser } from '@capacitor/browser';
-import { getBrowserSupabase } from './supabase';
+import { ensureAuthStorageReady, getBrowserSupabase } from './supabase';
 import { FEED_PATH } from '@/app-paths.ts';
 import { resolveReturnTo } from '@/pages/auth/return-to.ts';
 import { completeSignup } from './analytics';
@@ -49,52 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Start loading only when a client exists; missing env must not flash a spinner forever.
+  const [loading, setLoading] = useState(() => Boolean(getBrowserSupabase()));
+  // Until the first getSession() finishes, ignore auth events that would
+  // flip loading=false with a null user and bounce Gate to /signin.
+  const hydratedRef = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const client = getBrowserSupabase();
-    if (!client) {
-      setLoading(false);
-      return;
-    }
-
-    const applySession = (next: Session | null) => {
-      if (cancelled) return;
-      setSession(next);
-      setUser(next?.user ?? null);
-      if (next?.user) {
-        void loadProfile(next.user.id);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    };
-
-    client.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (error) console.warn('[auth] getSession', error.message);
-        applySession(data.session ?? null);
-      })
-      .catch((error: unknown) => {
-        console.warn('[auth] getSession failed', error);
-        applySession(null);
-      });
-
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, next) => {
-      applySession(next);
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  async function loadProfile(userId: string) {
+  const loadProfile = useCallback(async (userId: string) => {
     const client = getBrowserSupabase();
     if (!client) {
       setLoading(false);
@@ -120,7 +81,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const applySession = useCallback(
+    (next: Session | null) => {
+      setSession(next);
+      setUser(next?.user ?? null);
+      if (next?.user) {
+        void loadProfile(next.user.id);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    },
+    [loadProfile],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const client = getBrowserSupabase();
+    if (!client) return;
+
+    const hydrate = async () => {
+      try {
+        await ensureAuthStorageReady();
+        const { data, error } = await client.auth.getSession();
+        if (cancelled) return;
+        if (error) console.warn('[auth] getSession', error.message);
+        hydratedRef.current = true;
+        applySession(data.session ?? null);
+      } catch (error: unknown) {
+        if (cancelled) return;
+        console.warn('[auth] getSession failed', error);
+        hydratedRef.current = true;
+        applySession(null);
+      }
+    };
+
+    void hydrate();
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((event, next) => {
+      // INITIAL_SESSION races with getSession(); hydration owns the first paint.
+      if (event === 'INITIAL_SESSION') return;
+      if (!hydratedRef.current) return;
+      applySession(next);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [applySession]);
 
   const signIn = async (provider: 'google' | 'azure' | 'apple') => {
     const client = getBrowserSupabase();
@@ -160,6 +173,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       type: 'email',
     });
     if (error) throw error;
+    // Apply before the sign-in page navigates so Gate/GuestOnly see the user
+    // in the same tick (onAuthStateChange alone can lag one frame).
+    hydratedRef.current = true;
+    applySession(data.session ?? null);
     if (data.session?.user) {
       try {
         await completeSignup({ client, user: data.session.user });
