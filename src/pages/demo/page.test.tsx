@@ -205,16 +205,16 @@ describe("Demo feed interactions", () => {
     expect(screen.queryByRole("link", { name: /^explore$/i })).not.toBeInTheDocument();
   });
 
-  it("lets visitors pick insights and preview a PowerPoint deck without signing in", async () => {
+  it("lets visitors add insights and generate a PowerPoint deck without signing in", async () => {
     const user = userEvent.setup();
+    mockDesktop();
     renderDemo();
 
-    const ppt = screen.getByLabelText(/make a powerpoint from these insights/i);
-    expect(ppt).toHaveTextContent("PowerPoint");
-    await user.click(ppt);
-    expect(await screen.findByRole("heading", { name: /make a powerpoint/i })).toBeInTheDocument();
-    expect(screen.getByText(/\d+ selected/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /preview/i }));
+    const add = screen.getAllByRole("button", { name: /add to ppt/i })[0];
+    await user.click(add);
+    expect(add).toHaveTextContent(/added to ppt/i);
+    expect(screen.getByRole("button", { name: /generate powerpoint \(1\)/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /generate powerpoint \(1\)/i }));
     expect(await screen.findByRole("button", { name: /\.pptx|powerpoint/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/create a new version/i)).not.toBeInTheDocument();
   });

@@ -1,12 +1,13 @@
 import { useRef, useState } from "react";
 import { Play } from "lucide-react";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
-import type { ReelData } from "@/lib/reel/painter.ts";
 import type { PanelTab } from "@/pages/feed/_components/reel-panel.tsx";
 import SceneActions from "@/pages/feed/_components/scene-actions.tsx";
+import AddToPptButton from "@/pages/share/_components/add-to-ppt-button.tsx";
+import type { DemoReel } from "../_lib/demo-interactions.ts";
 
 type Props = {
-  reel: ReelData;
+  reel: DemoReel;
   /** Only the slide in view (and its neighbours) mount a canvas. */
   mounted: boolean;
   active: boolean;
@@ -72,8 +73,11 @@ export default function DemoSlide({
           </span>
         )}
       </button>
-      <div className="pointer-events-none absolute inset-0 z-30 flex items-end justify-end p-4 pb-5">
-        <div className="pointer-events-auto">
+      <div className="pointer-events-none absolute inset-0 z-30 flex items-end justify-between gap-3 p-4 pb-5">
+        <div className="min-w-0 flex-1 self-end">
+          <AddToPptButton reelId={reel.id} />
+        </div>
+        <div className="pointer-events-auto shrink-0">
           <SceneActions
             hearted={hearted}
             hearts={hearts}

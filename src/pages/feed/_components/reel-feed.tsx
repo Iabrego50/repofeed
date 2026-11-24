@@ -38,6 +38,7 @@ export default function ReelFeed({
   empty,
   resetKey,
   jumpKey = 0,
+  asideFooter,
 }: {
   reels: FeedReel[] | undefined;
   deepLink: string | null;
@@ -47,6 +48,8 @@ export default function ReelFeed({
   empty: ReactNode;
   /** Changing this scrolls back to the top (e.g. a new study filter). */
   resetKey?: string;
+  /** Optional controls under the desktop discussion/evidence panel (e.g. Generate PowerPoint). */
+  asideFooter?: ReactNode;
 }) {
   const { ordered: reels, fresh } = useFeedOrder(rawReels, resetKey);
   const mode = useFeedMode();
@@ -218,9 +221,14 @@ export default function ReelFeed({
         )}
       </div>
 
-      {showPanels && isDesktop && activeReel && (
-        <aside className="hidden w-[380px] shrink-0 border-l border-border lg:flex">
-          <ReelPanel reel={activeReel} tab={desktopTab} onTab={setDesktopTab} className="w-full" />
+      {showPanels && isDesktop && (activeReel || asideFooter) && (
+        <aside className="hidden w-[380px] shrink-0 flex-col border-l border-border lg:flex">
+          {activeReel ? (
+            <ReelPanel reel={activeReel} tab={desktopTab} onTab={setDesktopTab} className="min-h-0 w-full flex-1" />
+          ) : (
+            <div className="min-h-0 flex-1" />
+          )}
+          {asideFooter && <div className="shrink-0 border-t border-border p-4">{asideFooter}</div>}
         </aside>
       )}
 

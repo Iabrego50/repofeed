@@ -27,7 +27,8 @@ import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
 import { useSnapFeedIndex } from "@/pages/feed/_lib/use-snap-feed-index.ts";
 import { Presenter } from "@/pages/insights/deck/page.tsx";
 import type { Deck } from "@/pages/insights/deck/_lib/deck.ts";
-import DeckPicker from "@/pages/share/_components/deck-picker.tsx";
+import GeneratePptButton from "@/pages/share/_components/generate-ppt-button.tsx";
+import { DeckSelectionProvider } from "@/pages/share/_lib/deck-selection.ts";
 import { SAMPLE_STUDY } from "./_lib/sample.ts";
 
 const REELS = buildDemoReels();
@@ -64,7 +65,6 @@ export default function DemoPage() {
   const [hintsReady, setHintsReady] = useState(false);
   const [posted, setPosted] = useState(false);
   const [nudgeOpen, setNudgeOpen] = useState(true);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [previewDeck, setPreviewDeck] = useState<Deck | null>(null);
   const isDesktop = useIsDesktop();
   const { isResearcher } = useIsResearcher();
@@ -201,7 +201,17 @@ export default function DemoPage() {
     );
   }
 
+  const generateBtn = (
+    <GeneratePptButton
+      studyTitle={SAMPLE_STUDY.title}
+      reels={pickerReels}
+      onPreview={setPreviewDeck}
+      variant={isDesktop ? "default" : "overlay"}
+    />
+  );
+
   return (
+    <DeckSelectionProvider>
     <div className="dark flex h-dvh bg-background">
       <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
         <div className="absolute inset-x-0 top-0 z-30 mx-auto flex items-center justify-between gap-3 bg-gradient-to-b from-black/75 to-transparent px-3 py-3 lg:max-w-[calc(100dvh*9/16)]">
@@ -231,17 +241,7 @@ export default function DemoPage() {
                 <BarChart3 className="size-3.5" /> Insights
               </Link>
             )}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-9 gap-1.5 border-0 bg-white/15 text-white hover:bg-white/25"
-              onClick={() => setPickerOpen(true)}
-              aria-label="Make a PowerPoint from these insights"
-            >
-              <Presentation className="size-4" />
-              PowerPoint
-            </Button>
+            {!isDesktop && generateBtn}
             <span className="rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
               {onEnd ? "Done" : `${activeIdx + 1} / ${REELS.length}`}
             </span>
@@ -297,15 +297,20 @@ export default function DemoPage() {
         )}
       </div>
 
-      {isDesktop && panelProps && (
+      {isDesktop && (
         <aside className="hidden w-[380px] shrink-0 flex-col border-l border-border lg:flex">
-          <ReelPanel
-            {...panelProps}
-            tab={desktopTab}
-            onTab={setDesktopTab}
-            className="min-h-0 flex-1"
-          />
+          {panelProps ? (
+            <ReelPanel
+              {...panelProps}
+              tab={desktopTab}
+              onTab={setDesktopTab}
+              className="min-h-0 flex-1"
+            />
+          ) : (
+            <div className="min-h-0 flex-1" />
+          )}
           <div className="space-y-2 border-t border-border p-4">
+            {generateBtn}
             {isResearcher && (
               <Button
                 asChild
@@ -319,23 +324,16 @@ export default function DemoPage() {
               </Button>
             )}
             {isResearcher && !isNativePlatform() && (
-              <>
-                <Button
-                  asChild
-                  variant="secondary"
-                  size="sm"
-                  className="h-10 w-full font-semibold"
-                >
-                  <Link to="/demo/insights">
-                    <BarChart3 className="size-4" /> See the Insights dashboard
-                  </Link>
-                </Button>
-                <Button asChild variant="secondary" size="sm" className="h-10 w-full font-semibold">
-                  <Link to="/demo/deck">
-                    <Presentation className="size-4" /> Make a PowerPoint deck
-                  </Link>
-                </Button>
-              </>
+              <Button
+                asChild
+                variant="secondary"
+                size="sm"
+                className="h-10 w-full font-semibold"
+              >
+                <Link to="/demo/insights">
+                  <BarChart3 className="size-4" /> See the Insights dashboard
+                </Link>
+              </Button>
             )}
             <SignInButton
               size="sm"
@@ -385,14 +383,8 @@ export default function DemoPage() {
         )}
       </AnimatePresence>
 
-      <DeckPicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        studyTitle={SAMPLE_STUDY.title}
-        reels={pickerReels}
-        onPreview={setPreviewDeck}
-      />
     </div>
+    </DeckSelectionProvider>
   );
 }
 
