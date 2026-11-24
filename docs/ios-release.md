@@ -101,6 +101,8 @@ Site URL can stay `https://repofeed.ai`.
 
 The iOS app registers the custom scheme `ai.repofeed.app` and listens with `@capacitor/app` `appUrlOpen` to finish PKCE / magic-link sessions. OAuth on device opens `@capacitor/browser` (SFSafariViewController) and returns via that scheme.
 
+Supabase auth sessions on device are stored with `@capacitor/preferences` (UserDefaults), not WebView `localStorage`, so TestFlight updates and storage pressure do not force another email sign-in code. After `pnpm add` / lockfile changes, run `pnpm ios:sync` (or `npx cap sync ios`) so the Preferences plugin is linked.
+
 ### Optional: Universal Links
 
 1. Host `https://repofeed.ai/.well-known/apple-app-site-association` with your Team ID and `ai.repofeed.app`.
