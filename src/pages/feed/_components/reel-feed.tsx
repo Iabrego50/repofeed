@@ -53,8 +53,6 @@ export default function ReelFeed({
   const { recordView } = useFeedActions();
   const feedOpenSent = useRef(false);
   const openedReels = useRef(new Set<string>());
-  // On a first visit everything is unwatched, so a "New" badge on every scene would be noise.
-  const showBadges = reels !== undefined && fresh.size < reels.length;
   const scrollerRef = useRef<HTMLDivElement>(null);
   // Caught-up card sits at index === reels.length.
   const maxIndex = reels?.length ?? 0;
@@ -188,7 +186,6 @@ export default function ReelFeed({
                     <FeedSlide
                       reel={r}
                       active={i === activeIdx}
-                      isNew={showBadges && fresh.has(r._id) && !r.seen}
                       onEnded={() => {
                         // Ignore auto-advance if the user is mid-gesture or already moved on.
                         if (scrollingRef.current || activeRef.current !== i) return;

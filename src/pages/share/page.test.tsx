@@ -137,6 +137,7 @@ describe("Share page", () => {
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/make a powerpoint from these insights/i)).toBeInTheDocument();
     expect(
       await screen.findByPlaceholderText(/ask a question or leave a note/i),
     ).toBeInTheDocument();
@@ -145,6 +146,35 @@ describe("Share page", () => {
     expect(screen.queryByTestId("app-sidebar")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mobile-bottom-nav")).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
+  });
+
+  it("lets a guest pick insights and preview a PowerPoint deck", async () => {
+    const user = userEvent.setup();
+    bag.feed.mockResolvedValue({
+      ...feedPayload,
+      reels: [
+        ...feedPayload.reels,
+        {
+          ...feedPayload.reels[0],
+          _id: "r2",
+          id: "r2",
+          title: "Shipping surprise",
+          scenes: [
+            { type: "quote", text: "The fee showed up too late", by: "P11" },
+            { type: "cta", text: "Show shipping earlier." },
+          ],
+        },
+      ],
+    });
+    renderShare("live-token");
+    await user.click(await screen.findByLabelText(/make a powerpoint from these insights/i));
+    expect(await screen.findByRole("heading", { name: /make a powerpoint/i })).toBeInTheDocument();
+    expect(screen.getByText(/2 selected/i)).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/include shipping surprise/i));
+    expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /preview/i }));
+    expect(await screen.findByRole("button", { name: /\.pptx|powerpoint/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/create a new version/i)).not.toBeInTheDocument();
   });
 
   it("asks for a name on first post, then joins and adds a comment", async () => {
