@@ -24,6 +24,7 @@ import {
 import { track } from "@/lib/analytics";
 import { isNativePlatform } from "@/lib/native";
 import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
+import { useSnapFeedIndex } from "@/pages/feed/_lib/use-snap-feed-index.ts";
 
 const REELS = buildDemoReels();
 
@@ -46,7 +47,10 @@ function useIsDesktop() {
 /** Public sample feed so visitors can try reacting, commenting and checking evidence before signing up. */
 export default function DemoPage() {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const [activeIdx, setActiveIdx] = useState(0);
+  const { activeIdx, scrollTo, scrollingRef, activeRef, setActiveIdx } = useSnapFeedIndex(
+    scrollerRef,
+    REELS.length,
+  );
   const [interactions, setInteractions] = useState<DemoInteractionState>(() =>
     initialInteractionState(REELS),
   );
@@ -62,13 +66,6 @@ export default function DemoPage() {
   const active = REELS[Math.min(activeIdx, REELS.length - 1)];
   const activeScene = interactions[active.id];
 
-  const scrollTo = useCallback((i: number) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const clamped = Math.max(0, Math.min(REELS.length, i));
-    el.scrollTo({ top: clamped * el.clientHeight, behavior: "smooth" });
-  }, []);
-
   const [params] = useSearchParams();
   const startScene = Number(params.get("scene") ?? 0);
   useEffect(() => {
@@ -81,7 +78,8 @@ export default function DemoPage() {
     )
       return;
     el.scrollTo({ top: startScene * el.clientHeight });
-  }, [startScene]);
+    setActiveIdx(startScene);
+  }, [startScene, setActiveIdx]);
 
   useEffect(() => {
     track("feed_open", { demo: true });
@@ -92,15 +90,6 @@ export default function DemoPage() {
     track("reel_open", { demo: true, reelId: active.id, index: activeIdx });
     track("scene_view", { demo: true, reelId: active.id, index: activeIdx });
   }, [active?.id, activeIdx, onEnd, active]);
-
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const onScroll = () =>
-      setActiveIdx(Math.round(el.scrollTop / Math.max(1, el.clientHeight)));
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     if (!hintsOpen) return;
@@ -114,15 +103,15 @@ export default function DemoPage() {
       if (document.querySelector("[role=dialog]")) return;
       if (e.key === "ArrowDown" || e.key === "j") {
         e.preventDefault();
-        scrollTo(activeIdx + 1);
+        scrollTo(activeRef.current + 1);
       } else if (e.key === "ArrowUp" || e.key === "k") {
         e.preventDefault();
-        scrollTo(activeIdx - 1);
+        scrollTo(activeRef.current - 1);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeIdx, scrollTo]);
+  }, [scrollTo, activeRef]);
 
   const dismissHints = useCallback(() => {
     setHintsOpen(false);
@@ -216,18 +205,21 @@ export default function DemoPage() {
         </div>
         <div
           ref={scrollerRef}
-          className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-none lg:max-w-[calc(100dvh*9/16)]"
+          className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain scrollbar-none touch-pan-y lg:max-w-[calc(100dvh*9/16)]"
           aria-label="Demo scene feed. Use arrow keys or J and K to move."
         >
           {REELS.map((r, i) => {
             const scene = interactions[r.id];
             return (
-              <div key={r.key} className="h-full w-full">
+              <div key={r.key} className="h-full w-full snap-start">
                 <DemoSlide
                   reel={r}
-                  mounted={Math.abs(i - activeIdx) <= 1}
+                  mounted={Math.abs(i - activeIdx) <= 2}
                   active={i === activeIdx}
-                  onEnded={() => scrollTo(i + 1)}
+                  onEnded={() => {
+                    if (scrollingRef.current || activeRef.current !== i) return;
+                    scrollTo(i + 1);
+                  }}
                   hearted={scene?.hearted ?? false}
                   hearts={scene?.hearts ?? 0}
                   saved={scene?.saved ?? false}

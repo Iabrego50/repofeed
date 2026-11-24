@@ -8,6 +8,7 @@ import type { FeedReel } from "../_lib/types.ts";
 import { useFeedActions } from "../_lib/use-feed-data.ts";
 import { useFeedMode } from "../_lib/feed-mode.ts";
 import { useFeedOrder } from "../_lib/use-feed-order.ts";
+import { useSnapFeedIndex } from "../_lib/use-snap-feed-index.ts";
 import CaughtUp from "./caught-up.tsx";
 import FeedSlide from "./feed-slide.tsx";
 import ReelPanel, { type PanelTab } from "./reel-panel.tsx";
@@ -25,6 +26,9 @@ function useIsDesktop() {
   }, []);
   return desktop;
 }
+
+/** How many neighbours to keep mounted so the next snap target is warm before the gesture. */
+const MOUNT_RADIUS = 2;
 
 /** Snap-scrolling reel feed with a discussion/evidence panel. Shared by members and share links. */
 export default function ReelFeed({
@@ -52,7 +56,12 @@ export default function ReelFeed({
   // On a first visit everything is unwatched, so a "New" badge on every scene would be noise.
   const showBadges = reels !== undefined && fresh.size < reels.length;
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const [activeIdx, setActiveIdx] = useState(0);
+  // Caught-up card sits at index === reels.length.
+  const maxIndex = reels?.length ?? 0;
+  const { activeIdx, setActiveIdx, scrollingRef, scrollTo, activeRef } = useSnapFeedIndex(
+    scrollerRef,
+    maxIndex,
+  );
   const [panel, setPanel] = useState<PanelTab | null>(null);
   const [desktopTab, setDesktopTab] = useState<PanelTab>("discussion");
   const [exporting, setExporting] = useState<ReelData | null>(null);
@@ -70,23 +79,6 @@ export default function ReelFeed({
     scrollerRef.current?.scrollTo({ top: 0 });
   }, [resetKey]);
 
-  const scrollTo = useCallback((i: number) => {
-    const el = scrollerRef.current;
-    if (!el || !reels) return;
-    // The extra slot past the last scene is the "All caught up" card.
-    const clamped = Math.max(0, Math.min(reels.length, i));
-    el.scrollTo({ top: clamped * el.clientHeight, behavior: "smooth" });
-  }, [reels]);
-
-  // Track the visible reel from scroll position.
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const onScroll = () => setActiveIdx(Math.round(el.scrollTop / Math.max(1, el.clientHeight)));
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [reels !== undefined && reels.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Deep link: jump to ?reel=<id> once it's loaded.
   useEffect(() => {
     const jump = `${deepLink}:${jumpKey}`;
@@ -99,7 +91,7 @@ export default function ReelFeed({
       if (el) el.scrollTop = i * el.clientHeight;
       setActiveIdx(i);
     });
-  }, [reels, deepLink, jumpKey]);
+  }, [reels, deepLink, jumpKey, setActiveIdx]);
 
   // Keyboard: arrows and j/k move between reels.
   useEffect(() => {
@@ -109,15 +101,15 @@ export default function ReelFeed({
       if (document.querySelector("[role=dialog]")) return;
       if (e.key === "ArrowDown" || e.key === "j") {
         e.preventDefault();
-        scrollTo(activeIdx + 1);
+        scrollTo(activeRef.current + 1);
       } else if (e.key === "ArrowUp" || e.key === "k") {
         e.preventDefault();
-        scrollTo(activeIdx - 1);
+        scrollTo(activeRef.current - 1);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeIdx, scrollTo]);
+  }, [scrollTo, activeRef]);
 
   const activeReel = reels?.[Math.min(activeIdx, (reels?.length ?? 1) - 1)];
   const onCaughtUp = Boolean(reels && activeIdx >= reels.length);
@@ -185,40 +177,45 @@ export default function ReelFeed({
         ) : (
           <div
             ref={scrollerRef}
-            className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-none "
+            className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain scrollbar-none touch-pan-y"
             aria-label="Scene feed. Use arrow keys or J and K to move."
           >
-            {reels.map((r, i) => (
-              <div key={r._id} className="h-full w-full">
-                {Math.abs(i - activeIdx) <= 1 ? (
-                  <FeedSlide
-                    reel={r}
-                    active={i === activeIdx}
-                    isNew={showBadges && fresh.has(r._id) && !r.seen}
-                    onEnded={() => {
-                      quietRecordView(r._id, true);
-                      scrollTo(i + 1);
-                    }}
-                    onOpenPanel={openPanel}
-                    onExport={
-                      canExport
-                        ? () =>
-                            setExporting({
-                              title: r.title,
-                              track: r.track,
-                              trackIndex: r.trackIndex,
-                              studyTitle: r.studyTitle,
-                              scenes: r.scenes || [],
-                              footage: r.footage,
-                            })
-                        : undefined
-                    }
-                  />
-                ) : (
-                  <div className="h-full w-full snap-start bg-black" aria-hidden />
-                )}
-              </div>
-            ))}
+            {reels.map((r, i) => {
+              const mounted = Math.abs(i - activeIdx) <= MOUNT_RADIUS;
+              return (
+                <div key={r._id} className="h-full w-full snap-start">
+                  {mounted ? (
+                    <FeedSlide
+                      reel={r}
+                      active={i === activeIdx}
+                      isNew={showBadges && fresh.has(r._id) && !r.seen}
+                      onEnded={() => {
+                        // Ignore auto-advance if the user is mid-gesture or already moved on.
+                        if (scrollingRef.current || activeRef.current !== i) return;
+                        quietRecordView(r._id, true);
+                        scrollTo(i + 1);
+                      }}
+                      onOpenPanel={openPanel}
+                      onExport={
+                        canExport
+                          ? () =>
+                              setExporting({
+                                title: r.title,
+                                track: r.track,
+                                trackIndex: r.trackIndex,
+                                studyTitle: r.studyTitle,
+                                scenes: r.scenes || [],
+                                footage: r.footage,
+                              })
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-black" aria-hidden />
+                  )}
+                </div>
+              );
+            })}
             <CaughtUp total={reels.length} watchedNew={fresh.size} onRestart={() => scrollTo(0)} />
           </div>
         )}

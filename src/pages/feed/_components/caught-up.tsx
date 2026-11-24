@@ -6,7 +6,7 @@ export default function CaughtUp({ total, watchedNew, onRestart }: { total: numb
   return (
     <section
       aria-label="All caught up"
-      className="flex h-full w-full snap-start snap-always flex-col items-center justify-center gap-5 bg-[radial-gradient(ellipse_at_center,rgba(47,155,255,0.18),transparent_65%)] px-8 text-center text-white"
+      className="flex h-full w-full snap-start flex-col items-center justify-center gap-5 bg-[radial-gradient(ellipse_at_center,rgba(47,155,255,0.18),transparent_65%)] px-8 text-center text-white"
     >
       <span className="grid size-16 place-items-center rounded-full bg-primary/15 text-primary">
         <CheckCheck className="size-8" strokeWidth={2.5} />

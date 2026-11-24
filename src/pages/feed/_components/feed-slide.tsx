@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useFeedMode } from "../_lib/feed-mode.ts";
 import { GuestDismissed, useFeedActions } from "../_lib/use-feed-data.ts";
@@ -53,7 +53,8 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
   const canReact = true;
   const canSave = !isShare;
   const [paused, setPaused] = useState(false);
-  const [progress, setProgress] = useState(0);
+  // Progress bar width is updated via ref so the RAF loop does not re-render React every frame.
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const playing = active && !paused;
 
   const saveMutation = useMutation({
@@ -128,7 +129,7 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
   }, [active, react, save, onOpenPanel, canReact, canSave]);
 
   return (
-    <div className="relative flex h-full w-full snap-start snap-always items-center justify-center bg-black">
+    <div className="relative flex h-full w-full items-center justify-center bg-black contain-paint">
       <div className="relative h-full w-full overflow-hidden lg:aspect-[9/16] lg:w-auto lg:rounded-xl">
         <ReelCanvas
           reel={{
@@ -144,7 +145,10 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
           restartKey={active ? "on" : "off"}
           fit="cover"
           onEnded={onEnded}
-          onProgress={(t, total) => setProgress(total ? t / total : 0)}
+          onProgress={(t, total) => {
+            const bar = progressBarRef.current;
+            if (bar) bar.style.width = `${total ? (t / total) * 100 : 0}%`;
+          }}
           className="size-full"
         />
         <button
@@ -223,7 +227,11 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
           </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 z-30 h-1 bg-white/15">
-          <div className="h-full bg-white transition-[width] duration-100" style={{ width: `${active ? progress * 100 : 0}%` }} />
+          <div
+            ref={progressBarRef}
+            className="h-full bg-white"
+            style={{ width: active ? undefined : "0%" }}
+          />
         </div>
       </div>
     </div>

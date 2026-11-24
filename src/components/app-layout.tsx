@@ -253,7 +253,8 @@ function ViewerLayout({ native = false }: { native?: boolean }) {
         )}
       </header>
       <OfflineBanner />
-      <main className={cn("min-h-0 flex-1 overflow-y-auto", onFeed && "dark")}>
+      {/* Scene feed owns scrolling; a second overflow-y-auto here fights snap-scroll. */}
+      <main className={cn("min-h-0 flex-1", onFeed ? "overflow-hidden dark" : "overflow-y-auto")}>
         <Outlet />
       </main>
     </div>
@@ -377,7 +378,12 @@ function EditorLayout() {
         </header>
         <OfflineBanner />
         <PlanNotices />
-        <main className={cn("min-h-0 flex-1 overflow-y-auto pb-14 lg:pb-0", onFeed && "dark")}>
+        <main
+          className={cn(
+            "min-h-0 flex-1 pb-14 lg:pb-0",
+            onFeed ? "overflow-hidden dark" : "overflow-y-auto",
+          )}
+        >
           <Outlet />
         </main>
         <nav
