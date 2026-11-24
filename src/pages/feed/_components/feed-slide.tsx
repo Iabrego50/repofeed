@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { useFeedMode } from "../_lib/feed-mode.ts";
 import { GuestDismissed, useFeedActions } from "../_lib/use-feed-data.ts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +7,6 @@ import type { ReactionType } from "@/schema/validators.ts";
 import { cn } from "@/lib/utils.ts";
 import { toast } from "sonner";
 import { api } from "@/lib/api/complete";
-import { isNativePlatform } from "@/lib/native";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
 import { SHAREABLE_ORIGIN } from "@/lib/site.ts";
 import { track } from "@/lib/analytics";
@@ -19,7 +17,6 @@ import SceneActions from "./scene-actions.tsx";
 interface FeedSlideProps {
   reel: FeedReel;
   active: boolean;
-  isNew: boolean;
   onEnded: () => void;
   onOpenPanel: (tab: PanelTab) => void;
   /** Members only — omit for share-link viewers. */
@@ -41,14 +38,13 @@ function isTyping(target: EventTarget | null) {
 /**
  * One full-height scene. Plays as soon as it is in view, pauses on tap, and
  * answers the same keys people already use on video sites.
+ * Overlay: headline + reaction pills + action buttons only — no topic tags or New badges.
  */
-export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }: FeedSlideProps) {
+export default function FeedSlide({ reel, active, onEnded, onOpenPanel }: FeedSlideProps) {
   const queryClient = useQueryClient();
   const { react: reactOnFeed } = useFeedActions();
   const mode = useFeedMode();
   const isShare = mode.kind === "share";
-  // Guests and native (Explore scene feed) keep topic tags as plain text.
-  const linkTopics = !isShare && !isNativePlatform();
   // Guests may react (share_react) and comment; save/export stay member-only.
   const canReact = true;
   const canSave = !isShare;
@@ -165,30 +161,7 @@ export default function FeedSlide({ reel, active, isNew, onEnded, onOpenPanel }:
         </button>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end gap-3 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-4 pb-5 pt-24 text-white">
           <div className="min-w-0 flex-1">
-            {isNew && (
-              <span className="mb-2 inline-block rounded-sm bg-mark px-1.5 py-0.5 text-[11px] font-bold text-mark-foreground">New</span>
-            )}
             <p className="truncate text-[0.9375rem] font-semibold">{reel.title}</p>
-            {(reel.topics?.length ?? 0) > 0 && (
-              <div className="pointer-events-auto mt-1.5 flex flex-wrap gap-1">
-                {reel.topics.slice(0, 3).map((topic) =>
-                  linkTopics ? (
-                    <Link
-                      key={topic}
-                      to={`/explore?topic=${encodeURIComponent(topic)}`}
-                      aria-label={`More about ${topic}`}
-                      className="rounded px-1.5 py-0.5 text-[11px] font-semibold text-white/90 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
-                    >
-                      #{topic.replace(/\s+/g, "")}
-                    </Link>
-                  ) : (
-                    <span key={topic} className="px-1.5 py-0.5 text-[11px] font-semibold text-white/80">
-                      #{topic.replace(/\s+/g, "")}
-                    </span>
-                  ),
-                )}
-              </div>
-            )}
             {canReact && (
               <div role="group" aria-label="Your reaction" data-tour={active ? "reactions" : undefined} className="pointer-events-auto mt-3 flex flex-wrap gap-1.5">
                 {REACTIONS.map((r) => (

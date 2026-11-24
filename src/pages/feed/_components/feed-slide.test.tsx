@@ -66,7 +66,6 @@ function renderSlide(mode: "member" | "share") {
             <FeedSlide
               reel={reel}
               active
-              isNew={false}
               onEnded={() => undefined}
               onOpenPanel={() => undefined}
               onExport={() => undefined}
@@ -79,27 +78,28 @@ function renderSlide(mode: "member" | "share") {
 }
 
 describe("FeedSlide access", () => {
-  it("share links: discussion/evidence + reactions — no save or explore links", () => {
+  it("share links: discussion/evidence + reactions — no save, topics, or study meta", () => {
     renderSlide("share");
     expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/more about checkout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("#checkout")).not.toBeInTheDocument();
     expect(screen.getByRole("group", { name: /your reaction/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
-    expect(screen.getByText("#checkout")).toBeInTheDocument();
     expect(screen.getByText("Cart drop-off")).toBeInTheDocument();
     expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/pause scene|play scene/i)).toBeInTheDocument();
   });
 
-  it("shows Save, reactions, and Explore topic links for members — no study meta line", () => {
+  it("members: Save + reactions — no topic tags or study meta", () => {
     renderSlide("member");
     expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/more about checkout/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/more about checkout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("#checkout")).not.toBeInTheDocument();
     expect(screen.getByText("Cart drop-off")).toBeInTheDocument();
     expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
   });
