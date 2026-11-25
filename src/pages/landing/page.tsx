@@ -16,7 +16,8 @@ import PrivacySection from "./privacy-section.tsx";
 import { variantFor } from "./variants.ts";
 
 const SHELL = "mx-auto max-w-6xl px-5";
-const H2 = "max-w-[22ch] text-balance text-[2rem] font-bold leading-[1.02] sm:text-[2.75rem]";
+const EYEBROW = "font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase";
+const H2 = "max-w-[22ch] text-balance text-[2rem] font-bold tracking-tight leading-[1.02] sm:text-[2.75rem]";
 const LEAD = "mt-4 max-w-[58ch] text-lg leading-relaxed text-muted-foreground";
 const FREE_NOTE = "Free for your first three studies. No card, no password.";
 
@@ -87,7 +88,7 @@ function Nav({ variant, focused }: { variant: string; focused: boolean }) {
   const link =
     "hidden min-h-10 cursor-pointer items-center rounded-md px-3 text-[0.9375rem] font-medium text-muted-foreground hover:text-foreground sm:flex";
   return (
-    <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-border/70 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-5 py-2.5">
         <Link to="/" aria-label="repofeed.ai home" className="cursor-pointer">
           <Logo />
@@ -139,13 +140,14 @@ export default function Landing() {
   }, [variant.slug]);
 
   return (
-    <div className="landing min-h-dvh bg-background max-md:pb-24">
+    <div className="landing min-h-dvh bg-paper max-md:pb-24">
       <Nav variant={variant.slug} focused={focused} />
 
       <main>
         <section className={cn(SHELL, "grid items-center gap-x-10 gap-y-14 pb-16 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:pb-24 lg:pt-16")}>
           <div>
-            <h1 className="title-card max-w-[13ch] text-[3.25rem] sm:text-[4.5rem] lg:text-[5.25rem]">{variant.headline}</h1>
+            <p className={EYEBROW}>Research, on air</p>
+            <h1 className="title-card mt-3 max-w-[13ch] text-[3.25rem] sm:text-[4.5rem] lg:text-[5.25rem]">{variant.headline}</h1>
             <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-muted-foreground sm:text-xl">{variant.sub}</p>
             <div ref={heroCtaRef} className="mt-8">
               <HeroSignup variant={variant.slug} />
@@ -184,7 +186,8 @@ export default function Landing() {
         <section aria-labelledby="feed-heading" className={cn(SHELL, "py-16 lg:py-24")}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 id="feed-heading" className={H2}>
+              <p className={EYEBROW}>Sample channel</p>
+              <h2 id="feed-heading" className={cn(H2, "mt-2")}>
                 One study becomes a feed like this.
               </h2>
               <p className={LEAD}>
@@ -208,7 +211,8 @@ export default function Landing() {
         <section aria-labelledby="problem-heading" className="border-y border-border bg-card">
           <div className={cn(SHELL, "grid gap-10 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-24")}>
             <div>
-              <h2 id="problem-heading" className={H2}>
+              <p className={EYEBROW}>The usual ending</p>
+              <h2 id="problem-heading" className={cn(H2, "mt-2")}>
                 You did the interviews. Then the findings sat in a deck.
               </h2>
               <p className={LEAD}>
@@ -230,14 +234,15 @@ export default function Landing() {
         </section>
 
         <section aria-labelledby="how-heading" className={cn(SHELL, "py-16 lg:py-24")}>
-          <h2 id="how-heading" className={H2}>
+          <p className={EYEBROW}>How it works</p>
+          <h2 id="how-heading" className={cn(H2, "mt-2")}>
             From raw files to a feed in three steps.
           </h2>
           <ol className="mt-12 grid gap-x-10 gap-y-10 md:grid-cols-3">
             {STEPS.map((step, i) => (
-              <li key={step.title} className="border-t-2 border-foreground pt-4">
-                <span className="figures text-5xl font-extrabold">{i + 1}</span>
-                <h3 className="mt-3 text-2xl font-bold leading-tight">{step.title}</h3>
+              <li key={step.title} className="border-t-2 border-primary pt-4">
+                <span className="figures text-5xl text-primary">{i + 1}</span>
+                <h3 className="mt-3 text-2xl font-bold tracking-tight leading-tight">{step.title}</h3>
                 <p className="mt-2.5 leading-relaxed text-muted-foreground">{step.body}</p>
               </li>
             ))}
@@ -254,7 +259,8 @@ export default function Landing() {
 
         <section aria-labelledby="after-heading" className={cn(SHELL, "grid gap-12 py-16 lg:grid-cols-2 lg:items-center lg:py-24")}>
           <div>
-            <h2 id="after-heading" className={H2}>
+            <p className={EYEBROW}>Insights</p>
+            <h2 id="after-heading" className={cn(H2, "mt-2")}>
               Then you find out whether it landed.
             </h2>
             <p className={LEAD}>
@@ -267,7 +273,7 @@ export default function Landing() {
               you can edit.
             </p>
           </div>
-          <div className="overflow-hidden rounded-xl bg-card shadow-sheet">
+          <div className="overflow-hidden rounded-[1.5rem] bg-card shadow-sheet">
             <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
               {[
                 ["19", "people reached"],
@@ -275,8 +281,8 @@ export default function Landing() {
                 ["14", "open questions"],
               ].map(([value, label]) => (
                 <div key={label} className="px-4 py-5">
-                  <p className="figures text-4xl font-extrabold">{value}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+                  <p className="figures text-4xl text-primary">{value}</p>
+                  <p className="mt-1 font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">{label}</p>
                 </div>
               ))}
             </div>
@@ -314,7 +320,8 @@ export default function Landing() {
 
         <section aria-labelledby="compare-heading" className="border-y border-border bg-card">
           <div className={cn(SHELL, "py-16 lg:py-24")}>
-            <h2 id="compare-heading" className={H2}>
+            <p className={EYEBROW}>Why a feed</p>
+            <h2 id="compare-heading" className={cn(H2, "mt-2")}>
               A repository waits to be searched. A feed shows up.
             </h2>
             <p className={LEAD}>
@@ -361,18 +368,21 @@ export default function Landing() {
         <PricingSection variant={variant.slug} />
         <Faq />
 
-        <section aria-labelledby="final-heading" className="dark">
+        <section aria-labelledby="final-heading" className="dark bg-studio">
           <div className={cn(SHELL, "grid gap-10 py-20 lg:grid-cols-[1.2fr_0.8fr] lg:items-end lg:py-28")}>
-            <h2 id="final-heading" className="title-card max-w-[14ch] text-[2.75rem] sm:text-[4rem]">
-              Put your last study in front of people this week.
-            </h2>
             <div>
-              <p className="max-w-md text-lg leading-relaxed text-muted-foreground">
+              <p className={EYEBROW}>You're on air</p>
+              <h2 id="final-heading" className="title-card mt-3 max-w-[14ch] text-[2.75rem] text-white sm:text-[4rem]">
+                Put your last study in front of people this week.
+              </h2>
+            </div>
+            <div>
+              <p className="max-w-md text-lg leading-relaxed text-white/65">
                 Upload the files you already have and share the feed with as many viewers as you like.
               </p>
               <div ref={finalCtaRef} className="mt-6">
                 <HeroSignup variant={variant.slug} id="final-email" location="final" />
-                <p className="mt-3 text-[0.9375rem] text-muted-foreground">{FREE_NOTE}</p>
+                <p className="mt-3 text-[0.9375rem] text-white/55">{FREE_NOTE}</p>
               </div>
             </div>
           </div>

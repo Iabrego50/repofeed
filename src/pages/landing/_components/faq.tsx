@@ -40,7 +40,8 @@ export default function Faq() {
       className="mx-auto grid max-w-6xl gap-10 border-t border-border px-5 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:py-24"
     >
       <div>
-        <h2 id="faq-heading" className="max-w-[22ch] text-balance text-[2rem] font-bold leading-[1.02] sm:text-[2.75rem]">
+        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">FAQ</p>
+        <h2 id="faq-heading" className="mt-2 max-w-[22ch] text-balance text-[2rem] font-bold tracking-tight leading-[1.02] sm:text-[2.75rem]">
           Questions people ask before they try it
         </h2>
         <p className="mt-4 text-muted-foreground">
@@ -55,7 +56,7 @@ export default function Faq() {
           .
         </p>
       </div>
-      <Accordion type="single" collapsible className="border-t-2 border-foreground">
+      <Accordion type="single" collapsible className="border-t-2 border-primary">
         {QUESTIONS.map((item) => (
           <AccordionItem key={item.q} value={item.q}>
             <AccordionTrigger className="cursor-pointer py-5 text-left text-lg font-semibold">{item.q}</AccordionTrigger>

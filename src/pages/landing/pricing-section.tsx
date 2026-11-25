@@ -10,9 +10,10 @@ export default function PricingSection({ variant = "" }: { variant?: string }) {
     <section id="pricing" aria-labelledby="pricing-heading" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 lg:py-24">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
+          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Pricing</p>
           <h2
             id="pricing-heading"
-            className="max-w-[22ch] text-balance text-[2rem] font-bold leading-[1.02] sm:text-[2.75rem]"
+            className="mt-2 max-w-[22ch] text-balance text-[2rem] font-bold tracking-tight leading-[1.02] sm:text-[2.75rem]"
           >
             Pay for editors. Viewers are free.
           </h2>

@@ -143,17 +143,18 @@ export default function FeedPage() {
   ) : null;
 
   const empty = (
-    <Empty>
+    <Empty className="dark border-0 bg-transparent text-white">
       <EmptyHeader>
-        <EmptyMedia variant="icon"><Clapperboard /></EmptyMedia>
-        <EmptyTitle>No scenes in your feed yet</EmptyTitle>
-        <EmptyDescription>
+        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Your feed</p>
+        <EmptyMedia variant="icon" className="mt-3 bg-studio-panel text-mark"><Clapperboard /></EmptyMedia>
+        <EmptyTitle className="text-white">No scenes in your feed yet</EmptyTitle>
+        <EmptyDescription className="text-white/60">
           {showCreateCta ? "Create a study from your research files and publish it to fill the feed." : "When an editor publishes a study, its scenes show up here."}
         </EmptyDescription>
       </EmptyHeader>
       {showCreateCta && (
         <EmptyContent>
-          <Button asChild className="h-11"><Link to="/studies/new">Create a study</Link></Button>
+          <Button asChild className="h-11 font-semibold"><Link to="/studies/new">Create a study</Link></Button>
         </EmptyContent>
       )}
     </Empty>

@@ -71,7 +71,7 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <p className="px-2.5 pb-1.5 text-xs font-medium text-muted-foreground/80">{label}</p>
+      <p className="px-2.5 pb-1.5 font-mono text-[10px] font-medium tracking-[0.14em] text-eyebrow uppercase">{label}</p>
       <div className="flex flex-col gap-0.5">
         {items.map((n) => (
           <NavRow key={n.to} item={n} />

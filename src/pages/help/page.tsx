@@ -65,8 +65,8 @@ export default function HelpPage() {
             if (!list.length) return null;
             return (
               <section key={cat} aria-label={cat}>
-                <h2 className="text-sm font-medium text-muted-foreground">{cat}</h2>
-                <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
+                <h2 className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">{cat}</h2>
+                <div className="mt-3 overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-lift">
                   {list.map((a) => (
                     <AccordionItem key={a.id} value={a.id} id={`help-${a.id}`} className="border-border px-4 sm:px-5">
                       <AccordionTrigger className="cursor-pointer py-4 hover:no-underline">
