@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import Logo from "@/components/logo.tsx";
-import { readStoryAnswers } from "@/lib/story-onboarding.ts";
 
 const STEPS = ["About you", "Your workspace", "Your team", "First study"] as const;
 
@@ -98,13 +97,10 @@ export default function WorkspaceSetup() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const { refresh } = useWorkspace();
-  const story = readStoryAnswers(user);
   const [step, setStep] = useState(0);
   const [nameInput, setName] = useState<string | null>(null);
-  const [role, setRole] = useState<string>(story.role ? mapStoryRole(story.role) : "");
-  const [workspaceInput, setWorkspaceName] = useState<string | null>(
-    story.channelName ? story.channelName : null,
-  );
+  const [role, setRole] = useState<string>("");
+  const [workspaceInput, setWorkspaceName] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -321,17 +317,3 @@ export default function WorkspaceSetup() {
   );
 }
 
-function mapStoryRole(role: string): string {
-  switch (role) {
-    case "researcher":
-      return "UX researcher";
-    case "designer":
-      return "Designer";
-    case "pm":
-      return "Product manager";
-    case "founder":
-      return "Founder";
-    default:
-      return "Something else";
-  }
-}

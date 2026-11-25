@@ -12,6 +12,15 @@ export const DIVISION_LABELS: Record<DivisionSlug, string> = {
   website: "Website",
 };
 
+/** Design-system channel labels: CH 01 Auto … CH 05 Website */
+export const DIVISION_CHANNEL_CODES: Record<DivisionSlug, string> = {
+  auto: "CH 01",
+  gi: "CH 02",
+  wood: "CH 03",
+  marine: "CH 04",
+  website: "CH 05",
+};
+
 export const DIVISION_HINTS: Record<DivisionSlug, string> = {
   auto: "Automotive",
   gi: "General Industrial",
