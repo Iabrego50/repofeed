@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils.ts";
-import type { StoryAnswers } from "@/lib/story-onboarding.ts";
-import { RESEARCH_LABELS, ROLE_LABELS, SHARE_LABELS } from "@/lib/story-onboarding.ts";
+import type { StorySession } from "@/lib/story-onboarding.ts";
+import { ROLE_LABELS } from "@/lib/story-onboarding.ts";
 
 type VisualProps = {
   reduced: boolean;
@@ -170,23 +170,18 @@ export function ChannelPhoneVisual({ reduced, className }: VisualProps) {
 
 /** Live channel preview card used on setup + ready steps. */
 export function ChannelPreviewCard({
-  answers,
+  session,
   status = "setting",
   showNext = false,
   className,
 }: {
-  answers: StoryAnswers;
+  session: StorySession;
   status?: "setting" | "air";
   showNext?: boolean;
   className?: string;
 }) {
-  const tuned = answers.role ? ROLE_LABELS[answers.role] : "Not set yet";
-  const onAir =
-    answers.researchKinds.length > 0
-      ? answers.researchKinds.map((k) => RESEARCH_LABELS[k]).join(" · ")
-      : "Not set yet";
-  const watching = answers.shareAudience ? SHARE_LABELS[answers.shareAudience] : "Not set yet";
-  const title = answers.channelName.trim() || "Unnamed channel.";
+  const tuned = session.role ? ROLE_LABELS[session.role] : "Not set yet";
+  const title = session.channelName.trim() || "Unnamed channel.";
 
   return (
     <aside
@@ -211,8 +206,8 @@ export function ChannelPreviewCard({
         {(
           [
             ["Tuned for", tuned],
-            ["On air", onAir],
-            ["Watching", watching],
+            ["On air", "Not set yet"],
+            ["Watching", "Not set yet"],
           ] as const
         ).map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-4 py-3">

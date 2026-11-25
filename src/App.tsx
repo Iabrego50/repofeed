@@ -48,6 +48,7 @@ const AdminAnalyticsPage = lazy(() => import("./pages/admin/analytics.tsx"));
 const JoinPage = lazy(() => import("./pages/join/page.tsx"));
 const DivisionHomePage = lazy(() => import("./pages/home/division-home.tsx"));
 const DivisionFeedPage = lazy(() => import("./pages/home/division-feed.tsx"));
+const DesignHarnessPage = lazy(() => import("./pages/design-harness/page.tsx"));
 
 function PageLoader() {
   return (
@@ -260,6 +261,9 @@ export default function App() {
               <Route path="/" element={<PublicEntry loader={<FullScreenLoader />} />} />
               <Route path="/dashboard" element={<Navigate to={appHomePath()} replace />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+              {/* DEV / VITE_DESIGN_HARNESS fixture screens — no auth, no DB writes. */}
+              <Route path="/__design" element={<DesignHarnessPage />} />
+              <Route path="/__design/:screen" element={<DesignHarnessPage />} />
               {/* Public story preview + first-run / workspace setup. Outside Gate so founders can open /welcome signed out. */}
               <Route
                 path="/welcome"

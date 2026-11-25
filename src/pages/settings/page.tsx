@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Link2, Trash2, UserMinus, Loader2, RefreshCw, Mail, Clapperboard } from "lucide-react";
+import { Copy, Link2, Trash2, UserMinus, Loader2, Mail, Clapperboard } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select.tsx";
 import PageHeader from "@/components/page-header.tsx";
 import UserAvatar from "@/components/user-avatar.tsx";
+import { JoinCodePanelView } from "@/components/design-system/join-code-panel.tsx";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { SHAREABLE_ORIGIN } from "@/lib/site.ts";
@@ -159,117 +160,55 @@ function JoinCodePanel({ workspaceId }: { workspaceId: string }) {
   });
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
-  const digits = (code ?? "").padEnd(8, " ").slice(0, 8).split("");
 
   return (
-    <section className="space-y-5">
-      <div>
-        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">
-          {current?.name ?? "Workspace"} · workspace
-        </p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight">Get your team on the channel.</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          You’re an owner of this workspace. Share the join code and viewers land straight in your feed.
-        </p>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-[1.5rem] bg-studio p-6 text-white shadow-lift">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-eyebrow uppercase">Team join code</p>
-          {isLoading || !code ? (
-            <Skeleton className="mt-5 h-16 w-full rounded-xl bg-white/10" />
-          ) : (
-            <div className="mt-5 grid grid-cols-8 gap-1.5 sm:gap-2" aria-label="Team join code">
-              {digits.map((ch, i) => (
-                <span
-                  key={i}
-                  className="flex aspect-square items-center justify-center rounded-xl border border-white/10 bg-[#0a0d16] font-mono text-lg font-bold text-mark sm:text-xl"
-                >
-                  {ch.trim() || "·"}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button
-              className="h-11 font-semibold"
-              disabled={!code}
-              onClick={() => {
-                if (!code) return;
-                void copy(code, "Join code copied");
-              }}
-            >
-              <Copy className="size-4" /> Copy code
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"
-              disabled={regenerate.isPending}
-              onClick={() => regenerate.mutate()}
-            >
-              {regenerate.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-              Regenerate
-            </Button>
+    <JoinCodePanelView
+      workspaceName={current?.name ?? "Workspace"}
+      code={code}
+      loading={isLoading}
+      regenerating={regenerate.isPending}
+      onCopy={() => {
+        if (!code) return;
+        void copy(code, "Join code copied");
+      }}
+      onRegenerate={() => regenerate.mutate()}
+      emailSlot={
+        <form
+          className="grid gap-3 rounded-[1.5rem] border border-border bg-card p-5 sm:grid-cols-[1fr_auto] sm:items-end"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!email.trim()) return;
+            setEmailBusy(true);
+            try {
+              await api.workspaces.emailJoinCode({ workspaceId, email: email.trim() });
+              toast.success(`Invite email sent to ${email.trim()}`);
+              setEmail("");
+            } catch (err: unknown) {
+              toast.error(err instanceof Error ? err.message : "Couldn't send email");
+            } finally {
+              setEmailBusy(false);
+            }
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="join-email">Email the code</Label>
+            <Input
+              id="join-email"
+              type="email"
+              className="h-11"
+              placeholder="teammate@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={emailBusy}
+            />
           </div>
-          <p className="mt-3 text-xs text-white/45">Regenerating revokes the previous code immediately.</p>
-        </div>
-
-        <aside className="rounded-[1.5rem] border border-border bg-card p-6 shadow-lift">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
-            How viewers join
-          </p>
-          <ol className="mt-4 space-y-3 text-sm">
-            {[
-              "Open the iOS app, or go to /join on the web",
-              "Enter the code",
-              `Start scrolling ${current?.name ?? "your research"}`,
-            ].map((line, i) => (
-              <li key={line} className="flex items-start gap-3">
-                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-bold text-background">
-                  {i + 1}
-                </span>
-                {line}
-              </li>
-            ))}
-          </ol>
-        </aside>
-      </div>
-
-      <form
-        className="grid gap-3 rounded-[1.5rem] border border-border bg-card p-5 sm:grid-cols-[1fr_auto] sm:items-end"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!email.trim()) return;
-          setEmailBusy(true);
-          try {
-            await api.workspaces.emailJoinCode({ workspaceId, email: email.trim() });
-            toast.success(`Invite email sent to ${email.trim()}`);
-            setEmail("");
-          } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Couldn't send email");
-          } finally {
-            setEmailBusy(false);
-          }
-        }}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="join-email">Email the code</Label>
-          <Input
-            id="join-email"
-            type="email"
-            className="h-11"
-            placeholder="teammate@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={emailBusy}
-          />
-        </div>
-        <Button type="submit" className="h-11 font-semibold" disabled={emailBusy || !email.trim()}>
-          {emailBusy ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
-          Send invite
-        </Button>
-      </form>
-    </section>
+          <Button type="submit" className="h-11 font-semibold" disabled={emailBusy || !email.trim()}>
+            {emailBusy ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+            Send invite
+          </Button>
+        </form>
+      }
+    />
   );
 }
 

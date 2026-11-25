@@ -64,5 +64,7 @@ describe("StoryOnboarding", () => {
     expect(continueBtn).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /^Researcher$/i }));
     expect(continueBtn).not.toBeDisabled();
+    fireEvent.click(continueBtn);
+    expect(screen.getByRole("heading", { name: /You're on air/i })).toBeInTheDocument();
   });
 });

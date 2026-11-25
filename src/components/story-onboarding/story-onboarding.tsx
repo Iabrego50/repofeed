@@ -9,25 +9,16 @@ import { cn } from "@/lib/utils.ts";
 import { appHomePath } from "@/lib/native-access.ts";
 import { isNativePlatform } from "@/lib/native";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import Logo from "@/components/logo.tsx";
 import {
-  emptyStoryAnswers,
+  emptyStorySession,
   hasCompletedStoryOnboarding,
   markStoryOnboardingComplete,
-  persistStoryOnboarding,
-  readStoryAnswers,
-  RESEARCH_LABELS,
   ROLE_LABELS,
-  SHARE_LABELS,
-  STORY_RESEARCH_KINDS,
   STORY_ROLES,
-  STORY_SHARE_AUDIENCES,
   suggestChannelName,
-  type StoryAnswers,
-  type StoryResearchKind,
   type StoryRole,
-  type StoryShareAudience,
+  type StorySession,
 } from "@/lib/story-onboarding.ts";
 import {
   ChannelPhoneVisual,
@@ -52,14 +43,10 @@ type Step = {
   body: string;
   cta?: string;
   visual?: "crt" | "yellow" | "scattered" | "phone" | "preview" | "ready";
-  question?: "role" | "research" | "share" | "channel";
-  channelStep?: number;
+  question?: "role";
 };
 
-/**
- * Design screens 01–06, plus intermediate channel questions (research / share / name)
- * so we still persist the answers the product needs.
- */
+/** Design screens 01–06 exactly — no extra answer-collection steps. */
 const STEPS: Step[] = [
   {
     id: "then",
@@ -111,43 +98,6 @@ const STEPS: Step[] = [
     cta: "Continue",
     question: "role",
     visual: "preview",
-    channelStep: 1,
-  },
-  {
-    id: "research",
-    kind: "question",
-    theme: "light",
-    eyebrow: "Your channel · 2 of 4",
-    title: "What’s on air?",
-    body: "Pick the research you work with. We’ll label scenes so the feed feels familiar.",
-    cta: "Continue",
-    question: "research",
-    visual: "preview",
-    channelStep: 2,
-  },
-  {
-    id: "share",
-    kind: "question",
-    theme: "light",
-    eyebrow: "Your channel · 3 of 4",
-    title: "Who’s watching?",
-    body: "Start small or go wide — you invite people when you’re ready.",
-    cta: "Continue",
-    question: "share",
-    visual: "preview",
-    channelStep: 3,
-  },
-  {
-    id: "name",
-    kind: "question",
-    theme: "light",
-    eyebrow: "Your channel · 4 of 4",
-    title: "Name the channel.",
-    body: "A short name your teammates will recognize in the feed.",
-    cta: "Continue",
-    question: "channel",
-    visual: "preview",
-    channelStep: 4,
   },
   {
     id: "ready",
@@ -164,12 +114,10 @@ function Chip({
   selected,
   children,
   onClick,
-  dark,
 }: {
   selected: boolean;
   children: ReactNode;
   onClick: () => void;
-  dark?: boolean;
 }) {
   return (
     <button
@@ -179,12 +127,8 @@ function Chip({
       className={cn(
         "min-h-11 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         selected
-          ? dark
-            ? "border-white bg-white text-[#0b1020]"
-            : "border-foreground bg-foreground text-background"
-          : dark
-            ? "border-white/25 bg-transparent text-white hover:border-white/50"
-            : "border-border bg-card text-foreground hover:border-foreground/40",
+          ? "border-foreground bg-foreground text-background"
+          : "border-border bg-card text-foreground hover:border-foreground/40",
       )}
     >
       {children}
@@ -259,8 +203,8 @@ export type StoryOnboardingProps = {
 };
 
 /**
- * Full-screen story onboarding matching Isaac’s design screens:
- * two-column desktop layout, mono eyebrows, navy / paper / blue / yellow.
+ * Full-screen story onboarding matching Isaac’s design screens 01–06.
+ * Role chips are visual only; only the completion flag is persisted.
  */
 export default function StoryOnboarding({ preview = false, replay = false, onFinished }: StoryOnboardingProps) {
   const navigate = useNavigate();
@@ -269,17 +213,10 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const { nativeViewerMode } = useNativeViewer();
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<StoryAnswers>(() => {
-    if (user) {
-      const existing = readStoryAnswers(user);
-      return {
-        ...emptyStoryAnswers(),
-        ...existing,
-        channelName: existing.channelName || suggestChannelName(user.email),
-      };
-    }
-    return { ...emptyStoryAnswers(), channelName: suggestChannelName(null) };
-  });
+  const [session, setSession] = useState<StorySession>(() => ({
+    ...emptyStorySession(),
+    channelName: suggestChannelName(user?.email),
+  }));
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -291,22 +228,10 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const light = step.theme === "light";
 
   useEffect(() => {
-    if (!answers.channelName && user?.email) {
-      setAnswers((a) => ({ ...a, channelName: suggestChannelName(user.email) }));
-    }
-  }, [user?.email, answers.channelName]);
-
-  useEffect(() => {
     headingRef.current?.focus();
   }, [index]);
 
-  const canAdvance = (() => {
-    if (step.question === "role") return Boolean(answers.role);
-    if (step.question === "research") return answers.researchKinds.length > 0;
-    if (step.question === "share") return Boolean(answers.shareAudience);
-    if (step.question === "channel") return answers.channelName.trim().length > 0;
-    return true;
-  })();
+  const canAdvance = step.question === "role" ? Boolean(session.role) : true;
 
   const go = useCallback((delta: number) => {
     setIndex((i) => Math.min(STEPS.length - 1, Math.max(0, i + delta)));
@@ -342,7 +267,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     setBusy(true);
     try {
       if (!preview && user) {
-        await persistStoryOnboarding(answers);
+        await markStoryOnboardingComplete();
       }
       onFinished?.(destination);
       if (onFinished) return;
@@ -366,7 +291,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
       else if (destination === "demo") navigate("/demo", { replace: true });
       else navigate(appHomePath(), { replace: true });
     } catch (err) {
-      console.error("[story-onboarding] persist failed", err);
+      console.error("[story-onboarding] complete failed", err);
       navigate(preview ? "/signin" : appHomePath(), { replace: true });
     } finally {
       setBusy(false);
@@ -394,16 +319,6 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     }
   };
 
-  const toggleKind = (kind: StoryResearchKind) => {
-    setAnswers((a) => {
-      const has = a.researchKinds.includes(kind);
-      return {
-        ...a,
-        researchKinds: has ? a.researchKinds.filter((k) => k !== kind) : [...a.researchKinds, kind],
-      };
-    });
-  };
-
   const visual = (() => {
     switch (step.visual) {
       case "crt":
@@ -415,9 +330,9 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
       case "phone":
         return <ChannelPhoneVisual reduced={reduced} />;
       case "preview":
-        return <ChannelPreviewCard answers={answers} status="setting" />;
+        return <ChannelPreviewCard session={session} status="setting" />;
       case "ready":
-        return <ChannelPreviewCard answers={answers} status="air" showNext />;
+        return <ChannelPreviewCard session={session} status="air" showNext />;
       default:
         return null;
     }
@@ -512,53 +427,12 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                   {STORY_ROLES.map((role) => (
                     <Chip
                       key={role}
-                      selected={answers.role === role}
-                      onClick={() => setAnswers((a) => ({ ...a, role: role as StoryRole }))}
+                      selected={session.role === role}
+                      onClick={() => setSession((s) => ({ ...s, role: role as StoryRole }))}
                     >
                       {ROLE_LABELS[role]}
                     </Chip>
                   ))}
-                </div>
-              )}
-
-              {step.question === "research" && (
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {STORY_RESEARCH_KINDS.map((kind) => (
-                    <Chip key={kind} selected={answers.researchKinds.includes(kind)} onClick={() => toggleKind(kind)}>
-                      {RESEARCH_LABELS[kind]}
-                    </Chip>
-                  ))}
-                </div>
-              )}
-
-              {step.question === "share" && (
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {STORY_SHARE_AUDIENCES.map((aud) => (
-                    <Chip
-                      key={aud}
-                      selected={answers.shareAudience === aud}
-                      onClick={() => setAnswers((a) => ({ ...a, shareAudience: aud as StoryShareAudience }))}
-                    >
-                      {SHARE_LABELS[aud]}
-                    </Chip>
-                  ))}
-                </div>
-              )}
-
-              {step.question === "channel" && (
-                <div className="mt-6 space-y-2">
-                  <label htmlFor="story-channel" className="sr-only">
-                    Channel name
-                  </label>
-                  <Input
-                    id="story-channel"
-                    value={answers.channelName}
-                    onChange={(e) => setAnswers((a) => ({ ...a, channelName: e.target.value }))}
-                    maxLength={60}
-                    className="h-12 border-border bg-card"
-                    placeholder={suggestChannelName(user?.email)}
-                    autoComplete="organization"
-                  />
                 </div>
               )}
 
@@ -617,21 +491,25 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         </div>
 
         <div className="relative mt-8 flex min-h-0 flex-1 items-center justify-center lg:mt-0">
-          {!isQuestion && !isFinish && step.visual !== "crt" && step.visual !== "yellow" && step.visual !== "scattered" && (
-            <div className="absolute inset-0 z-10 hidden lg:flex">
-              <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
-              <button
-                type="button"
-                aria-label="Pause"
-                className="w-1/3 cursor-pointer bg-transparent"
-                onPointerDown={() => setPaused(true)}
-                onPointerUp={() => setPaused(false)}
-                onPointerLeave={() => setPaused(false)}
-                onClick={next}
-              />
-              <button type="button" aria-label="Next" className="w-1/3 cursor-pointer bg-transparent" onClick={next} />
-            </div>
-          )}
+          {!isQuestion &&
+            !isFinish &&
+            step.visual !== "crt" &&
+            step.visual !== "yellow" &&
+            step.visual !== "scattered" && (
+              <div className="absolute inset-0 z-10 hidden lg:flex">
+                <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
+                <button
+                  type="button"
+                  aria-label="Pause"
+                  className="w-1/3 cursor-pointer bg-transparent"
+                  onPointerDown={() => setPaused(true)}
+                  onPointerUp={() => setPaused(false)}
+                  onPointerLeave={() => setPaused(false)}
+                  onClick={next}
+                />
+                <button type="button" aria-label="Next" className="w-1/3 cursor-pointer bg-transparent" onClick={next} />
+              </div>
+            )}
           <AnimatePresence mode="wait">
             <motion.div
               key={step.id}
@@ -656,7 +534,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         >
           {preview
             ? "Preview mode. Answers aren't saved until you sign in."
-            : "Replaying the product story. Finish to update your answers."}
+            : "Replaying the product story. Finish to mark it complete."}
         </p>
       )}
     </div>
