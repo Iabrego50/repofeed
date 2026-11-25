@@ -30,7 +30,7 @@ export async function listStudies(args: { workspaceId: string }) {
   // Editors see all, members only see published
   const query = supabase
     .from('studies')
-    .select('id, title, audience, status, tracks, published_at, is_demo, created_at')
+    .select('id, title, audience, status, tracks, published_at, is_demo, division, created_at')
     .eq('workspace_id', args.workspaceId)
     .eq('deleting', false)
     .order('created_at', { ascending: false })
@@ -53,6 +53,7 @@ export async function listStudies(args: { workspaceId: string }) {
     tracks: s.tracks || [],
     publishedAt: s.published_at,
     isDemo: s.is_demo || false,
+    division: (s as { division?: string | null }).division ?? null,
   }));
 }
 
@@ -157,6 +158,8 @@ export async function updateStudy(args: {
   title?: string;
   audience?: string;
   goal?: string;
+  /** Mobile division feed slug, or null to clear. */
+  division?: string | null;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -181,15 +184,22 @@ export async function updateStudy(args: {
     throw new Error('Must be an editor');
   }
 
+  const allowed = new Set(['auto', 'gi', 'wood', 'marine', 'website']);
+  if (args.division !== undefined && args.division !== null && !allowed.has(args.division)) {
+    throw new Error('Invalid division');
+  }
+
   const updates: {
     updated_at: string;
     title?: string;
     audience?: string;
     goal?: string | null;
+    division?: string | null;
   } = { updated_at: new Date().toISOString() };
   if (args.title !== undefined) updates.title = args.title.trim().slice(0, 120);
   if (args.audience !== undefined) updates.audience = args.audience.trim().slice(0, 200);
   if (args.goal !== undefined) updates.goal = args.goal?.trim().slice(0, 300) || null;
+  if (args.division !== undefined) updates.division = args.division;
 
   const { error } = await supabase
     .from('studies')

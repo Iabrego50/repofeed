@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Link2, Trash2, UserMinus, Loader2, RefreshCw, Mail } from "lucide-react";
+import { Copy, Link2, Trash2, UserMinus, Loader2, RefreshCw, Mail, Clapperboard } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -65,7 +66,9 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
       <h2 className="text-xl font-bold">Invite people</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Anyone with the link can join until it expires or runs out of uses.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Anyone with the link can join until it expires or runs out of uses. For the iOS app, prefer the short join code below.
+      </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
         <div className="space-y-2">
           <Label htmlFor="invite-role">Role</Label>
@@ -332,6 +335,17 @@ export default function SettingsPage() {
       {showCreatorTools && <Invites workspaceId={current._id} isOwner={isOwner} />}
       <EmailUpdates workspaceId={current._id} />
       <Members workspaceId={current._id} isOwner={isOwner} />
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-xl font-bold">Product story</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Replay the short onboarding story — TV to streaming to your research channel.
+        </p>
+        <Button asChild variant="outline" className="mt-4 h-11 font-semibold">
+          <Link to="/welcome?story=1">
+            <Clapperboard className="size-4" /> Replay product story
+          </Link>
+        </Button>
+      </section>
       <DeleteAccount />
     </div>
   );

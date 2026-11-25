@@ -71,13 +71,18 @@ const EXACT: Record<string, RouteMeta> = {
     description: "How repofeed.ai collects, uses and stores account, research and billing data.",
   },
   "/welcome": {
-    title: "Create a workspace — repofeed.ai",
-    description: "Set up your first research workspace on repofeed.ai.",
+    title: "Welcome — repofeed.ai",
+    description: "Research, as a feed: a short story of how repofeed turns raw research into a shared channel of insight scenes.",
     robots: "noindex",
   },
   "/feed": {
     title: "Feed — repofeed.ai",
     description: "Watch research scenes from your workspace.",
+    robots: "noindex",
+  },
+  "/home": {
+    title: "Channels — repofeed.ai",
+    description: "Pick a division channel to scroll research insight scenes.",
     robots: "noindex",
   },
   "/explore": {

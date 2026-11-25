@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { CircleHelp, Mail, Search, SearchX } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { CircleHelp, Clapperboard, Mail, Search, SearchX } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -28,9 +28,14 @@ export default function HelpPage() {
         title="How can we help?"
         description="Short guides to building studies, sharing them and reading the results."
         actions={
-          <Button asChild variant="secondary" className="h-11">
-            <a href={SUPPORT_MAILTO}><Mail className="size-4" /> Email support</a>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" className="h-11">
+              <Link to="/welcome?story=1"><Clapperboard className="size-4" /> Product story</Link>
+            </Button>
+            <Button asChild variant="secondary" className="h-11">
+              <a href={SUPPORT_MAILTO}><Mail className="size-4" /> Email support</a>
+            </Button>
+          </div>
         }
       />
       <div className="relative mt-6">

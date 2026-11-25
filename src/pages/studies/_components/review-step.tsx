@@ -27,6 +27,7 @@ import {
   PaintStudyButton,
 } from "./art-controls.tsx";
 import HelpHint from "@/components/help-hint.tsx";
+import DivisionAssign from "./division-assign.tsx";
 
 interface ReviewReel {
   _id: string;
@@ -292,6 +293,8 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
       </div>
 
       {isPublished && <ShareLinkCard studyId={studyId} />}
+
+      <DivisionAssign studyId={studyId} value={study.division ?? null} />
 
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((reel: any) => (

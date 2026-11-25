@@ -26,6 +26,6 @@ describe("native-access", () => {
     expect(isNativeViewerMode(true)).toBe(false);
     expect(isNativeAdminAccess(true)).toBe(true);
     expect(isNativeAdminAccess(false)).toBe(false);
-    expect(appHomePath()).toBe("/explore");
+    expect(appHomePath()).toBe("/home");
   });
 });

@@ -27,6 +27,17 @@ export const CATEGORIES: HelpCategory[] = [
 
 export const ARTICLES: HelpArticle[] = [
   {
+    id: "product-story",
+    category: "Getting started",
+    title: "Replay the product story",
+    summary: "The short TV-to-channel onboarding you saw on first sign-in.",
+    paragraphs: [
+      "repofeed turns raw research into a scrollable feed of short AI insight scenes — a curated channel so your team shares one common knowledge base again.",
+      "You can replay the story any time from Workspace settings, or open /welcome?story=1. Signed-out visitors can preview the same story at /welcome.",
+    ],
+    tip: "Open Replay product story in Settings, or visit /welcome while signed out to preview.",
+  },
+  {
     id: "how-it-works",
     category: "Getting started",
     title: "How repofeed.ai works",

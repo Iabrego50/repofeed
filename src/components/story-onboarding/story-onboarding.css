@@ -1,0 +1,144 @@
+/* Story onboarding motion — gated by prefers-reduced-motion in JS; CSS also respects it. */
+
+@keyframes story-scanlines {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 12px;
+  }
+}
+
+@keyframes story-crt-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 24px 60px -20px rgba(0, 0, 0, 0.7),
+      0 0 40px -8px rgba(29, 99, 224, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 24px 60px -20px rgba(0, 0, 0, 0.7),
+      0 0 56px -4px rgba(29, 99, 224, 0.55);
+  }
+}
+
+@keyframes story-tile-drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+
+@keyframes story-file-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+@keyframes story-tile-assemble {
+  from {
+    opacity: 0.35;
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.85);
+  }
+  to {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+}
+
+@keyframes story-phone-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes story-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes story-bar-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.story-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.28) 2px,
+    rgba(0, 0, 0, 0.28) 3px
+  );
+  background-size: 100% 12px;
+  animation: story-scanlines 0.9s linear infinite;
+}
+
+.story-crt-glow {
+  animation: story-crt-glow 2.8s ease-in-out infinite;
+}
+
+.story-tile-drift {
+  animation: story-tile-drift 3.2s ease-in-out infinite;
+}
+
+.story-file-float {
+  animation: story-file-float 3.6s ease-in-out infinite;
+}
+
+.story-tile-assemble {
+  animation: story-tile-assemble 1.6s ease-in-out infinite;
+}
+
+.story-phone-rise {
+  animation: story-phone-rise 0.55s ease-out both;
+}
+
+.story-step-in {
+  animation: story-step-in 0.45s ease-out both;
+}
+
+.story-progress-fill {
+  transform-origin: left center;
+  animation: story-bar-fill linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-scanlines,
+  .story-crt-glow,
+  .story-tile-drift,
+  .story-file-float,
+  .story-tile-assemble,
+  .story-phone-rise,
+  .story-step-in,
+  .story-progress-fill {
+    animation: none !important;
+  }
+
+  .story-progress-fill {
+    transform: scaleX(1);
+  }
+}

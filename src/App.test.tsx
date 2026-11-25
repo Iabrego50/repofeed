@@ -6,7 +6,11 @@ const { sessionBag, mockUser, bag, emptyInsightSummary } = vi.hoisted(() => {
   const mockUser = {
     id: "user-1",
     email: "tester@example.com",
-    user_metadata: { name: "Test User", avatar_url: "" },
+    user_metadata: {
+      name: "Test User",
+      avatar_url: "",
+      story_onboarding_completed_at: "2026-01-01T00:00:00.000Z",
+    },
   };
   const sessionBag: {
     session: null | {
@@ -83,6 +87,15 @@ const { sessionBag, mockUser, bag, emptyInsightSummary } = vi.hoisted(() => {
       signOut: async () => ({ error: null }),
       exchangeCodeForSession: async () => ({ data: { session: sessionBag.session }, error: null }),
       verifyOtp: async () => ({ data: { session: sessionBag.session }, error: sessionBag.session ? null : { message: "No session found" } }),
+      updateUser: async ({ data }: { data?: Record<string, unknown> }) => {
+        if (sessionBag.session?.user && data) {
+          sessionBag.session.user.user_metadata = {
+            ...sessionBag.session.user.user_metadata,
+            ...data,
+          };
+        }
+        return { data: { user: sessionBag.session?.user ?? null }, error: null };
+      },
     },
     from(table: string) {
       if (table === "workspace_members" && sessionBag.session) {
@@ -369,11 +382,11 @@ describe("App routes", () => {
     const expected: Record<string, RegExp> = {
       "/": /Nobody reads the report/i,
       "/for/research-repository": /research repository people open/i,
-      "/demo": /Demo feed|Supperly/i,
+      "/demo": /Demo feed|Supperly|Help that became homework|That's the whole study/i,
       // Researcher-only demo tools: signed-out visitors are sent back to the feed.
-      "/demo/insights": /Demo feed|Supperly/i,
-      "/demo/explore": /Demo feed|Supperly/i,
-      "/demo/deck": /Demo feed|Supperly/i,
+      "/demo/insights": /Demo feed|Supperly|Help that became homework|That's the whole study/i,
+      "/demo/explore": /Demo feed|Supperly|Help that became homework|That's the whole study/i,
+      "/demo/deck": /Demo feed|Supperly|Help that became homework|That's the whole study/i,
       "/help": /How can we help/i,
       "/terms": /terms of service/i,
       "/privacy": /privacy policy/i,
@@ -385,6 +398,7 @@ describe("App routes", () => {
       "/s/test-token": /isn't available|No scenes here yet/i,
       "/share/test-token": /isn't available|No scenes here yet/i,
       "/invite/test-token": /Sign in to repofeed|invite no longer works|You're Invited/i,
+      "/welcome": /Everyone watched the same story|Skip|repofeed/i,
     };
 
     for (const path of PUBLIC_APP_PATHS) {

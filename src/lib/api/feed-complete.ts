@@ -11,7 +11,13 @@ import {
 import type { CommentKind } from '@/schema/validators';
 
 /** `limit` defaults to the feed's 100; Explore asks for the whole library. */
-export async function listReels(args: { workspaceId: string; studyId?: string; limit?: number }): Promise<FeedReel[]> {
+export async function listReels(args: {
+  workspaceId: string;
+  studyId?: string;
+  /** Mobile division feed — separate stream per slug. */
+  division?: string;
+  limit?: number;
+}): Promise<FeedReel[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -27,7 +33,7 @@ export async function listReels(args: { workspaceId: string; studyId?: string; l
 
   let query = supabase
     .from('reels')
-    .select('*, studies!inner(title, status)')
+    .select('*, studies!inner(title, status, division)')
     .eq('workspace_id', args.workspaceId)
     .eq('enabled', true)
     .order('created_at', { ascending: false })
@@ -35,6 +41,10 @@ export async function listReels(args: { workspaceId: string; studyId?: string; l
 
   if (args.studyId) {
     query = query.eq('study_id', args.studyId);
+  }
+
+  if (args.division) {
+    query = query.eq('studies.division', args.division);
   }
 
   // Only show reels from published studies for non-editors
