@@ -1035,6 +1035,8 @@ export type Database = {
           deleting: boolean
           share_enabled: boolean
           share_token: string | null
+          /** Mobile division feed: auto | gi | wood | marine | website */
+          division: string | null
           created_at: string
           updated_at: string
         }
@@ -1053,6 +1055,7 @@ export type Database = {
           deleting?: boolean
           share_enabled?: boolean
           share_token?: string | null
+          division?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1060,6 +1063,7 @@ export type Database = {
           id?: string
           workspace_id?: string
           title?: string
+          division?: string | null
           audience?: string
           goal?: string | null
           status?: 'draft' | 'generating' | 'review' | 'published' | 'archived'

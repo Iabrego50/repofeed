@@ -1,4 +1,5 @@
-import { EXPLORE_PATH, FEED_PATH } from "@/app-paths.ts";
+import { FEED_PATH } from "@/app-paths.ts";
+import { DIVISION_HOME_PATH } from "@/lib/divisions.ts";
 import { isNativePlatform } from "@/lib/native";
 
 /**
@@ -17,7 +18,7 @@ export function isNativeAdminAccess(isAdmin: boolean | null | undefined): boolea
   return isNativePlatform() && isAdmin === true;
 }
 
-/** Home path after sign-in: Explore on native, Feed on web. */
+/** Home path after sign-in: division channels on native, Feed on web. */
 export function appHomePath(): string {
-  return isNativePlatform() ? EXPLORE_PATH : FEED_PATH;
+  return isNativePlatform() ? DIVISION_HOME_PATH : FEED_PATH;
 }

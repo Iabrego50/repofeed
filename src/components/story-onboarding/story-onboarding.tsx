@@ -4,8 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
+import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { cn } from "@/lib/utils.ts";
 import { appHomePath } from "@/lib/native-access.ts";
+import { isNativePlatform } from "@/lib/native";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import Logo from "@/components/logo.tsx";
@@ -221,6 +223,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const navigate = useNavigate();
   const { user } = useAuth();
   const { workspaces } = useWorkspace();
+  const { nativeViewerMode } = useNativeViewer();
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<StoryAnswers>(() =>
@@ -298,8 +301,13 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         navigate(destination === "demo" ? "/demo" : "/signin", { replace: true });
         return;
       }
-      const needsSetup = !workspaces || workspaces.length === 0;
-      if (destination === "setup" || needsSetup) {
+      const needsTeam = !workspaces || workspaces.length === 0;
+      // Native phone viewers redeem a short code instead of creating a workspace.
+      if (needsTeam && (nativeViewerMode || isNativePlatform())) {
+        navigate("/join", { replace: true });
+        return;
+      }
+      if (destination === "setup" || needsTeam) {
         navigate("/welcome?setup=1", { replace: true });
         return;
       }
@@ -327,7 +335,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         return;
       }
       if (!workspaces || workspaces.length === 0) {
-        navigate("/welcome?setup=1", { replace: true });
+        navigate(nativeViewerMode || isNativePlatform() ? "/join" : "/welcome?setup=1", { replace: true });
         return;
       }
       navigate(appHomePath(), { replace: true });

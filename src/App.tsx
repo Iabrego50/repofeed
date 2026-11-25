@@ -15,6 +15,7 @@ import Logo from "./components/logo.tsx";
 import { Spinner } from "./components/ui/spinner.tsx";
 import { EXPLORE_PATH, FEED_PATH, signInPath } from "./app-paths.ts";
 import { appHomePath } from "./lib/native-access.ts";
+import { DIVISION_HOME_PATH } from "./lib/divisions.ts";
 import { resolveReturnTo } from "./pages/auth/return-to.ts";
 import { isNativePlatform } from "@/lib/native";
 import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
@@ -45,6 +46,8 @@ const TermsPage = lazy(() => import("./pages/legal/terms.tsx"));
 const PrivacyPage = lazy(() => import("./pages/legal/privacy.tsx"));
 const AdminAnalyticsPage = lazy(() => import("./pages/admin/analytics.tsx"));
 const JoinPage = lazy(() => import("./pages/join/page.tsx"));
+const DivisionHomePage = lazy(() => import("./pages/home/division-home.tsx"));
+const DivisionFeedPage = lazy(() => import("./pages/home/division-feed.tsx"));
 
 function PageLoader() {
   return (
@@ -79,12 +82,12 @@ function GuestOnly({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [params] = useSearchParams();
   const raw = resolveReturnTo({ returnTo: params.get("returnTo") });
-  // On native, /feed deep-links and defaults land on Explore (merged scene feed).
+  // On native, /feed and /explore deep-links land on the division home.
   const returnTo =
-    isNativePlatform() && (raw === FEED_PATH || raw.startsWith(`${FEED_PATH}?`))
-      ? raw.replace(FEED_PATH, EXPLORE_PATH)
+    isNativePlatform() && (raw === FEED_PATH || raw.startsWith(`${FEED_PATH}?`) || raw === EXPLORE_PATH)
+      ? DIVISION_HOME_PATH
       : isNativePlatform() && raw === "/"
-        ? EXPLORE_PATH
+        ? DIVISION_HOME_PATH
         : raw;
   if (loading) return <FullScreenLoader />;
   if (user) return <Navigate to={returnTo} replace />;
@@ -108,7 +111,7 @@ function RequireWorkspace() {
 function EditorsOnly() {
   const { isEditor, loading, current } = useWorkspace();
   const { isResearcher, loading: researcherLoading } = useIsResearcher();
-  if (isNativePlatform()) return <Navigate to={EXPLORE_PATH} replace />;
+  if (isNativePlatform()) return <Navigate to={DIVISION_HOME_PATH} replace />;
   if (loading || researcherLoading || !current) return <FullScreenLoader />;
   if (!isEditor && !isResearcher) return <Navigate to={FEED_PATH} replace />;
   return <Outlet />;
@@ -125,43 +128,42 @@ function ResearchersOnly({ fallback }: { fallback: string }) {
   return <Outlet />;
 }
 
-/** Native non-admins should not create workspaces in-app. */
+/**
+ * Native non-admins should not create workspaces in-app.
+ * They may still open `/welcome` for the product story; WelcomePage sends them
+ * to `/join` afterward when they have no team.
+ */
 function WelcomeGate({ children }: { children: React.ReactNode }) {
-  const { nativeViewerMode, loading } = useNativeViewer();
+  const { loading } = useNativeViewer();
   if (isNativePlatform() && loading) return <FullScreenLoader />;
-  if (nativeViewerMode) return <Navigate to="/join" replace />;
   return <>{children}</>;
 }
 
 /**
- * On native (everyone, including admins): only Explore (scene feed) is allowed.
- * Insights, deck, Studies, Settings, Billing → Explore. Web unchanged.
+ * On native: Studies / Settings / Billing redirect to division home.
+ * Division feeds and join stay reachable.
  */
 function NativeExploreOnly() {
-  if (isNativePlatform()) return <Navigate to={EXPLORE_PATH} replace />;
+  if (isNativePlatform()) return <Navigate to={DIVISION_HOME_PATH} replace />;
   return <Outlet />;
 }
 
-/** Web keeps /feed; native sends /feed?… → /explore?… (merged home). */
+/** Web keeps /feed; native sends /feed → division home. */
 function FeedRoute() {
-  const [params] = useSearchParams();
-  if (isNativePlatform()) {
-    const q = params.toString();
-    return <Navigate to={q ? `${EXPLORE_PATH}?${q}` : EXPLORE_PATH} replace />;
-  }
+  if (isNativePlatform()) return <Navigate to={DIVISION_HOME_PATH} replace />;
   return <FeedPage />;
 }
 
 /**
  * Web: topic/search Explore library.
- * Native: the scrollable team scene feed (former /feed) — sole content surface.
+ * Native: division channel home (replaces the former merged scene feed).
  */
 function ExploreRoute() {
-  if (isNativePlatform()) return <FeedPage />;
+  if (isNativePlatform()) return <Navigate to={DIVISION_HOME_PATH} replace />;
   return <ExplorePage />;
 }
 
-/** Public demo Insights/deck: on native, only Explore remains. */
+/** Public demo Insights/deck: on native, only division home remains. */
 function NativeDemoRedirect({ to }: { to: string }) {
   if (isNativePlatform()) return <Navigate to={to} replace />;
   return <Outlet />;
@@ -187,19 +189,18 @@ function Gate() {
 }
 
 /**
- * First sign-in: send accounts that have not finished the product story to
- * `/welcome`. Native viewer-only accounts skip it (join / explore only).
- * `/welcome` and `/join` are excluded so those flows are not interrupted.
+ * First sign-in (web + iOS): send accounts that have not finished the product
+ * story to `/welcome`. `/welcome` and `/join` are excluded so those flows are
+ * not interrupted.
  */
 function StoryOnboardingGate() {
   const { user, loading } = useAuth();
-  const { nativeViewerMode, loading: viewerLoading } = useNativeViewer();
+  const { loading: viewerLoading } = useNativeViewer();
   const location = useLocation();
 
   if (loading || (isNativePlatform() && viewerLoading)) return <FullScreenLoader />;
   if (
     user &&
-    !nativeViewerMode &&
     !hasCompletedStoryOnboarding(user) &&
     location.pathname !== "/welcome" &&
     location.pathname !== "/join"
@@ -248,7 +249,7 @@ export default function App() {
               <Route path="/for/:slug" element={<Landing />} />
               <Route path="/demo" element={<DemoPage />} />
               <Route element={<ResearchersOnly fallback="/demo" />}>
-                <Route element={<NativeDemoRedirect to="/demo/explore" />}>
+                <Route element={<NativeDemoRedirect to={DIVISION_HOME_PATH} />}>
                   <Route path="/demo/insights" element={<DemoInsightsPage />} />
                   <Route path="/demo/deck" element={<DemoDeckPage />} />
                 </Route>
@@ -275,6 +276,27 @@ export default function App() {
                     <Route element={<EditorsOnly />}>
                       <Route path="/insights/deck" element={<DeckPage />} />
                     </Route>
+                    {/* Native division shell — no AppLayout chrome */}
+                    <Route
+                      path="/home"
+                      element={
+                        <div className="h-dvh overflow-hidden">
+                          <Suspense fallback={<FullScreenLoader />}>
+                            <DivisionHomePage />
+                          </Suspense>
+                        </div>
+                      }
+                    />
+                    <Route
+                      path="/d/:division"
+                      element={
+                        <div className="h-dvh overflow-hidden">
+                          <Suspense fallback={<FullScreenLoader />}>
+                            <DivisionFeedPage />
+                          </Suspense>
+                        </div>
+                      }
+                    />
                     <Route element={<AppLayout />}>
                       <Route element={<ShellOutlet />}>
                         <Route path="/feed" element={<FeedRoute />} />

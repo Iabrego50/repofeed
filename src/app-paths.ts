@@ -33,6 +33,8 @@ export const PUBLIC_APP_PATHS = [
 export const PROTECTED_APP_PATHS = [
   "/feed",
   "/dashboard",
+  "/home",
+  "/d/auto",
   "/studies",
   "/studies/new",
   "/studies/test-study-id",

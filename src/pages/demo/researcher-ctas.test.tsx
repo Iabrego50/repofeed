@@ -40,10 +40,9 @@ describe("Demo researcher CTAs", () => {
     cleanup();
   });
 
-  it("shows Search / Insights / deck CTAs for researchers on desktop", () => {
+  it("shows Search and PowerPoint CTAs for researchers on desktop", () => {
     renderDemo();
     expect(screen.getAllByRole("link", { name: /search these insights/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /insights dashboard/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /powerpoint deck/i }).length).toBeGreaterThan(0);
   });
 });

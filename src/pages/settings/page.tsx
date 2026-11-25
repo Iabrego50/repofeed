@@ -66,7 +66,9 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
       <h2 className="text-xl font-bold">Invite people</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Anyone with the link can join until it expires or runs out of uses.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Anyone with the link can join until it expires or runs out of uses. For the iOS app, prefer the short join code below.
+      </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
         <div className="space-y-2">
           <Label htmlFor="invite-role">Role</Label>

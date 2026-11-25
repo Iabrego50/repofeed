@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Trash2, TrendingUp } from "lucide-react";
+import { KeyRound, LogOut, Trash2, TrendingUp } from "lucide-react";
 import { useAuth, useUser } from "@/hooks/use-auth.ts";
 import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import UserAvatar from "@/components/user-avatar.tsx";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog.tsx";
 
 /**
- * Native shell account menu: sign out + delete account for everyone.
+ * Native shell account menu: change short code, sign out, delete account.
  * Admins also get Analytics (server-gated). No Insights/deck/Settings.
  */
 export default function NativeViewerAccountMenu() {
@@ -38,7 +38,7 @@ export default function NativeViewerAccountMenu() {
         <DropdownMenuTrigger
           data-testid="native-account-menu"
           aria-label="Account menu"
-          className="ml-auto grid size-10 shrink-0 cursor-pointer place-items-center rounded-md hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+          className="ml-auto grid size-10 shrink-0 cursor-pointer place-items-center rounded-md hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-ring"
         >
           <UserAvatar name={user.name ?? user.email} src={user.avatar} />
         </DropdownMenuTrigger>
@@ -47,6 +47,13 @@ export default function NativeViewerAccountMenu() {
             {user.email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => navigate("/join?switch=1")}
+            className="cursor-pointer"
+            data-testid="native-switch-code"
+          >
+            <KeyRound className="size-4" /> Enter a different code
+          </DropdownMenuItem>
           {nativeAdminAccess && (
             <DropdownMenuItem
               onSelect={() => navigate("/admin/analytics")}
