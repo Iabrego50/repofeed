@@ -5,11 +5,6 @@ import type { FeedReel } from "@/pages/feed/_lib/types.ts";
 import { DeckSelectionProvider, useRequiredDeckSelection } from "../_lib/deck-selection.ts";
 import GeneratePptButton from "./generate-ppt-button.tsx";
 
-const toastMessage = vi.fn();
-vi.mock("sonner", () => ({
-  toast: { message: (...args: unknown[]) => toastMessage(...args) },
-}));
-
 const reels: FeedReel[] = [
   {
     _id: "r1",
@@ -69,25 +64,15 @@ function Seed({ ids }: { ids: string[] }) {
 }
 
 describe("GeneratePptButton", () => {
-  afterEach(() => {
-    cleanup();
-    toastMessage.mockReset();
-  });
+  afterEach(() => cleanup());
 
-  it("hints when nothing is selected", async () => {
-    const user = userEvent.setup();
-    const onPreview = vi.fn();
-    render(
+  it("renders nothing when nothing is selected", () => {
+    const { container } = render(
       <DeckSelectionProvider>
-        <GeneratePptButton studyTitle="Checkout" reels={reels} onPreview={onPreview} />
+        <GeneratePptButton studyTitle="Checkout" reels={reels} onPreview={vi.fn()} />
       </DeckSelectionProvider>,
     );
-
-    await user.click(screen.getByRole("button", { name: /^generate powerpoint$/i }));
-    expect(toastMessage).toHaveBeenCalledWith(
-      "Tap Add to PPT on insights you want, then generate.",
-    );
-    expect(onPreview).not.toHaveBeenCalled();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("builds a deck from selected insights in feed order", async () => {
@@ -100,6 +85,7 @@ describe("GeneratePptButton", () => {
       </DeckSelectionProvider>,
     );
 
+    expect(screen.queryByRole("button", { name: /generate powerpoint/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "seed" }));
     expect(screen.getByRole("button", { name: /generate powerpoint \(2\)/i })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /generate powerpoint \(2\)/i }));
@@ -107,7 +93,6 @@ describe("GeneratePptButton", () => {
     expect(onPreview).toHaveBeenCalledTimes(1);
     const deck = onPreview.mock.calls[0][0];
     expect(deck.scopeLabel).toMatch(/checkout/i);
-    // Feed order: r1 before r2, even though r2 was toggled first.
     expect(deck.reels.map((r: { id: string }) => r.id)).toEqual(["r1", "r2"]);
   });
 });

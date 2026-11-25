@@ -145,8 +145,8 @@ describe("ReelFeed panels", () => {
     expect(screen.getByRole("button", { name: /^post$/i })).toBeInTheDocument();
     expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
-    // Reactions are allowed for guests; save/export are not.
-    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^like$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /heard this before/i })).toBeInTheDocument();
 
     expect(bag.shareComments).toHaveBeenCalledWith({
       token: "live-token",
@@ -155,7 +155,7 @@ describe("ReelFeed panels", () => {
     expect(bag.getComments).not.toHaveBeenCalled();
   });
 
-  it("member mode keeps the composer and can open export dialog wiring", async () => {
+  it("member mode keeps the composer and the four stream actions", async () => {
     renderFeed("member");
 
     const panel = await screen.findByRole("tablist", { name: /scene details/i });
@@ -165,8 +165,9 @@ describe("ReelFeed panels", () => {
       await screen.findByPlaceholderText(/ask a question or leave a note/i),
     ).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: /comment type/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^like$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /heard this before/i })).toBeInTheDocument();
     expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument();
 
     expect(bag.getComments).toHaveBeenCalledWith({ reelId: "r1" });

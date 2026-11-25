@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { FeedModeContext, type FeedMode } from "../_lib/feed-mode";
 import type { FeedReel } from "../_lib/types";
+import { DeckSelectionProvider } from "@/pages/share/_lib/deck-selection.ts";
 import FeedSlide from "./feed-slide";
 
 vi.mock("@/components/reel/reel-canvas.tsx", () => ({
@@ -62,45 +63,39 @@ function renderSlide(mode: "member" | "share") {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <FeedModeContext.Provider value={value}>
-          <div className="h-[600px]">
-            <FeedSlide
-              reel={reel}
-              active
-              onEnded={() => undefined}
-              onOpenPanel={() => undefined}
-              onExport={() => undefined}
-            />
-          </div>
+          <DeckSelectionProvider>
+            <div className="h-[600px]">
+              <FeedSlide
+                reel={reel}
+                active
+                onEnded={() => undefined}
+                onOpenPanel={() => undefined}
+                onExport={() => undefined}
+              />
+            </div>
+          </DeckSelectionProvider>
         </FeedModeContext.Provider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe("FeedSlide access", () => {
-  it("share links: discussion/evidence + reactions — no save, topics, or study meta", () => {
-    renderSlide("share");
-    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/more about checkout/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("#checkout")).not.toBeInTheDocument();
-    expect(screen.getByRole("group", { name: /your reaction/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
-    expect(screen.getByText("Cart drop-off")).toBeInTheDocument();
-    expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/pause scene|play scene/i)).toBeInTheDocument();
-  });
-
-  it("members: Save + reactions — no topic tags or study meta", () => {
-    renderSlide("member");
-    expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/more about checkout/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("#checkout")).not.toBeInTheDocument();
-    expect(screen.getByText("Cart drop-off")).toBeInTheDocument();
-    expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
+describe("FeedSlide stream actions", () => {
+  it("share and member slides only expose the four stream actions", () => {
+    for (const mode of ["share", "member"] as const) {
+      const { unmount } = renderSlide(mode);
+      expect(screen.getByRole("button", { name: /add to ppt/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^like$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /open comments/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /heard this before/i })).toBeInTheDocument();
+      expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/copy link/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/rings true/i)).not.toBeInTheDocument();
+      expect(screen.queryByText("#checkout")).not.toBeInTheDocument();
+      expect(screen.getByText("Cart drop-off")).toBeInTheDocument();
+      expect(screen.queryByText("Checkout study")).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });

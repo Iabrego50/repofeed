@@ -5,30 +5,36 @@ import SceneActions from "./scene-actions";
 const noop = () => undefined;
 
 describe("SceneActions", () => {
-  it("hides Save when omitted; React is optional for share guests", () => {
+  it("only exposes Like, Comment, and Heard this before", () => {
     render(
       <SceneActions
-        onHeart={noop}
+        onLike={noop}
         onComment={noop}
-        onEvidence={noop}
+        onHeardBefore={noop}
       />,
     );
-    expect(screen.getByLabelText(/react/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^like$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open comments/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /heard this before/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/copy link/i)).not.toBeInTheDocument();
   });
 
-  it("shows Save and React for signed-in members", () => {
+  it("reflects pressed state for Like and Heard this before", () => {
     render(
       <SceneActions
-        onHeart={noop}
+        liked
+        heardBefore
+        onLike={vi.fn()}
         onComment={noop}
-        onEvidence={noop}
-        onSave={vi.fn()}
+        onHeardBefore={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText(/react/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/save scene/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^unlike$/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /remove heard this before/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 });

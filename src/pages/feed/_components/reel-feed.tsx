@@ -215,7 +215,7 @@ export default function ReelFeed({
           ) : (
             <div className="min-h-0 flex-1" />
           )}
-          {asideFooter && <div className="shrink-0 border-t border-border p-4">{asideFooter}</div>}
+          {asideFooter}
         </aside>
       )}
 

@@ -1,5 +1,4 @@
 import { Presentation } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button.tsx";
 import { cn } from "@/lib/utils.ts";
 import type { FeedReel } from "@/pages/feed/_lib/types.ts";
@@ -7,7 +6,10 @@ import type { Deck } from "@/pages/insights/deck/_lib/deck.ts";
 import { buildShareDeck } from "../_lib/build-share-deck.ts";
 import { useRequiredDeckSelection } from "../_lib/deck-selection.ts";
 
-/** Builds a readout deck from insights the viewer added with Add to PPT. */
+/**
+ * Builds a readout deck from insights added with Add to PPT.
+ * Hidden until at least one insight is selected (keeps the stream clean).
+ */
 export default function GeneratePptButton({
   studyTitle,
   reels,
@@ -19,16 +21,12 @@ export default function GeneratePptButton({
   reels: FeedReel[];
   onPreview: (deck: Deck) => void;
   className?: string;
-  variant?: "default" | "overlay";
+  variant?: "default" | "overlay" | "aside";
 }) {
   const { selected, count } = useRequiredDeckSelection();
+  if (count === 0) return null;
 
   const generate = () => {
-    if (count === 0) {
-      toast.message("Tap Add to PPT on insights you want, then generate.");
-      return;
-    }
-    // Keep feed order so the deck follows the study, not click order.
     const picked = reels.filter((r) => selected.has(r._id));
     onPreview(
       buildShareDeck({
@@ -43,7 +41,7 @@ export default function GeneratePptButton({
     );
   };
 
-  const label = count > 0 ? `Generate PowerPoint (${count})` : "Generate PowerPoint";
+  const label = `Generate PowerPoint (${count})`;
 
   if (variant === "overlay") {
     return (
@@ -53,7 +51,6 @@ export default function GeneratePptButton({
         aria-label={label}
         className={cn(
           "flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-black/55 px-4 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-black/70 focus-visible:outline-2 focus-visible:outline-white",
-          count === 0 && "opacity-80",
           className,
         )}
       >
@@ -63,16 +60,22 @@ export default function GeneratePptButton({
     );
   }
 
-  return (
+  const button = (
     <Button
       type="button"
       className={cn("h-11 w-full font-semibold", className)}
       onClick={generate}
       aria-label={label}
-      variant={count === 0 ? "secondary" : "default"}
     >
       <Presentation className="size-4" />
       {label}
     </Button>
   );
+
+  // Aside includes its own border so ReelFeed/demo don't leave an empty strip at N=0.
+  if (variant === "aside") {
+    return <div className="shrink-0 border-t border-border p-4">{button}</div>;
+  }
+
+  return button;
 }
