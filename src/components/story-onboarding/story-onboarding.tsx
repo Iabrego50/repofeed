@@ -269,15 +269,17 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const { nativeViewerMode } = useNativeViewer();
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<StoryAnswers>(() =>
-    user
-      ? {
-          ...emptyStoryAnswers(),
-          ...readStoryAnswers(user),
-          channelName: readStoryAnswers(user).channelName || suggestChannelName(user.email),
-        }
-      : emptyStoryAnswers(),
-  );
+  const [answers, setAnswers] = useState<StoryAnswers>(() => {
+    if (user) {
+      const existing = readStoryAnswers(user);
+      return {
+        ...emptyStoryAnswers(),
+        ...existing,
+        channelName: existing.channelName || suggestChannelName(user.email),
+      };
+    }
+    return { ...emptyStoryAnswers(), channelName: suggestChannelName(null) };
+  });
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
