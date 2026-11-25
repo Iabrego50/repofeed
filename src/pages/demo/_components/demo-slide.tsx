@@ -12,32 +12,26 @@ type Props = {
   mounted: boolean;
   active: boolean;
   onEnded: () => void;
-  hearted: boolean;
-  hearts: number;
-  saved: boolean;
+  liked: boolean;
+  heardBefore: boolean;
   commentCount: number;
-  onHeart: () => void;
-  onSave: () => void;
+  onLike: () => void;
+  onHeardBefore: () => void;
   onOpenPanel: (tab: PanelTab) => void;
-  showHints?: boolean;
-  onDismissHints?: () => void;
 };
 
-/** One full-height demo scene — same phone-frame chrome as the researcher FeedSlide. */
+/** Demo scene — same four stream actions as the researcher feed. */
 export default function DemoSlide({
   reel,
   mounted,
   active,
   onEnded,
-  hearted,
-  hearts,
-  saved,
+  liked,
+  heardBefore,
   commentCount,
-  onHeart,
-  onSave,
+  onLike,
+  onHeardBefore,
   onOpenPanel,
-  showHints,
-  onDismissHints,
 }: Props) {
   const [paused, setPaused] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -81,26 +75,14 @@ export default function DemoSlide({
               <AddToPptButton reelId={reel.id} />
             </div>
           </div>
-          <div className="pointer-events-auto shrink-0">
+          <div className="pointer-events-auto">
             <SceneActions
-              hearted={hearted}
-              hearts={hearts}
-              onHeart={onHeart}
+              liked={liked}
+              onLike={onLike}
               commentCount={commentCount}
               onComment={() => onOpenPanel("discussion")}
-              saved={saved}
-              onSave={onSave}
-              onEvidence={() => onOpenPanel("evidence")}
-              hints={
-                showHints
-                  ? {
-                      react: "React if this rings true",
-                      comment: "Ask a question",
-                      evidence: "See the evidence",
-                    }
-                  : undefined
-              }
-              onDismissHints={showHints ? onDismissHints : undefined}
+              heardBefore={heardBefore}
+              onHeardBefore={onHeardBefore}
             />
           </div>
         </div>

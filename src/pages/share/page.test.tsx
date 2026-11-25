@@ -136,10 +136,11 @@ describe("Share page", () => {
     expect(screen.queryByText(/made with repofeed/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/open comments/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/open sources/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^like$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /heard this before/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /add to ppt/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^generate powerpoint$/i })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/make a powerpoint from these insights/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /generate powerpoint/i })).not.toBeInTheDocument();
     expect(
       await screen.findByPlaceholderText(/ask a question or leave a note/i),
     ).toBeInTheDocument();
