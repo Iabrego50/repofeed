@@ -103,16 +103,24 @@ export default function SharePage() {
     );
   }
 
-  const generateBtn = canExport ? (
+  // Leave-feed control only; Generate appears when N > 0 (button returns null otherwise).
+  const generateOverlay = canExport ? (
     <GeneratePptButton
       studyTitle={studyTitle}
       reels={reels}
       onPreview={setPreviewDeck}
-      variant={isDesktop ? "default" : "overlay"}
+      variant="overlay"
+    />
+  ) : null;
+  const generateAside = canExport ? (
+    <GeneratePptButton
+      studyTitle={studyTitle}
+      reels={reels}
+      onPreview={setPreviewDeck}
+      variant="aside"
     />
   ) : null;
 
-  // Match researcher /feed toolbar chrome (full-width gradient, no phone-width clamp).
   const header = (
     <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3">
       <Link
@@ -123,7 +131,7 @@ export default function SharePage() {
         <Logo withText={false} />
       </Link>
       <div className="flex-1" />
-      {!isDesktop && generateBtn}
+      {!isDesktop && generateOverlay}
     </div>
   );
 
@@ -135,7 +143,7 @@ export default function SharePage() {
             reels={data?.reels}
             deepLink={params.get("reel")}
             toolbar={header}
-            asideFooter={isDesktop ? generateBtn : undefined}
+            asideFooter={isDesktop ? generateAside : undefined}
             empty={
               <Empty>
                 <EmptyHeader>

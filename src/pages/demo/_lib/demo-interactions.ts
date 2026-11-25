@@ -11,6 +11,7 @@ export const HINT_STORAGE_KEY = "repofeed.demo.interactHints";
 export type DemoSceneState = {
   hearted: boolean;
   hearts: number;
+  heardBefore: boolean;
   saved: boolean;
   comments: Comment[];
 };
@@ -72,6 +73,7 @@ export function initialInteractionState(
     state[reel.id] = {
       hearted: false,
       hearts: DEMO_SEED_HEARTS[i] ?? 0,
+      heardBefore: false,
       saved: false,
       comments: (DEMO_SEEDED_COMMENTS[reel.id] ?? []).map((c) => ({ ...c })),
     };
@@ -91,7 +93,24 @@ export function toggleHeart(
     [reelId]: {
       ...scene,
       hearted,
+      heardBefore: false,
       hearts: Math.max(0, scene.hearts + (hearted ? 1 : -1)),
+    },
+  };
+}
+
+export function toggleHeardBefore(
+  state: DemoInteractionState,
+  reelId: string,
+): DemoInteractionState {
+  const scene = state[reelId];
+  if (!scene) return state;
+  return {
+    ...state,
+    [reelId]: {
+      ...scene,
+      heardBefore: !scene.heardBefore,
+      hearted: false,
     },
   };
 }

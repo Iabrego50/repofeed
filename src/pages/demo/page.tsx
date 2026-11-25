@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, ArrowLeft, BarChart3, Compass, RotateCcw, X, Presentation } from "lucide-react";
+import { ArrowLeft, BarChart3, Compass, RotateCcw, Presentation } from "lucide-react";
 import Logo from "@/components/logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { SignInButton } from "@/components/ui/signin.tsx";
@@ -14,11 +14,9 @@ import {
   buildDemoReels,
   initialInteractionState,
   isTypingTarget,
-  persistHintsDismissed,
-  readHintsDismissed,
   toFeedReel,
+  toggleHeardBefore,
   toggleHeart,
-  toggleSave,
   type DemoInteractionState,
 } from "./_lib/demo-interactions.ts";
 import { track } from "@/lib/analytics";
@@ -34,7 +32,7 @@ import { SAMPLE_STUDY } from "./_lib/sample.ts";
 
 const REELS = buildDemoReels();
 
-/** Public sample feed so visitors can try reacting, commenting and checking evidence before signing up. */
+/** Public sample feed — same four stream actions as the researcher feed. */
 export default function DemoPage() {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const { activeIdx, scrollTo, scrollingRef, activeRef, setActiveIdx } = useSnapFeedIndex(
@@ -46,10 +44,6 @@ export default function DemoPage() {
   );
   const [panel, setPanel] = useState<PanelTab | null>(null);
   const [desktopTab, setDesktopTab] = useState<PanelTab>("discussion");
-  const [hintsOpen, setHintsOpen] = useState(() => !readHintsDismissed());
-  const [hintsReady, setHintsReady] = useState(false);
-  const [posted, setPosted] = useState(false);
-  const [nudgeOpen, setNudgeOpen] = useState(true);
   const [previewDeck, setPreviewDeck] = useState<Deck | null>(null);
   const isDesktop = useIsDesktop();
   const { isResearcher } = useIsResearcher();
@@ -64,6 +58,7 @@ export default function DemoPage() {
           interactions[r.id] ?? {
             hearted: false,
             hearts: 0,
+            heardBefore: false,
             saved: false,
             comments: [],
           },
@@ -98,12 +93,6 @@ export default function DemoPage() {
   }, [active?.id, activeIdx, onEnd, active]);
 
   useEffect(() => {
-    if (!hintsOpen) return;
-    const t = window.setTimeout(() => setHintsReady(true), 800);
-    return () => window.clearTimeout(t);
-  }, [hintsOpen]);
-
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
       if (document.querySelector("[role=dialog]")) return;
@@ -119,24 +108,12 @@ export default function DemoPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [scrollTo, activeRef]);
 
-  const dismissHints = useCallback(() => {
-    setHintsOpen(false);
-    persistHintsDismissed();
-  }, []);
-
   const openPanel = useCallback(
     (tab: PanelTab) => {
-      dismissHints();
-      if (tab === "evidence") {
-        track("evidence_open", {
-          demo: true,
-          reelId: REELS[Math.min(activeIdx, REELS.length - 1)]?.id,
-        });
-      }
       if (isDesktop) setDesktopTab(tab);
       else setPanel(tab);
     },
-    [dismissHints, isDesktop, activeIdx],
+    [isDesktop],
   );
 
   const addComment = useCallback(
@@ -148,8 +125,6 @@ export default function DemoPage() {
     }) => {
       setInteractions((s) => addLocalComment(s, args.reelId, args));
       track("comment", { demo: true, reelId: args.reelId, kind: args.kind });
-      setPosted(true);
-      setNudgeOpen(true);
     },
     [],
   );
@@ -159,7 +134,6 @@ export default function DemoPage() {
     [active, activeScene],
   );
 
-  const showHints = hintsOpen && hintsReady && activeIdx === 0 && !onEnd;
   const panelProps =
     feedReel && activeScene
       ? {
@@ -167,10 +141,6 @@ export default function DemoPage() {
           comments: activeScene.comments,
           onAddComment: addComment,
           findings: active.findings,
-          discussionFooter:
-            posted && nudgeOpen ? (
-              <WorkspaceNudge onDismiss={() => setNudgeOpen(false)} />
-            ) : undefined,
         }
       : null;
 
@@ -186,215 +156,132 @@ export default function DemoPage() {
     );
   }
 
-  const generateBtn = (
+  const generateOverlay = (
     <GeneratePptButton
       studyTitle={SAMPLE_STUDY.title}
       reels={pickerReels}
       onPreview={setPreviewDeck}
-      variant={isDesktop ? "default" : "overlay"}
+      variant="overlay"
+    />
+  );
+  const generateAside = (
+    <GeneratePptButton
+      studyTitle={SAMPLE_STUDY.title}
+      reels={pickerReels}
+      onPreview={setPreviewDeck}
+      variant="aside"
     />
   );
 
   return (
     <DeckSelectionProvider>
-    <div className="dark flex h-dvh bg-background">
-      <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
-        <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3">
-          <Link
-            to="/"
-            aria-label="Back to repofeed.ai"
-            className="flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            <ArrowLeft className="size-3.5 shrink-0" />
-            <Logo withText={false} />
-            <span className="truncate">Demo</span>
-          </Link>
-          <div className="ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto scrollbar-none sm:gap-2">
-            {isResearcher && (
-              <Link
-                to="/demo/explore"
-                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white lg:hidden"
-              >
-                <Compass className="size-3.5" /> Explore
-              </Link>
-            )}
-            {isResearcher && !isNativePlatform() && (
-              <Link
-                to="/demo/insights"
-                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white lg:hidden"
-              >
-                <BarChart3 className="size-3.5" /> Insights
-              </Link>
-            )}
-            {!isDesktop && generateBtn}
-            <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur">
-              {onEnd ? "Done" : `${activeIdx + 1} / ${REELS.length}`}
-            </span>
-          </div>
-        </div>
-        <div
-          ref={scrollerRef}
-          className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain scrollbar-none touch-pan-y"
-          aria-label="Demo scene feed. Use arrow keys or J and K to move."
-        >
-          {REELS.map((r, i) => {
-            const scene = interactions[r.id];
-            return (
-              <div key={r.key} className="h-full w-full snap-start">
-                <DemoSlide
-                  reel={r}
-                  mounted={Math.abs(i - activeIdx) <= 2}
-                  active={i === activeIdx}
-                  onEnded={() => {
-                    if (scrollingRef.current || activeRef.current !== i) return;
-                    scrollTo(i + 1);
-                  }}
-                  hearted={scene?.hearted ?? false}
-                  hearts={scene?.hearts ?? 0}
-                  saved={scene?.saved ?? false}
-                  commentCount={scene?.comments.length ?? 0}
-                  onHeart={() => {
-                    setInteractions((s) => toggleHeart(s, r.id));
-                    track("heart", { demo: true, reelId: r.id });
-                  }}
-                  onSave={() => {
-                    setInteractions((s) => toggleSave(s, r.id));
-                    track("save", { demo: true, reelId: r.id });
-                  }}
-                  onOpenPanel={openPanel}
-                  showHints={showHints && i === 0}
-                  onDismissHints={dismissHints}
-                />
-              </div>
-            );
-          })}
-          <EndCard onRestart={() => scrollTo(0)} showResearcherCtas={isResearcher} />
-        </div>
-        {activeIdx === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.4, ease: "easeOut" }}
-            className="pointer-events-none absolute bottom-6 left-4 z-20 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur"
-          >
-            <ArrowDown className="size-3.5" /> Scroll for the next scene
-          </motion.div>
-        )}
-      </div>
-
-      {isDesktop && (
-        <aside className="hidden w-[380px] shrink-0 flex-col border-l border-border lg:flex">
-          {panelProps ? (
-            <ReelPanel
-              {...panelProps}
-              tab={desktopTab}
-              onTab={setDesktopTab}
-              className="min-h-0 flex-1"
-            />
-          ) : (
-            <div className="min-h-0 flex-1" />
-          )}
-          <div className="space-y-2 border-t border-border p-4">
-            {generateBtn}
-            {isResearcher && (
-              <Button
-                asChild
-                variant="secondary"
-                size="sm"
-                className="h-10 w-full font-semibold"
-              >
-                <Link to="/demo/explore">
-                  <Compass className="size-4" /> Search these insights
-                </Link>
-              </Button>
-            )}
-            {isResearcher && !isNativePlatform() && (
-              <Button
-                asChild
-                variant="secondary"
-                size="sm"
-                className="h-10 w-full font-semibold"
-              >
-                <Link to="/demo/insights">
-                  <BarChart3 className="size-4" /> See the Insights dashboard
-                </Link>
-              </Button>
-            )}
-            <SignInButton
-              size="sm"
-              className="h-10 w-full font-semibold"
-              signInText="Make your own, free"
-            />
-          </div>
-        </aside>
-      )}
-
-      <AnimatePresence>
-        {!isDesktop && panel && panelProps && (
-          <>
-            <motion.div
-              key="scrim"
-              className="fixed inset-0 z-50 bg-black/60"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setPanel(null)}
-            />
-            <motion.div
-              key="sheet"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Scene discussion and evidence"
-              className="fixed inset-x-0 bottom-0 z-50 flex h-[78dvh] flex-col overflow-hidden rounded-t-3xl border-t border-border"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 32, stiffness: 340 }}
+      <div className="dark flex h-dvh bg-background">
+        <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
+          <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3">
+            <Link
+              to="/"
+              aria-label="Back to repofeed.ai"
+              className="flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
             >
-              <span
-                aria-hidden
-                className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border"
-              />
+              <ArrowLeft className="size-3.5 shrink-0" />
+              <Logo withText={false} />
+              <span className="truncate">Demo</span>
+            </Link>
+            <div className="ml-auto">{!isDesktop && generateOverlay}</div>
+          </div>
+          <div
+            ref={scrollerRef}
+            className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain scrollbar-none touch-pan-y"
+            aria-label="Demo scene feed. Use arrow keys or J and K to move."
+          >
+            {REELS.map((r, i) => {
+              const scene = interactions[r.id];
+              return (
+                <div key={r.key} className="h-full w-full snap-start">
+                  <DemoSlide
+                    reel={r}
+                    mounted={Math.abs(i - activeIdx) <= 2}
+                    active={i === activeIdx}
+                    onEnded={() => {
+                      if (scrollingRef.current || activeRef.current !== i) return;
+                      scrollTo(i + 1);
+                    }}
+                    liked={scene?.hearted ?? false}
+                    heardBefore={scene?.heardBefore ?? false}
+                    commentCount={scene?.comments.length ?? 0}
+                    onLike={() => {
+                      setInteractions((s) => toggleHeart(s, r.id));
+                      track("heart", { demo: true, reelId: r.id, kind: "true" });
+                    }}
+                    onHeardBefore={() => {
+                      setInteractions((s) => toggleHeardBefore(s, r.id));
+                      track("heart", { demo: true, reelId: r.id, kind: "surprised" });
+                    }}
+                    onOpenPanel={openPanel}
+                  />
+                </div>
+              );
+            })}
+            <EndCard onRestart={() => scrollTo(0)} showResearcherCtas={isResearcher} />
+          </div>
+        </div>
+
+        {isDesktop && (
+          <aside className="hidden w-[380px] shrink-0 flex-col border-l border-border lg:flex">
+            {panelProps ? (
               <ReelPanel
                 {...panelProps}
-                tab={panel}
-                onTab={setPanel}
-                onClose={() => setPanel(null)}
+                tab={desktopTab}
+                onTab={setDesktopTab}
                 className="min-h-0 flex-1"
               />
-            </motion.div>
-          </>
+            ) : (
+              <div className="min-h-0 flex-1" />
+            )}
+            {generateAside}
+          </aside>
         )}
-      </AnimatePresence>
 
-    </div>
-    </DeckSelectionProvider>
-  );
-}
-
-function WorkspaceNudge({ onDismiss }: { onDismiss: () => void }) {
-  return (
-    <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium">
-          In your workspace, your team sees this.
-        </p>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground hover:bg-accent"
-          aria-label="Dismiss"
-        >
-          <X className="size-4" />
-        </button>
+        <AnimatePresence>
+          {!isDesktop && panel && panelProps && (
+            <>
+              <motion.div
+                key="scrim"
+                className="fixed inset-0 z-50 bg-black/60"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setPanel(null)}
+              />
+              <motion.div
+                key="sheet"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Scene discussion"
+                className="fixed inset-x-0 bottom-0 z-50 flex h-[78dvh] flex-col overflow-hidden rounded-t-3xl border-t border-border"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 32, stiffness: 340 }}
+              >
+                <span
+                  aria-hidden
+                  className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border"
+                />
+                <ReelPanel
+                  {...panelProps}
+                  tab={panel}
+                  onTab={setPanel}
+                  onClose={() => setPanel(null)}
+                  className="min-h-0 flex-1"
+                />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
-      <SignInButton
-        size="sm"
-        className="mt-3 h-9 font-semibold"
-        signInText="Make your own, free"
-      />
-    </div>
+    </DeckSelectionProvider>
   );
 }
 

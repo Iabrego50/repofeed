@@ -10,7 +10,6 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DemoPage from "./page.tsx";
-import { HINT_STORAGE_KEY } from "./_lib/demo-interactions.ts";
 
 vi.mock("@/components/reel/reel-canvas.tsx", () => ({
   default: ({ reel }: { reel: { title: string } }) => <div>{reel.title}</div>,
@@ -65,35 +64,39 @@ describe("Demo feed interactions", () => {
     cleanup();
   });
 
-  it("hearts and saves a scene locally without showing count chrome", async () => {
+  it("exposes only Add to PPT, Like, Comment, and Heard this before on the stream", () => {
+    renderDemo();
+    expect(screen.getAllByRole("button", { name: /add to ppt/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /^like$/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /open comments/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /heard this before/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/open sources/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /generate powerpoint/i })).not.toBeInTheDocument();
+  });
+
+  it("likes and marks heard this before locally", async () => {
     const user = userEvent.setup();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     renderDemo();
 
-    const react = screen.getAllByRole("button", { name: /^react$/i })[0];
-    expect(react).not.toHaveTextContent(/\d/);
-    await user.click(react);
-    expect(react).toHaveAttribute("aria-pressed", "true");
-    expect(react).not.toHaveTextContent(/\d/);
-    await user.click(screen.getByRole("button", { name: /remove reaction/i }));
-    expect(react).toHaveAttribute("aria-pressed", "false");
+    const like = screen.getAllByRole("button", { name: /^like$/i })[0];
+    await user.click(like);
+    expect(like).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: /^unlike$/i }));
+    expect(screen.getAllByRole("button", { name: /^like$/i })[0]).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
 
-    const save = screen.getAllByRole("button", { name: /save scene/i })[0];
-    await user.click(save);
-    expect(save).toHaveAttribute("aria-pressed", "true");
-    expect(save).toHaveAccessibleName(/remove from saved/i);
+    const heard = screen.getAllByRole("button", { name: /heard this before/i })[0];
+    await user.click(heard);
+    expect(heard).toHaveAttribute("aria-pressed", "true");
 
     const productCalls = fetchSpy.mock.calls.filter(
       ([url]) => !String(url).includes("/analytics_events"),
     );
     expect(productCalls).toEqual([]);
-    expect(
-      fetchSpy.mock.calls.some(
-        ([url, init]) =>
-          String(url).includes("/analytics_events") &&
-          String((init as { body?: string })?.body).includes('"event":"heart"'),
-      ),
-    ).toBe(true);
     fetchSpy.mockRestore();
   });
 
@@ -105,14 +108,10 @@ describe("Demo feed interactions", () => {
       screen.getAllByRole("button", { name: /open comments/i })[0],
     );
     const sheet = await screen.findByRole("dialog", {
-      name: /scene discussion and evidence/i,
+      name: /scene discussion/i,
     });
     expect(within(sheet).getByText(/too much food/i)).toBeInTheDocument();
     expect(within(sheet).getByText("Maya Chen")).toBeInTheDocument();
-    expect(
-      within(sheet).getByText(/price is still the top reason/i),
-    ).toBeInTheDocument();
-    expect(within(sheet).getByText(/3-night SKU/i)).toBeInTheDocument();
 
     await user.type(
       within(sheet).getByPlaceholderText(/ask a question or leave a note/i),
@@ -124,33 +123,6 @@ describe("Demo feed interactions", () => {
       within(sheet).getByText("Can we try a 3-night plan?"),
     ).toBeInTheDocument();
     expect(within(sheet).getByText("You")).toBeInTheDocument();
-    expect(
-      within(sheet).getByText(/in your workspace, your team sees this/i),
-    ).toBeInTheDocument();
-    expect(
-      within(sheet).getByRole("link", { name: /make your own, free/i }),
-    ).toHaveAttribute("href", "/signin");
-  });
-
-  it("shows the scene's findings and source files in evidence", async () => {
-    const user = userEvent.setup();
-    renderDemo();
-
-    await user.click(
-      screen.getAllByRole("button", { name: /open sources/i })[0],
-    );
-    const sheet = await screen.findByRole("dialog", {
-      name: /scene discussion and evidence/i,
-    });
-    expect(
-      within(sheet).getByRole("tab", { name: /evidence/i }),
-    ).toHaveAttribute("aria-selected", "true");
-    expect(within(sheet).getByText("29%")).toBeInTheDocument();
-    expect(within(sheet).getByText("Source files")).toBeInTheDocument();
-    expect(
-      within(sheet).getByText("supperly-churn-survey.csv"),
-    ).toBeInTheDocument();
-    expect(within(sheet).getByText("On-screen script")).toBeInTheDocument();
   });
 
   it("does not change scenes while typing in the comment box", async () => {
@@ -158,7 +130,6 @@ describe("Demo feed interactions", () => {
     mockDesktop();
     renderDemo();
 
-    expect(screen.getByText("1 / 10")).toBeInTheDocument();
     expect(screen.getByText("Maya Chen")).toBeInTheDocument();
 
     const scroller = screen.getByLabelText(/demo scene feed/i);
@@ -185,14 +156,13 @@ describe("Demo feed interactions", () => {
     await user.keyboard("{ArrowDown}");
 
     expect(box).toHaveValue("jk");
-    expect(screen.getByText("1 / 10")).toBeInTheDocument();
     expect(top).toBe(0);
 
     await user.keyboard("{Escape}");
     box.blur();
     await user.keyboard("j");
     await waitFor(() => {
-      expect(screen.getByText("2 / 10")).toBeInTheDocument();
+      expect(top).toBe(800);
     });
   });
 
@@ -210,6 +180,7 @@ describe("Demo feed interactions", () => {
     mockDesktop();
     renderDemo();
 
+    expect(screen.queryByRole("button", { name: /generate powerpoint/i })).not.toBeInTheDocument();
     const add = screen.getAllByRole("button", { name: /add to ppt/i })[0];
     await user.click(add);
     expect(add).toHaveTextContent(/added to ppt/i);
@@ -217,31 +188,5 @@ describe("Demo feed interactions", () => {
     await user.click(screen.getByRole("button", { name: /generate powerpoint \(1\)/i }));
     expect(await screen.findByRole("button", { name: /\.pptx|powerpoint/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/create a new version/i)).not.toBeInTheDocument();
-  });
-
-  it("shows first-scene coach marks and remembers dismissing them", async () => {
-    const user = userEvent.setup();
-    renderDemo();
-
-    expect(
-      await screen.findByRole("button", { name: /got it/i }, { timeout: 2000 }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/react if this rings true/i)).toBeInTheDocument();
-    expect(screen.getByText(/ask a question/i)).toBeInTheDocument();
-    expect(screen.getByText(/see the evidence/i)).toBeInTheDocument();
-    expect(screen.getByText(/scroll for the next scene/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /got it/i }));
-    expect(
-      screen.queryByRole("button", { name: /got it/i }),
-    ).not.toBeInTheDocument();
-    expect(localStorage.getItem(HINT_STORAGE_KEY)).toBe("1");
-
-    cleanup();
-    renderDemo();
-    await new Promise((r) => setTimeout(r, 1000));
-    expect(
-      screen.queryByRole("button", { name: /got it/i }),
-    ).not.toBeInTheDocument();
   });
 });

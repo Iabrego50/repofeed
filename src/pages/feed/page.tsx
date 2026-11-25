@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, Clapperboard, Search } from "lucide-react";
+import { Clapperboard } from "lucide-react";
 import { api } from "@/lib/api/complete";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button.tsx";
@@ -9,19 +9,13 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { isNativePlatform } from "@/lib/native";
-import { cn } from "@/lib/utils.ts";
+import { useIsDesktop } from "@/hooks/use-is-desktop.ts";
 import FeedTour from "@/components/feed-tour.tsx";
 import ReelFeed from "./_components/reel-feed.tsx";
-import { openSearch } from "@/components/shell/command-palette.tsx";
 import { Presenter } from "@/pages/insights/deck/page.tsx";
 import type { Deck } from "@/pages/insights/deck/_lib/deck.ts";
 import GeneratePptButton from "@/pages/share/_components/generate-ppt-button.tsx";
 import { DeckSelectionProvider } from "@/pages/share/_lib/deck-selection.ts";
-import { useIsDesktop } from "@/hooks/use-is-desktop.ts";
-
-const CHIP =
-  "min-h-8 shrink-0 cursor-pointer rounded-full border border-white/10 bg-black/30 px-3 text-[11px] font-semibold text-white/75 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring sm:min-h-9 sm:text-xs";
-const CHIP_ON = "border-transparent bg-white text-black hover:text-black";
 
 export default function FeedPage() {
   const { current, isEditor } = useWorkspace();
@@ -59,7 +53,7 @@ export default function FeedPage() {
   });
   const savedView = params.get("view") === "saved";
   const studyFilter = savedView ? undefined : (params.get("study") ?? undefined);
-  
+
   const { data: studies } = useQuery({
     queryKey: ["studies", "list", current?._id],
     queryFn: () => api.studies.list({ workspaceId: current!._id }),
@@ -73,13 +67,13 @@ export default function FeedPage() {
     refetchInterval: 60_000,
   });
   const unreadSet = useMemo(() => new Set(unreadIds ?? []), [unreadIds]);
-  
+
   const { data: feedReels } = useQuery({
     queryKey: ["feed", "list", current?._id, studyFilter],
     queryFn: () => api.feed.list({ workspaceId: current!._id, studyId: studyFilter }),
     enabled: !!current && !savedView,
   });
-  
+
   const { data: savedReels } = useQuery({
     queryKey: ["feed", "saved", current?._id],
     queryFn: async () => {
@@ -90,7 +84,6 @@ export default function FeedPage() {
     enabled: !!current && savedView,
   });
 
-  // Clear the New badge when the viewer filters into a study (or opens a deep-linked reel from one).
   useEffect(() => {
     if (!studyFilter || !unreadSet.has(studyFilter)) return;
     void api.studyViews.markSeen({ studyId: studyFilter }).then(() => {
@@ -110,94 +103,46 @@ export default function FeedPage() {
       void queryClient.invalidateQueries({ queryKey: ["studyViews", "unread", current?._id] });
     });
   }, [params, feedReels, unreadSet, queryClient, current?._id]);
-  
+
   const reels = savedView ? savedReels : feedReels;
   const published = useMemo(
     () => (studies ?? []).filter((s) => s.status === "published"),
     [studies],
   );
-  // Native Explore-only shell: never offer create-study CTAs (even for web editors/admins).
   const showCreateCta = isEditor && !nativeViewerMode && !isNativePlatform();
   if (!current) return null;
-
-  const chips: Array<{ key: string; label: string; active: boolean; onClick: () => void; isNew?: boolean }> = [
-    { key: "all", label: "All studies", active: !savedView && !studyFilter, onClick: () => setParams({}) },
-    ...(published.length > 1
-      ? published.map((s) => ({
-          key: s._id,
-          label: s.title,
-          active: studyFilter === s._id,
-          onClick: () => setParams({ study: s._id }),
-          isNew: unreadSet.has(s._id),
-        }))
-      : []),
-  ];
 
   const studyTitle =
     (studyFilter && published.find((s) => s._id === studyFilter)?.title) ||
     current.name ||
     "Research readout";
   const canExport = (reels?.length ?? 0) > 0;
-  const generateBtn = canExport ? (
+  // Generate only mounts when N > 0 (button itself returns null at 0).
+  // Generate mounts only when N > 0 (button returns null at 0) — minimal stream chrome.
+  const generateOverlay = canExport ? (
     <GeneratePptButton
       studyTitle={studyTitle}
       reels={reels ?? []}
       onPreview={setPreviewDeck}
-      variant={isDesktop ? "default" : "overlay"}
+      variant="overlay"
+    />
+  ) : null;
+  const generateAside = canExport ? (
+    <GeneratePptButton
+      studyTitle={studyTitle}
+      reels={reels ?? []}
+      onPreview={setPreviewDeck}
+      variant="aside"
     />
   ) : null;
 
-  const toolbar = (
-    <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3 lg:justify-center">
-      <div className="flex min-w-0 gap-1.5 overflow-x-auto scrollbar-none sm:gap-2" role="toolbar" aria-label="Filter the feed">
-        <button
-          type="button"
-          onClick={() => setParams(savedView ? {} : { view: "saved" })}
-          aria-pressed={savedView}
-          className={cn(CHIP, "flex items-center gap-1.5", savedView && CHIP_ON)}
-        >
-          <Bookmark className={cn("size-3.5", savedView && "fill-current")} /> Saved
-        </button>
-        {chips.map((c) => (
-          <button key={c.key} type="button" onClick={c.onClick} aria-pressed={c.active} className={cn(CHIP, c.active && CHIP_ON)}>
-            <span className="flex max-w-[140px] items-center gap-1.5 truncate sm:max-w-[200px]">
-              {c.label}
-              {c.isNew ? (
-                <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-primary-foreground">
-                  New
-                </span>
-              ) : null}
-            </span>
-          </button>
-        ))}
-      </div>
-      {!isDesktop && generateBtn}
-      {!nativeViewerMode && (
-        <button
-          type="button"
-          onClick={openSearch}
-          aria-label="Search scenes"
-          title="Search scenes (/)"
-          className="ml-auto grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/30 text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring lg:ml-0"
-        >
-          <Search className="size-4" />
-        </button>
-      )}
+  const toolbar = canExport ? (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-end bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3">
+      <div className="pointer-events-auto">{!isDesktop && generateOverlay}</div>
     </div>
-  );
+  ) : null;
 
-  const empty = savedView ? (
-    <Empty>
-      <EmptyHeader>
-        <EmptyMedia variant="icon"><Bookmark /></EmptyMedia>
-        <EmptyTitle>Nothing saved yet</EmptyTitle>
-        <EmptyDescription>Tap the bookmark on any scene to keep it here for later. Only you can see your Saved list.</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
-        <Button className="h-11" onClick={() => setParams({})}>Back to the feed</Button>
-      </EmptyContent>
-    </Empty>
-  ) : (
+  const empty = (
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="icon"><Clapperboard /></EmptyMedia>
@@ -239,7 +184,7 @@ export default function FeedPage() {
         jumpKey={params.get("reel") ? 1 : 0}
         resetKey={savedView ? "saved" : (studyFilter ?? "all")}
         toolbar={toolbar}
-        asideFooter={isDesktop ? generateBtn : undefined}
+        asideFooter={isDesktop ? generateAside : undefined}
         empty={empty}
       />
     </DeckSelectionProvider>

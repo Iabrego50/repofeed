@@ -136,10 +136,15 @@ describe("Researcher feed PowerPoint", () => {
     cleanup();
   });
 
-  it("shows Add to PPT and Generate PowerPoint on the researcher feed", async () => {
+  it("shows the four stream actions and hides Generate until something is added", async () => {
     renderFeed();
     expect(await screen.findByRole("button", { name: /add to ppt/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^generate powerpoint$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^like$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open comments/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /heard this before/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /generate powerpoint/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/save scene/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/search scenes/i)).not.toBeInTheDocument();
   });
 
   it("lets a researcher add an insight and open the Presenter", async () => {
