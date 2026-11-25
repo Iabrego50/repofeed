@@ -142,6 +142,7 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 
 function JoinCodePanel({ workspaceId }: { workspaceId: string }) {
   const queryClient = useQueryClient();
+  const { current } = useWorkspace();
   const { data: code, isLoading } = useQuery({
     queryKey: ["workspaces", "joinCode", workspaceId],
     queryFn: () => api.workspaces.getJoinCode({ workspaceId }),
@@ -158,50 +159,84 @@ function JoinCodePanel({ workspaceId }: { workspaceId: string }) {
   });
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
+  const digits = (code ?? "").padEnd(8, " ").slice(0, 8).split("");
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="text-xl font-bold">Team join code</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Share this short code so viewers can join the iOS app (or /join on the web). Team settings stay on desktop — researchers can remove viewers below.
-      </p>
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        {isLoading || !code ? (
-          <Skeleton className="h-12 w-full max-w-xs rounded-xl" />
-        ) : (
-          <Input
-            readOnly
-            value={code}
-            className="h-12 max-w-xs font-mono text-lg tracking-[0.2em]"
-            aria-label="Team join code"
-            onFocus={(e) => e.currentTarget.select()}
-          />
-        )}
-        <div className="flex gap-1">
-          <Button
-            variant="secondary"
-            className="h-11"
-            disabled={!code}
-            onClick={() => {
-              if (!code) return;
-              void copy(code, "Join code copied");
-            }}
-          >
-            <Copy className="size-4" /> Copy
-          </Button>
-          <Button
-            variant="ghost"
-            className="h-11"
-            disabled={regenerate.isPending}
-            onClick={() => regenerate.mutate()}
-          >
-            {regenerate.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            Regenerate
-          </Button>
-        </div>
+    <section className="space-y-5">
+      <div>
+        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">
+          {current?.name ?? "Workspace"} · workspace
+        </p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Get your team on the channel.</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You’re an owner of this workspace. Share the join code and viewers land straight in your feed.
+        </p>
       </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+        <div className="rounded-[1.5rem] bg-studio p-6 text-white shadow-lift">
+          <p className="font-mono text-[10px] tracking-[0.14em] text-eyebrow uppercase">Team join code</p>
+          {isLoading || !code ? (
+            <Skeleton className="mt-5 h-16 w-full rounded-xl bg-white/10" />
+          ) : (
+            <div className="mt-5 grid grid-cols-8 gap-1.5 sm:gap-2" aria-label="Team join code">
+              {digits.map((ch, i) => (
+                <span
+                  key={i}
+                  className="flex aspect-square items-center justify-center rounded-xl border border-white/10 bg-[#0a0d16] font-mono text-lg font-bold text-mark sm:text-xl"
+                >
+                  {ch.trim() || "·"}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button
+              className="h-11 font-semibold"
+              disabled={!code}
+              onClick={() => {
+                if (!code) return;
+                void copy(code, "Join code copied");
+              }}
+            >
+              <Copy className="size-4" /> Copy code
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              disabled={regenerate.isPending}
+              onClick={() => regenerate.mutate()}
+            >
+              {regenerate.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              Regenerate
+            </Button>
+          </div>
+          <p className="mt-3 text-xs text-white/45">Regenerating revokes the previous code immediately.</p>
+        </div>
+
+        <aside className="rounded-[1.5rem] border border-border bg-card p-6 shadow-lift">
+          <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+            How viewers join
+          </p>
+          <ol className="mt-4 space-y-3 text-sm">
+            {[
+              "Open the iOS app, or go to /join on the web",
+              "Enter the code",
+              `Start scrolling ${current?.name ?? "your research"}`,
+            ].map((line, i) => (
+              <li key={line} className="flex items-start gap-3">
+                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-bold text-background">
+                  {i + 1}
+                </span>
+                {line}
+              </li>
+            ))}
+          </ol>
+        </aside>
+      </div>
+
       <form
-        className="mt-5 grid gap-3 border-t border-border pt-5 sm:grid-cols-[1fr_auto] sm:items-end"
+        className="grid gap-3 rounded-[1.5rem] border border-border bg-card p-5 sm:grid-cols-[1fr_auto] sm:items-end"
         onSubmit={async (e) => {
           e.preventDefault();
           if (!email.trim()) return;

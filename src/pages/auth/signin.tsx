@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label.tsx";
 import Logo from "@/components/logo.tsx";
 import SiteFooter from "@/components/site-footer.tsx";
 import { FEED_PATH } from "@/app-paths.ts";
+import { cn } from "@/lib/utils.ts";
 import { resolveReturnTo } from "./return-to.ts";
 
 const googleEnabled = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === "true";
@@ -124,22 +125,40 @@ export default function SignInPage() {
     setCooldown(0);
   };
 
+  const fromStory = returnTo.startsWith("/welcome") || returnTo === "/studies/new";
+
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-background">
-      <header className="relative mx-auto flex w-full max-w-md items-center justify-between px-5 py-5">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-paper">
+      <header className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-5">
         <Link to="/" aria-label="repofeed.ai home">
           <Logo />
         </Link>
-        <Link to="/demo" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-          Watch the demo
+        <Link
+          to={fromStory ? "/welcome" : "/demo"}
+          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          {fromStory ? "Back to the story" : "Watch the demo"}
         </Link>
       </header>
-      <main className="relative m-auto w-full max-w-md px-5 pb-16">
-        <h1 className="text-3xl font-bold tracking-tight">Sign in to repofeed.ai</h1>
+      <main
+        className={cn(
+          "relative m-auto w-full px-5 pb-16",
+          fromStory ? "grid max-w-5xl gap-10 lg:grid-cols-2 lg:items-center" : "max-w-md",
+        )}
+      >
+        <div>
+        <p className="font-mono text-[11px] tracking-[0.16em] text-eyebrow uppercase">
+          {fromStory ? "One step from air" : "Welcome back"}
+        </p>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+          {fromStory ? "Sign in to keep your channel." : "Sign in to repofeed.ai"}
+        </h1>
         <p className="mt-3 text-muted-foreground">
-          {googleEnabled || appleEnabled
-            ? "New here or coming back, it’s the same step. Use a sign-in button below, or we’ll email you a link and a sign-in code. There’s no password to remember."
-            : "New here or coming back, it’s the same step. We’ll email you a link and a sign-in code, and there’s no password to remember."}
+          {fromStory
+            ? "Everything you just set up comes with you. Next stop: your first study."
+            : googleEnabled || appleEnabled
+              ? "New here or coming back, it’s the same step. Use a sign-in button below, or we’ll email you a link and a sign-in code. There’s no password to remember."
+              : "New here or coming back, it’s the same step. We’ll email you a link and a sign-in code, and there’s no password to remember."}
         </p>
         {sent ? (
           <div className="mt-8 space-y-4">
@@ -235,8 +254,48 @@ export default function SignInPage() {
           </div>
         )}
         {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-        {returnTo !== FEED_PATH && (
+        {fromStory && (
+          <p className="mt-6 text-xs text-muted-foreground">
+            By continuing you agree to the{" "}
+            <Link to="/terms" className="underline underline-offset-2">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="underline underline-offset-2">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        )}
+        {returnTo !== FEED_PATH && !fromStory && (
           <p className="mt-4 text-xs text-muted-foreground">You'll return to {returnTo} after signing in.</p>
+        )}
+        </div>
+
+        {fromStory && (
+          <aside className="rounded-[1.5rem] border border-border bg-card p-6 shadow-lift">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Your channel</p>
+              <span className="rounded-full bg-mark px-2.5 py-0.5 text-[11px] font-semibold text-mark-foreground">
+                Not saved yet
+              </span>
+            </div>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight">Team research</h2>
+            <dl className="mt-5 divide-y divide-border text-sm">
+              {(
+                [
+                  ["Tuned for", "Researcher"],
+                  ["On air", "Interviews · Usability tests"],
+                  ["Watching", "My team"],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between gap-4 py-3">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="font-medium text-foreground">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </aside>
         )}
       </main>
       <SiteFooter />

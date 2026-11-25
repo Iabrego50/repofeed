@@ -30,108 +30,132 @@ import {
   type StoryShareAudience,
 } from "@/lib/story-onboarding.ts";
 import {
+  ChannelPhoneVisual,
+  ChannelPreviewCard,
   CrtTvVisual,
-  HowItWorksVisual,
-  ReadyVisual,
-  ReassembleVisual,
   ScatteredFilesVisual,
-  ShatterVisual,
+  YellowScreenVisual,
 } from "./story-visuals.tsx";
 import "./story-onboarding.css";
 
-const SEGMENT_MS = 8000;
+const SEGMENT_MS = 10000;
 
 type StepKind = "story" | "question" | "finish";
+type Theme = "dark" | "light";
 
 type Step = {
   id: string;
   kind: StepKind;
+  theme: Theme;
   eyebrow: string;
   title: string;
   body: string;
-  visual?: "crt" | "shatter" | "scattered" | "reassemble" | "how" | "ready";
+  cta?: string;
+  visual?: "crt" | "yellow" | "scattered" | "phone" | "preview" | "ready";
   question?: "role" | "research" | "share" | "channel";
+  channelStep?: number;
 };
 
+/**
+ * Design screens 01–06, plus intermediate channel questions (research / share / name)
+ * so we still persist the answers the product needs.
+ */
 const STEPS: Step[] = [
   {
     id: "then",
     kind: "story",
+    theme: "dark",
     eyebrow: "Then",
-    title: "Everyone watched the same story at 8pm.",
-    body: "Programmed TV kept a common narrative. Families, offices, whole cities tuned in together — one channel, one conversation the next morning.",
+    title: "Remember 8pm?",
+    body: "One channel. One story. Families, offices, whole cities tuned in together, and had one conversation about it the next morning.",
+    cta: "Turn it on",
     visual: "crt",
   },
   {
     id: "now",
     kind: "story",
+    theme: "dark",
     eyebrow: "Now",
-    title: "Streaming shattered the shared screen.",
-    body: "Algorithms built a private bubble for every person. Infinite choice, zero common plot. We stopped watching the same thing.",
-    visual: "shatter",
-  },
-  {
-    id: "role",
-    kind: "question",
-    eyebrow: "About you",
-    title: "What’s your role?",
-    body: "We’ll tune the channel language to how you work.",
-    question: "role",
+    title: "Then everyone got their own screen.",
+    body: "Streaming built a private bubble for every person. Infinite choice, zero common plot. (Ask anyone what they watched last night.)",
+    cta: "Change the channel",
+    visual: "yellow",
   },
   {
     id: "cost",
     kind: "story",
+    theme: "dark",
     eyebrow: "The cost",
-    title: "Research insights scatter into files nobody reads.",
-    body: "Interviews, surveys, decks — buried in drives. Teams lose the shared knowledge base that used to live in hallway talk and weekly readouts.",
+    title: "Your research went the same way.",
+    body: "Interviews, surveys, decks. All filed, none watched. Somewhere in there is the quote that should have changed the roadmap. Go find it.",
+    cta: "I'd rather not dig",
     visual: "scattered",
+  },
+  {
+    id: "channel",
+    kind: "story",
+    theme: "light",
+    eyebrow: "repofeed",
+    title: "Now it plays like a channel.",
+    body: "That buried interview file? Here it is as a short insight scene. One common feed, everyone scrolls the same findings. Go on, react to it.",
+    cta: "Build my channel",
+    visual: "phone",
+  },
+  {
+    id: "role",
+    kind: "question",
+    theme: "light",
+    eyebrow: "Your channel · 1 of 4",
+    title: "Who’s holding the remote?",
+    body: "Pick your role. We’ll tune the channel’s language to how you work.",
+    cta: "Continue",
+    question: "role",
+    visual: "preview",
+    channelStep: 1,
   },
   {
     id: "research",
     kind: "question",
-    eyebrow: "Your research",
-    title: "What kind of research do you work with?",
-    body: "Pick all that apply. You can change this later.",
+    theme: "light",
+    eyebrow: "Your channel · 2 of 4",
+    title: "What’s on air?",
+    body: "Pick the research you work with. We’ll label scenes so the feed feels familiar.",
+    cta: "Continue",
     question: "research",
-  },
-  {
-    id: "repofeed",
-    kind: "story",
-    eyebrow: "repofeed",
-    title: "A curated channel for your team’s research.",
-    body: "Short AI insight scenes, one common feed. Everyone scrolls the same findings — likes, comments, and marks “heard this before.”",
-    visual: "reassemble",
+    visual: "preview",
+    channelStep: 2,
   },
   {
     id: "share",
     kind: "question",
-    eyebrow: "Audience",
-    title: "Who should share this channel?",
+    theme: "light",
+    eyebrow: "Your channel · 3 of 4",
+    title: "Who’s watching?",
     body: "Start small or go wide — you invite people when you’re ready.",
+    cta: "Continue",
     question: "share",
+    visual: "preview",
+    channelStep: 3,
   },
   {
-    id: "how",
-    kind: "story",
-    eyebrow: "How it works",
-    title: "Upload → scenes → scroll → PowerPoint.",
-    body: "Drop in research. AI writes short insight scenes. Your team scrolls, reacts, and adds the best ones to a deck.",
-    visual: "how",
-  },
-  {
-    id: "channel",
+    id: "name",
     kind: "question",
-    eyebrow: "Name it",
-    title: "What should we call your channel?",
+    theme: "light",
+    eyebrow: "Your channel · 4 of 4",
+    title: "Name the channel.",
     body: "A short name your teammates will recognize in the feed.",
+    cta: "Continue",
     question: "channel",
+    visual: "preview",
+    channelStep: 4,
   },
   {
     id: "ready",
     kind: "finish",
+    theme: "light",
     eyebrow: "Ready",
-    title: "Your channel is ready.",
-    body: "Research, as a feed. Upload your first study or watch the demo to see insight scenes in motion.",
+    title: "You're on air.",
+    body: "Research, as a feed. Upload your first study, or watch the demo to see insight scenes in motion.",
     visual: "ready",
   },
 ];
@@ -140,10 +164,12 @@ function Chip({
   selected,
   children,
   onClick,
+  dark,
 }: {
   selected: boolean;
   children: ReactNode;
   onClick: () => void;
+  dark?: boolean;
 }) {
   return (
     <button
@@ -153,8 +179,12 @@ function Chip({
       className={cn(
         "min-h-11 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         selected
-          ? "border-foreground bg-foreground text-background"
-          : "border-border bg-card/80 text-foreground hover:border-foreground",
+          ? dark
+            ? "border-white bg-white text-[#0b1020]"
+            : "border-foreground bg-foreground text-background"
+          : dark
+            ? "border-white/25 bg-transparent text-white hover:border-white/50"
+            : "border-border bg-card text-foreground hover:border-foreground/40",
       )}
     >
       {children}
@@ -168,12 +198,14 @@ function ProgressBars({
   paused,
   reduced,
   onSegmentEnd,
+  light,
 }: {
   index: number;
   count: number;
   paused: boolean;
   reduced: boolean;
   onSegmentEnd: () => void;
+  light?: boolean;
 }) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -187,13 +219,24 @@ function ProgressBars({
   }, [index, paused, reduced, onSegmentEnd, tick]);
 
   return (
-    <div className="flex gap-1" role="progressbar" aria-valuemin={1} aria-valuemax={count} aria-valuenow={index + 1} aria-label="Story progress">
+    <div
+      className="flex gap-1.5"
+      role="progressbar"
+      aria-valuemin={1}
+      aria-valuemax={count}
+      aria-valuenow={index + 1}
+      aria-label="Story progress"
+    >
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
+        <div
+          key={i}
+          className={cn("h-0.5 flex-1 overflow-hidden rounded-full", light ? "bg-foreground/15" : "bg-white/20")}
+        >
           <div
             key={i === index ? `fill-${tick}` : `seg-${i}`}
             className={cn(
-              "h-full rounded-full bg-white",
+              "h-full rounded-full",
+              light ? "bg-foreground" : "bg-white",
               i < index && "w-full",
               i > index && "w-0",
               i === index && !reduced && !paused && "story-progress-fill w-full",
@@ -216,8 +259,8 @@ export type StoryOnboardingProps = {
 };
 
 /**
- * Full-screen Instagram-story onboarding: narrative beats, choice chips,
- * keyboard/swipe/tap navigation. Persists answers to auth user_metadata.
+ * Full-screen story onboarding matching Isaac’s design screens:
+ * two-column desktop layout, mono eyebrows, navy / paper / blue / yellow.
  */
 export default function StoryOnboarding({ preview = false, replay = false, onFinished }: StoryOnboardingProps) {
   const navigate = useNavigate();
@@ -227,7 +270,13 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<StoryAnswers>(() =>
-    user ? { ...emptyStoryAnswers(), ...readStoryAnswers(user), channelName: readStoryAnswers(user).channelName || suggestChannelName(user.email) } : emptyStoryAnswers(),
+    user
+      ? {
+          ...emptyStoryAnswers(),
+          ...readStoryAnswers(user),
+          channelName: readStoryAnswers(user).channelName || suggestChannelName(user.email),
+        }
+      : emptyStoryAnswers(),
   );
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -237,6 +286,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const step = STEPS[index]!;
   const isQuestion = step.kind === "question";
   const isFinish = step.kind === "finish";
+  const light = step.theme === "light";
 
   useEffect(() => {
     if (!answers.channelName && user?.email) {
@@ -256,12 +306,9 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     return true;
   })();
 
-  const go = useCallback(
-    (delta: number) => {
-      setIndex((i) => Math.min(STEPS.length - 1, Math.max(0, i + delta)));
-    },
-    [],
-  );
+  const go = useCallback((delta: number) => {
+    setIndex((i) => Math.min(STEPS.length - 1, Math.max(0, i + delta)));
+  }, []);
 
   const next = useCallback(() => {
     if (isFinish) return;
@@ -298,11 +345,13 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
       onFinished?.(destination);
       if (onFinished) return;
       if (preview) {
-        navigate(destination === "demo" ? "/demo" : "/signin", { replace: true });
+        navigate(
+          destination === "demo" ? "/demo" : "/signin?returnTo=/studies/new",
+          { replace: true },
+        );
         return;
       }
       const needsTeam = !workspaces || workspaces.length === 0;
-      // Native phone viewers redeem a short code instead of creating a workspace.
       if (needsTeam && (nativeViewerMode || isNativePlatform())) {
         navigate("/join", { replace: true });
         return;
@@ -316,7 +365,6 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
       else navigate(appHomePath(), { replace: true });
     } catch (err) {
       console.error("[story-onboarding] persist failed", err);
-      // Still let them through — answers can be re-saved later.
       navigate(preview ? "/signin" : appHomePath(), { replace: true });
     } finally {
       setBusy(false);
@@ -357,17 +405,17 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const visual = (() => {
     switch (step.visual) {
       case "crt":
-        return <CrtTvVisual reduced={reduced} />;
-      case "shatter":
-        return <ShatterVisual reduced={reduced} />;
+        return <CrtTvVisual reduced={reduced} onActivate={next} />;
+      case "yellow":
+        return <YellowScreenVisual reduced={reduced} onActivate={next} />;
       case "scattered":
-        return <ScatteredFilesVisual reduced={reduced} />;
-      case "reassemble":
-        return <ReassembleVisual reduced={reduced} />;
-      case "how":
-        return <HowItWorksVisual reduced={reduced} />;
+        return <ScatteredFilesVisual reduced={reduced} onActivate={next} />;
+      case "phone":
+        return <ChannelPhoneVisual reduced={reduced} />;
+      case "preview":
+        return <ChannelPreviewCard answers={answers} status="setting" />;
       case "ready":
-        return <ReadyVisual reduced={reduced} channelName={answers.channelName} />;
+        return <ChannelPreviewCard answers={answers} status="air" showNext />;
       default:
         return null;
     }
@@ -375,7 +423,10 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
 
   return (
     <div
-      className="dark relative flex h-dvh flex-col overflow-hidden bg-[#0a0d13] text-foreground"
+      className={cn(
+        "relative flex h-dvh flex-col overflow-hidden",
+        light ? "bg-paper text-foreground" : "dark bg-studio text-foreground",
+      )}
       onTouchStart={(e) => {
         const t = e.changedTouches[0];
         if (t) touchStart.current = { x: t.clientX, y: t.clientY };
@@ -392,33 +443,180 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         else back();
       }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(29,99,224,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(15,143,138,0.12),transparent_50%)]" />
-
-      <header className="relative z-20 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
+      <header className="relative z-20 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-8">
         <ProgressBars
           index={index}
           count={STEPS.length}
           paused={paused || isQuestion || isFinish}
           reduced={reduced}
           onSegmentEnd={next}
+          light={light}
         />
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <Logo className="text-white" />
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <Logo className={light ? undefined : "text-white"} />
           <button
             type="button"
             onClick={() => void skip()}
-            className="cursor-pointer text-sm font-medium text-white/70 underline-offset-2 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className={cn(
+              "cursor-pointer text-sm font-medium underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              light ? "text-foreground/70 hover:text-foreground" : "text-white/70 hover:text-white",
+            )}
           >
-            Skip
+            Skip the story
           </button>
         </div>
       </header>
 
-      <div className="relative z-0 flex min-h-0 flex-1 flex-col">
-        <div className="relative flex min-h-0 flex-[1.1] items-center justify-center px-4 pt-2 sm:px-8">
-          {/* Tap zones cover only the visual plane so Continue / chips stay clickable. */}
-          {!isQuestion && !isFinish && (
-            <div className="absolute inset-0 z-10 flex">
+      <div className="relative z-0 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6 sm:px-8 lg:flex-row lg:items-center lg:gap-12 lg:pt-4">
+        <div className="relative z-20 flex w-full flex-none flex-col lg:max-w-[42%] lg:flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`copy-${step.id}`}
+              initial={reduced ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduced ? undefined : { opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <p className="font-mono text-[11px] font-medium tracking-[0.16em] text-eyebrow uppercase">
+                {step.eyebrow}
+              </p>
+              <h1
+                ref={headingRef}
+                tabIndex={-1}
+                className={cn(
+                  "mt-3 text-balance text-3xl font-bold leading-[1.1] tracking-tight outline-none sm:text-4xl lg:text-[2.75rem]",
+                  light ? "text-foreground" : "text-white",
+                )}
+              >
+                {step.title}
+              </h1>
+              <p
+                className={cn(
+                  "mt-3 max-w-prose text-pretty text-base leading-relaxed",
+                  light ? "text-muted-foreground" : "text-white/70",
+                )}
+              >
+                {step.body}
+              </p>
+
+              {step.id === "cost" && (
+                <p className={cn("mt-3 text-sm font-medium", light ? "text-foreground" : "text-white/90")}>
+                  Five files. Tap one to start digging.
+                </p>
+              )}
+
+              {step.question === "role" && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {STORY_ROLES.map((role) => (
+                    <Chip
+                      key={role}
+                      selected={answers.role === role}
+                      onClick={() => setAnswers((a) => ({ ...a, role: role as StoryRole }))}
+                    >
+                      {ROLE_LABELS[role]}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+
+              {step.question === "research" && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {STORY_RESEARCH_KINDS.map((kind) => (
+                    <Chip key={kind} selected={answers.researchKinds.includes(kind)} onClick={() => toggleKind(kind)}>
+                      {RESEARCH_LABELS[kind]}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+
+              {step.question === "share" && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {STORY_SHARE_AUDIENCES.map((aud) => (
+                    <Chip
+                      key={aud}
+                      selected={answers.shareAudience === aud}
+                      onClick={() => setAnswers((a) => ({ ...a, shareAudience: aud as StoryShareAudience }))}
+                    >
+                      {SHARE_LABELS[aud]}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+
+              {step.question === "channel" && (
+                <div className="mt-6 space-y-2">
+                  <label htmlFor="story-channel" className="sr-only">
+                    Channel name
+                  </label>
+                  <Input
+                    id="story-channel"
+                    value={answers.channelName}
+                    onChange={(e) => setAnswers((a) => ({ ...a, channelName: e.target.value }))}
+                    maxLength={60}
+                    className="h-12 border-border bg-card"
+                    placeholder={suggestChannelName(user?.email)}
+                    autoComplete="organization"
+                  />
+                </div>
+              )}
+
+              <div className="mt-8 flex flex-wrap items-center gap-2">
+                {index > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "h-11 px-5 font-semibold",
+                      !light && "border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white",
+                    )}
+                    onClick={back}
+                  >
+                    Back
+                  </Button>
+                )}
+                {isFinish ? (
+                  <>
+                    <Button
+                      type="button"
+                      className="h-11 px-5 font-semibold"
+                      disabled={busy}
+                      onClick={() =>
+                        void finish(preview || (workspaces && workspaces.length > 0) ? "upload" : "setup")
+                      }
+                    >
+                      {preview
+                        ? "Sign in to upload"
+                        : workspaces && workspaces.length > 0
+                          ? "Upload research"
+                          : "Set up workspace"}
+                    </Button>
+                    <Button
+                      type="button"
+                      className={cn(
+                        "h-11 px-5 font-semibold",
+                        light
+                          ? "bg-foreground text-background hover:bg-foreground/90"
+                          : "bg-white text-[#0b1020] hover:bg-white/90",
+                      )}
+                      disabled={busy}
+                      onClick={() => void finish("demo")}
+                    >
+                      Watch the demo
+                    </Button>
+                  </>
+                ) : (
+                  <Button type="button" className="h-11 px-5 font-semibold" disabled={!canAdvance} onClick={next}>
+                    {step.cta ?? "Continue"}
+                  </Button>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div className="relative mt-8 flex min-h-0 flex-1 items-center justify-center lg:mt-0">
+          {!isQuestion && !isFinish && step.visual !== "crt" && step.visual !== "yellow" && step.visual !== "scattered" && (
+            <div className="absolute inset-0 z-10 hidden lg:flex">
               <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
               <button
                 type="button"
@@ -435,140 +633,30 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
           <AnimatePresence mode="wait">
             <motion.div
               key={step.id}
-              className="relative z-0 h-full w-full"
+              className="relative z-0 flex h-full w-full items-center justify-center"
               initial={reduced ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={reduced ? undefined : { opacity: 0, y: -8 }}
               transition={{ duration: 0.28 }}
             >
-              {visual ?? (
-                <div className="mx-auto flex h-full max-h-[320px] w-full max-w-md items-center justify-center">
-                  <div className="rounded-3xl border border-white/10 bg-white/5 px-8 py-10 text-center backdrop-blur-sm">
-                    <p className="text-sm font-semibold tracking-wide text-white/50 uppercase">{step.eyebrow}</p>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        <div className="relative z-20 mx-auto w-full max-w-xl flex-none px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 sm:px-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`copy-${step.id}`}
-              initial={reduced ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduced ? undefined : { opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">{step.eyebrow}</p>
-              <h1
-                ref={headingRef}
-                tabIndex={-1}
-                className="mt-2 text-balance font-serif text-2xl leading-tight text-white outline-none sm:text-3xl"
-              >
-                {step.title}
-              </h1>
-              <p className="mt-2 max-w-prose text-pretty text-sm leading-relaxed text-white/70 sm:text-base">{step.body}</p>
-
-              {step.question === "role" && (
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {STORY_ROLES.map((role) => (
-                    <Chip
-                      key={role}
-                      selected={answers.role === role}
-                      onClick={() => setAnswers((a) => ({ ...a, role: role as StoryRole }))}
-                    >
-                      {ROLE_LABELS[role]}
-                    </Chip>
-                  ))}
-                </div>
-              )}
-
-              {step.question === "research" && (
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {STORY_RESEARCH_KINDS.map((kind) => (
-                    <Chip key={kind} selected={answers.researchKinds.includes(kind)} onClick={() => toggleKind(kind)}>
-                      {RESEARCH_LABELS[kind]}
-                    </Chip>
-                  ))}
-                </div>
-              )}
-
-              {step.question === "share" && (
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {STORY_SHARE_AUDIENCES.map((aud) => (
-                    <Chip
-                      key={aud}
-                      selected={answers.shareAudience === aud}
-                      onClick={() => setAnswers((a) => ({ ...a, shareAudience: aud as StoryShareAudience }))}
-                    >
-                      {SHARE_LABELS[aud]}
-                    </Chip>
-                  ))}
-                </div>
-              )}
-
-              {step.question === "channel" && (
-                <div className="mt-5 space-y-2">
-                  <label htmlFor="story-channel" className="sr-only">
-                    Channel name
-                  </label>
-                  <Input
-                    id="story-channel"
-                    value={answers.channelName}
-                    onChange={(e) => setAnswers((a) => ({ ...a, channelName: e.target.value }))}
-                    maxLength={60}
-                    className="h-12 border-white/20 bg-white/10 text-white placeholder:text-white/40"
-                    placeholder={suggestChannelName(user?.email)}
-                    autoComplete="organization"
-                  />
-                  <p className="text-xs text-white/50">Suggestion from your email — edit freely.</p>
-                </div>
-              )}
-
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                {index > 0 && (
-                  <Button type="button" variant="ghost" className="h-11 text-white/80 hover:bg-white/10 hover:text-white" onClick={back}>
-                    Back
-                  </Button>
-                )}
-                {isFinish ? (
-                  <>
-                    <Button
-                      type="button"
-                      className="h-11 px-5 font-semibold"
-                      disabled={busy}
-                      onClick={() => void finish(preview || (workspaces && workspaces.length > 0) ? "upload" : "setup")}
-                    >
-                      {preview ? "Sign in to upload" : workspaces && workspaces.length > 0 ? "Upload research" : "Set up workspace"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-11 px-5 font-semibold"
-                      disabled={busy}
-                      onClick={() => void finish("demo")}
-                    >
-                      Watch the demo
-                    </Button>
-                  </>
-                ) : (
-                  <Button type="button" className="h-11 px-5 font-semibold" disabled={!canAdvance} onClick={next}>
-                    Continue
-                  </Button>
-                )}
-              </div>
-              {preview && (
-                <p className="mt-4 text-xs text-white/45">Preview mode — answers aren’t saved until you sign in.</p>
-              )}
-              {replay && !preview && (
-                <p className="mt-4 text-xs text-white/45">Replaying the product story. Finish to update your answers.</p>
-              )}
+              {visual}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
+
+      {(preview || replay) && (
+        <p
+          className={cn(
+            "relative z-20 px-5 pb-4 text-xs sm:px-8",
+            light ? "text-muted-foreground" : "text-white/40",
+          )}
+        >
+          {preview
+            ? "Preview mode. Answers aren't saved until you sign in."
+            : "Replaying the product story. Finish to update your answers."}
+        </p>
+      )}
     </div>
   );
 }

@@ -80,9 +80,9 @@ function ReelCard({
   return (
     <li
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-opacity",
-        reel.warning && "border-warning/60",
-        !reel.enabled && "opacity-70",
+        "flex flex-col overflow-hidden rounded-[1.5rem] border border-studio/80 bg-studio text-white transition-opacity shadow-lift",
+        reel.warning && "ring-2 ring-mark/60",
+        !reel.enabled && "opacity-55",
       )}
     >
       <button
@@ -107,55 +107,50 @@ function ReelCard({
         </span>
       </button>
       <div className="flex flex-1 flex-col gap-3 p-4">
-        <p
-          className="flex items-center gap-2 text-xs font-medium"
-          style={{ color: trackColor(reel.trackIndex) }}
-        >
-          <span
-            className="h-1 w-4 rounded-full"
-            style={{ background: trackColor(reel.trackIndex) }}
-          />
-          <span className="truncate">{reel.track}</span>
+        <p className="font-mono text-[10px] tracking-[0.14em] text-white/45 uppercase">
+          Scene {reel.trackIndex + 1}
         </p>
-        <h3 className="text-lg font-bold leading-tight">
-          {reel.title}
+        <h3 className="font-serif text-lg font-semibold leading-snug text-white">
+          {reel.title || reelScript(reel.scenes)}
         </h3>
-        <p className="line-clamp-3 text-sm text-muted-foreground">
-          {reelScript(reel.scenes)}
+        <p className="line-clamp-2 text-xs text-white/55" style={{ color: trackColor(reel.trackIndex) }}>
+          {reel.track}
         </p>
-        <p
-          className="truncate text-xs text-muted-foreground"
-          title={reel.sourceNames.join(", ")}
-        >
-          {reel.sourceNames.join(", ")}
-        </p>
-        {reel.warning && (
-          <div
-            role="status"
-            className="rounded-lg bg-warning/12 px-3 py-2 text-sm text-warning"
+        {reel.sourceNames.length > 0 && (
+          <span
+            className="w-fit rounded-full bg-white/10 px-2.5 py-1 font-mono text-[10px] text-white/80"
+            title={reel.sourceNames.join(", ")}
           >
+            Cut from {reel.sourceNames[0]}
+          </span>
+        )}
+        {reel.warning && (
+          <div role="status" className="rounded-lg bg-mark/15 px-3 py-2 text-sm text-mark">
             <p className="flex items-start gap-2 font-medium">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />{" "}
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <span className="min-w-0 break-words">{reel.warning}</span>
-            </p>
-            <p className="mt-1 pl-6 text-xs text-warning/80">
-              Edit the scene to match your files, or include it anyway.
             </p>
           </div>
         )}
-        <div className="mt-auto flex flex-col gap-2 pt-1">
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
-            <Switch
-              checked={reel.enabled}
-              onCheckedChange={(v) => setEnabledMutation.mutate(v)}
-              aria-label={`Include ${reel.title}`}
-            />
-            {reel.enabled ? "Included" : "Excluded"}
-          </label>
+        <div className="mt-auto flex flex-col gap-2 pt-2">
+          <button
+            type="button"
+            aria-pressed={reel.enabled}
+            aria-label={`${reel.enabled ? "Keeping" : "Cut"} ${reel.title}`}
+            onClick={() => setEnabledMutation.mutate(!reel.enabled)}
+            className={cn(
+              "flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors",
+              reel.enabled
+                ? "bg-mark text-mark-foreground"
+                : "bg-white/10 text-white/70 hover:bg-white/15",
+            )}
+          >
+            {reel.enabled ? "Keeping. Tap to cut" : "Cut. Tap to keep"}
+          </button>
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="secondary"
-              className="h-11"
+              className="h-10 border-0 bg-white/10 text-white hover:bg-white/15"
               onClick={() => setPickingFootage(true)}
               aria-label={`Footage for ${reel.title}`}
             >
@@ -163,7 +158,7 @@ function ReelCard({
             </Button>
             <Button
               variant="secondary"
-              className="h-11"
+              className="h-10 border-0 bg-white/10 text-white hover:bg-white/15"
               onClick={() => setEditing(true)}
             >
               <Pencil className="size-4" /> Edit
@@ -257,46 +252,45 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-bold">Review & Publish</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {enabled.length} scene{enabled.length === 1 ? "" : "s"} ready to
-              publish
-              {flagged.length > 0 && ` (${flagged.length} flagged)`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <PaintStudyButton studyId={studyId} />
-            <Button
-              onClick={() => publishMutation.mutate()}
-              disabled={busy || enabled.length === 0}
-              size="lg"
-            >
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
-              )}
-              {isPublished ? "Update" : "Publish"}
-            </Button>
-          </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">
+            {study?.title ?? "Sample study"} · first cut
+          </p>
+          <h3 className="mt-2 text-3xl font-bold tracking-tight">You're the editor.</h3>
+          <p className="mt-2 max-w-prose text-sm text-muted-foreground">
+            Keep the scenes worth your team's scroll. Cut the rest. Nothing airs without your say.
+            {" "}
+            {enabled.length} of {reels.length} scenes kept
+            {flagged.length > 0 && ` · ${flagged.length} flagged`}.
+          </p>
         </div>
-
-        {flagged.length > 0 && (
-          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm">
-            <Switch checked={onlyFlagged} onCheckedChange={setOnlyFlagged} />
-            Show only flagged scenes ({flagged.length})
-          </label>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <PaintStudyButton studyId={studyId} />
+          <Button
+            onClick={() => publishMutation.mutate()}
+            disabled={busy || enabled.length === 0}
+            size="lg"
+            className="font-semibold"
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            {isPublished ? "Update" : "Pick a channel"}
+          </Button>
+        </div>
       </div>
+
+      {flagged.length > 0 && (
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <Switch checked={onlyFlagged} onCheckedChange={setOnlyFlagged} />
+          Show only flagged scenes ({flagged.length})
+        </label>
+      )}
 
       {isPublished && <ShareLinkCard studyId={studyId} />}
 
       <DivisionAssign studyId={studyId} value={study.division ?? null} />
 
-      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {shown.map((reel: any) => (
           <ReelCard
             key={reel.id}

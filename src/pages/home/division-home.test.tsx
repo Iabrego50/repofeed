@@ -18,10 +18,10 @@ describe("DivisionHomePage", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("heading", { name: /Pick a division/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Auto/i })).toHaveAttribute("href", "/d/auto");
-    expect(screen.getByRole("link", { name: /^GI/i })).toHaveAttribute("href", "/d/gi");
-    expect(screen.getByRole("link", { name: /Wood/i })).toHaveAttribute("href", "/d/wood");
-    expect(screen.getByRole("link", { name: /Marine/i })).toHaveAttribute("href", "/d/marine");
-    expect(screen.getByRole("link", { name: /Website/i })).toHaveAttribute("href", "/d/website");
+    expect(screen.getByRole("link", { name: /CH 01.*Auto/i })).toHaveAttribute("href", "/d/auto");
+    expect(screen.getByRole("link", { name: /CH 02.*GI/i })).toHaveAttribute("href", "/d/gi");
+    expect(screen.getByRole("link", { name: /CH 03.*Wood/i })).toHaveAttribute("href", "/d/wood");
+    expect(screen.getByRole("link", { name: /CH 04.*Marine/i })).toHaveAttribute("href", "/d/marine");
+    expect(screen.getByRole("link", { name: /CH 05.*Website/i })).toHaveAttribute("href", "/d/website");
   });
 });

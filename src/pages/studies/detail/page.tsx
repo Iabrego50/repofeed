@@ -16,10 +16,10 @@ import GenerateStep from "../_components/generate-step.tsx";
 import ReviewStep from "../_components/review-step.tsx";
 
 const STEPS = [
-  { key: "sources", label: "Sources" },
+  { key: "sources", label: "Upload" },
   { key: "details", label: "Details" },
-  { key: "generate", label: "Generate" },
-  { key: "review", label: "Review & publish" },
+  { key: "generate", label: "Scenes" },
+  { key: "review", label: "Publish" },
 ] as const;
 type StepKey = (typeof STEPS)[number]["key"];
 
@@ -74,7 +74,7 @@ function StudyBody({ studyId }: { studyId: string }) {
       </div>
       <p className="text-sm text-muted-foreground">{study.audience}</p>
 
-      <nav className="mt-6 flex gap-2 overflow-x-auto border-b border-border">
+      <nav className="mt-6 flex flex-wrap gap-2" aria-label="Study steps">
         {STEPS.map((s, i) => {
           const disabled = (s.key === "generate" || s.key === "review") && !hasSources;
           const active = s.key === step;
@@ -85,15 +85,15 @@ function StudyBody({ studyId }: { studyId: string }) {
               onClick={() => !disabled && go(s.key)}
               disabled={disabled}
               className={cn(
-                "shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+                "shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
                 active
-                  ? "border-primary text-primary"
+                  ? "bg-studio text-white"
                   : disabled
-                    ? "cursor-not-allowed border-transparent text-muted-foreground/50"
-                    : "cursor-pointer border-transparent text-muted-foreground hover:text-foreground"
+                    ? "cursor-not-allowed bg-secondary/60 text-muted-foreground/50"
+                    : "cursor-pointer bg-secondary text-foreground hover:bg-secondary/80",
               )}
             >
-              {i + 1}. {s.label}
+              {i + 1} {s.label}
             </button>
           );
         })}

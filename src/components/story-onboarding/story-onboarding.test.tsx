@@ -45,19 +45,21 @@ describe("StoryOnboarding", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the first narrative beat and advances with Continue", () => {
+  it("renders the first narrative beat and advances with Turn it on", () => {
     render(wrap(<StoryOnboarding preview />));
-    expect(screen.getByRole("heading", { name: /Everyone watched the same story at 8pm/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Skip/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Continue/i }));
-    expect(screen.getByRole("heading", { name: /Streaming shattered the shared screen/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Remember 8pm/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Skip the story/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Turn it on$/i }));
+    expect(screen.getByRole("heading", { name: /Then everyone got their own screen/i })).toBeInTheDocument();
   });
 
-  it("requires a role chip before leaving the question step", () => {
+  it("requires a role chip before leaving the channel setup step", () => {
     render(wrap(<StoryOnboarding preview />));
-    fireEvent.click(screen.getByRole("button", { name: /Continue/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Continue/i }));
-    expect(screen.getByRole("heading", { name: /What’s your role/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Turn it on$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Change the channel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^I'd rather not dig$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Build my channel$/i }));
+    expect(screen.getByRole("heading", { name: /Who’s holding the remote/i })).toBeInTheDocument();
     const continueBtn = screen.getByRole("button", { name: /Continue/i });
     expect(continueBtn).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /^Researcher$/i }));

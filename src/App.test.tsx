@@ -371,7 +371,7 @@ describe("App routes", () => {
       renderAt(path);
       await waitFor(() => {
         expect(window.location.pathname).toBe("/signin");
-        expect(screen.getByRole("heading", { name: /sign in to repofeed/i })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /sign in to (repofeed|keep your channel)/i })).toBeInTheDocument();
       });
       expect(unmatched).toEqual([]);
       cleanup();
@@ -398,7 +398,7 @@ describe("App routes", () => {
       "/s/test-token": /isn't available|No scenes here yet/i,
       "/share/test-token": /isn't available|No scenes here yet/i,
       "/invite/test-token": /Sign in to repofeed|invite no longer works|You're Invited/i,
-      "/welcome": /Everyone watched the same story|Skip|repofeed/i,
+      "/welcome": /Remember 8pm|Skip the story|repofeed/i,
     };
 
     for (const path of PUBLIC_APP_PATHS) {
