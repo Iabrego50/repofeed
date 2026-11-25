@@ -24,6 +24,7 @@ export const PUBLIC_APP_PATHS = [
   "/auth",
   "/auth/callback",
   "/auth/confirm",
+  "/welcome",
   "/s/test-token",
   "/share/test-token",
   "/invite/test-token",
@@ -32,7 +33,6 @@ export const PUBLIC_APP_PATHS = [
 export const PROTECTED_APP_PATHS = [
   "/feed",
   "/dashboard",
-  "/welcome",
   "/studies",
   "/studies/new",
   "/studies/test-study-id",

@@ -18,6 +18,7 @@ import { appHomePath } from "./lib/native-access.ts";
 import { resolveReturnTo } from "./pages/auth/return-to.ts";
 import { isNativePlatform } from "@/lib/native";
 import { useIsResearcher } from "@/hooks/use-is-researcher.ts";
+import { hasCompletedStoryOnboarding } from "@/lib/story-onboarding.ts";
 
 const AuthCallback = lazy(() => import("./pages/auth/Callback.tsx"));
 const SignInPage = lazy(() => import("./pages/auth/signin.tsx"));
@@ -185,6 +186,29 @@ function Gate() {
   return <Outlet />;
 }
 
+/**
+ * First sign-in: send accounts that have not finished the product story to
+ * `/welcome`. Native viewer-only accounts skip it (join / explore only).
+ * `/welcome` and `/join` are excluded so those flows are not interrupted.
+ */
+function StoryOnboardingGate() {
+  const { user, loading } = useAuth();
+  const { nativeViewerMode, loading: viewerLoading } = useNativeViewer();
+  const location = useLocation();
+
+  if (loading || (isNativePlatform() && viewerLoading)) return <FullScreenLoader />;
+  if (
+    user &&
+    !nativeViewerMode &&
+    !hasCompletedStoryOnboarding(user) &&
+    location.pathname !== "/welcome" &&
+    location.pathname !== "/join"
+  ) {
+    return <Navigate to="/welcome" replace />;
+  }
+  return <Outlet />;
+}
+
 function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   return <AppErrorBoundary resetKey={pathname}>{children}</AppErrorBoundary>;
@@ -235,36 +259,37 @@ export default function App() {
               <Route path="/" element={<PublicEntry loader={<FullScreenLoader />} />} />
               <Route path="/dashboard" element={<Navigate to={appHomePath()} replace />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+              {/* Public story preview + first-run / workspace setup. Outside Gate so founders can open /welcome signed out. */}
+              <Route
+                path="/welcome"
+                element={
+                  <WelcomeGate>
+                    <Welcome />
+                  </WelcomeGate>
+                }
+              />
               <Route element={<Gate />}>
-                <Route
-                  path="/welcome"
-                  element={
-                    <WelcomeGate>
-                      <div className="h-dvh overflow-y-auto">
-                        <Welcome />
-                      </div>
-                    </WelcomeGate>
-                  }
-                />
-                <Route path="/join" element={<div className="h-dvh overflow-y-auto"><JoinPage /></div>} />
-                <Route element={<RequireWorkspace />}>
-                  <Route element={<EditorsOnly />}>
-                    <Route path="/insights/deck" element={<DeckPage />} />
-                  </Route>
-                  <Route element={<AppLayout />}>
-                    <Route element={<ShellOutlet />}>
-                      <Route path="/feed" element={<FeedRoute />} />
-                      <Route path="/explore" element={<ExploreRoute />} />
-                      <Route path="/help" element={<HelpPage />} />
-                      <Route element={<NativeExploreOnly />}>
-                        <Route path="/settings" element={<SettingsPage />} />
-                        <Route path="/studies" element={<StudiesPage />} />
-                        <Route path="/studies/new" element={<NewStudyPage />} />
-                        <Route path="/studies/:studyId" element={<StudyPage />} />
-                        <Route element={<ResearchersOnly fallback={FEED_PATH} />}>
-                          <Route path="/insights" element={<InsightsPage />} />
+                <Route element={<StoryOnboardingGate />}>
+                  <Route path="/join" element={<div className="h-dvh overflow-y-auto"><JoinPage /></div>} />
+                  <Route element={<RequireWorkspace />}>
+                    <Route element={<EditorsOnly />}>
+                      <Route path="/insights/deck" element={<DeckPage />} />
+                    </Route>
+                    <Route element={<AppLayout />}>
+                      <Route element={<ShellOutlet />}>
+                        <Route path="/feed" element={<FeedRoute />} />
+                        <Route path="/explore" element={<ExploreRoute />} />
+                        <Route path="/help" element={<HelpPage />} />
+                        <Route element={<NativeExploreOnly />}>
+                          <Route path="/settings" element={<SettingsPage />} />
+                          <Route path="/studies" element={<StudiesPage />} />
+                          <Route path="/studies/new" element={<NewStudyPage />} />
+                          <Route path="/studies/:studyId" element={<StudyPage />} />
+                          <Route element={<ResearchersOnly fallback={FEED_PATH} />}>
+                            <Route path="/insights" element={<InsightsPage />} />
+                          </Route>
+                          <Route path="/billing" element={<BillingPage />} />
                         </Route>
-                        <Route path="/billing" element={<BillingPage />} />
                       </Route>
                     </Route>
                   </Route>
