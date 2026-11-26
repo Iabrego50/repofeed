@@ -47,12 +47,13 @@ export default function NamePrompt({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onCancel()}>
-      <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => { e.preventDefault(); inputRef.current?.focus(); }}>
+      <DialogContent className="rounded-[1.5rem] sm:max-w-md" onOpenAutoFocus={(e) => { e.preventDefault(); inputRef.current?.focus(); }}>
         <DialogHeader>
-          <span className="mb-2 grid size-11 place-items-center rounded-full bg-primary/15 text-primary">
+          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Guest</p>
+          <span className="mt-3 mb-1 grid size-11 place-items-center rounded-full bg-mark text-mark-foreground">
             <MessageCircle className="size-5" />
           </span>
-          <DialogTitle className="text-2xl">What should we call you?</DialogTitle>
+          <DialogTitle className="text-2xl font-bold tracking-tight">What should we call you?</DialogTitle>
           <DialogDescription>
             The team behind <span className="font-medium text-foreground">{studyTitle}</span> will see your name next to your reactions and comments. No account needed.
           </DialogDescription>

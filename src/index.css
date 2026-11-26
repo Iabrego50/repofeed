@@ -6,8 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* App UI keeps Schibsted. The marketing landing overrides these under `.landing`
-     to Bricolage / Instrument / JetBrains so the product chrome is untouched. */
+  /* Product + marketing share Schibsted / JetBrains (Isaac design system). */
   --font-sans:
     "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display:
@@ -228,121 +227,35 @@
 }
 
 /*
- * Marketing landing only. Black primary buttons, yellow CTAs in `.dark` bands,
- * Bricolage display + Instrument body. Scoped so Studies / Insights / settings
- * keep the workspace palette above.
+ * Marketing landing inherits the shared design-system tokens (paper / studio /
+ * blue primary / mark yellow). Keep a light shell class for page-scoped layout.
  */
 .landing {
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque Variable", "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --background: #f5f4f8;
-  --foreground: #16131f;
-  --card: #fff;
-  --card-foreground: #16131f;
-  --popover: #fff;
-  --popover-foreground: #16131f;
-  --primary: #16131f;
-  --primary-foreground: #fff;
-  --secondary: #eae8f0;
-  --secondary-foreground: #16131f;
-  --muted: #eeecf3;
-  --muted-foreground: #5d586c;
-  --accent: #eae8f0;
-  --accent-foreground: #16131f;
-  --destructive: #c8322b;
-  --border: #dfdce8;
-  --input: #cbc7d8;
-  --ring: #1f5fe8;
-  --brand: #1f5fe8;
-  --mark: #ffd84a;
-  --mark-foreground: #231c00;
-  --success: #12805c;
-  --warning: #9a5b00;
-  --pushback: #c9472b;
-  --chart-1: #1f5fe8;
-  --chart-2: #0f8f8a;
-  --chart-3: #6a4fd8;
-  --chart-4: #12805c;
-  --chart-5: #b7791f;
-  --sidebar: #fff;
-  --sidebar-foreground: #16131f;
-  --sidebar-primary: #16131f;
-  --sidebar-primary-foreground: #fff;
-  --sidebar-accent: #eeecf3;
-  --sidebar-accent-foreground: #16131f;
-  --sidebar-border: #dfdce8;
-  --sidebar-ring: #1f5fe8;
-  --shadow-lift: 0 1px 2px rgb(22 19 31 / 0.06), 0 8px 24px -12px rgb(22 19 31 / 0.18);
-  --shadow-sheet: 0 0 0 1px rgb(22 19 31 / 0.06), 0 24px 48px -24px rgb(22 19 31 / 0.35);
-  font-family: var(--font-sans);
-  font-feature-settings: normal;
-  background-color: var(--background);
+  background-color: var(--paper);
   color: var(--foreground);
-}
-
-.landing .dark {
-  --background: #0c0a12;
-  --foreground: #f3f1f8;
-  --card: #15121d;
-  --card-foreground: #f3f1f8;
-  --popover: #1b1825;
-  --popover-foreground: #f3f1f8;
-  --primary: #ffd84a;
-  --primary-foreground: #231c00;
-  --secondary: #221e2d;
-  --secondary-foreground: #f3f1f8;
-  --muted: #1d1a27;
-  --muted-foreground: #a59fb6;
-  --accent: #2a2537;
-  --accent-foreground: #f3f1f8;
-  --destructive: #ff6b66;
-  --border: #2b2638;
-  --input: #3a3449;
-  --ring: #ffd84a;
-  --brand: #8fb4ff;
-  --mark: #ffd84a;
-  --mark-foreground: #231c00;
-  --success: #3ecf9a;
-  --warning: #f5b945;
-  --pushback: #ff8a6b;
-  --chart-1: #6ea3ff;
-  --chart-2: #35c9c2;
-  --chart-3: #9b87ff;
-  --chart-4: #3ecf9a;
-  --chart-5: #f5b945;
-  --sidebar: #0c0a12;
-  --sidebar-foreground: #f3f1f8;
-  --sidebar-primary: #ffd84a;
-  --sidebar-primary-foreground: #231c00;
-  --sidebar-accent: #221e2d;
-  --sidebar-accent-foreground: #f3f1f8;
-  --sidebar-border: #2b2638;
-  --sidebar-ring: #ffd84a;
-}
-
-.landing h1,
-.landing h2,
-.landing h3 {
-  font-family: var(--font-display);
-  letter-spacing: -0.015em;
-  font-stretch: 88%;
 }
 
 .title-card {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   text-wrap: balance;
   font-weight: 800;
-  font-stretch: 78%;
-  line-height: 0.96;
+  line-height: 0.94;
 }
 
 .figures {
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  font-stretch: 85%;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--eyebrow);
 }
 
 .shadow-sheet {

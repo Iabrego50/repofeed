@@ -100,8 +100,9 @@ export default function DeleteAccount({ embedded = false }: Props) {
   }
 
   return (
-    <section className="rounded-2xl border border-destructive/30 bg-card p-5">
-      <h2 className="text-xl font-bold text-destructive">Delete account</h2>
+    <section className="rounded-[1.5rem] border border-destructive/30 bg-card p-5 shadow-lift">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-destructive uppercase">Danger zone</p>
+      <h2 className="mt-2 text-xl font-bold tracking-tight text-destructive">Delete account</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Permanently delete {email ? <span className="font-medium text-foreground">{email}</span> : "your account"} and
         associated workspace data you own. This cannot be undone.

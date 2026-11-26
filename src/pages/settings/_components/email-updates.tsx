@@ -48,8 +48,9 @@ export default function EmailUpdates({ workspaceId }: { workspaceId: string }) {
   };
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="flex items-center gap-2 text-xl font-bold">
+    <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-lift">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Notifications</p>
+      <h2 className="mt-2 flex items-center gap-2 text-xl font-bold tracking-tight">
         <Mail className="size-5 text-primary" /> Email updates
       </h2>
       <div className="mt-1 text-sm text-muted-foreground">

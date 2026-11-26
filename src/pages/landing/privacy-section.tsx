@@ -24,11 +24,12 @@ const FACTS = [
 /** The two objections that stop a research team from trying an AI tool: where do my files go, and can I trust what it writes. */
 export default function PrivacySection() {
   return (
-    <section aria-labelledby="privacy-heading" className="dark">
+    <section aria-labelledby="privacy-heading" className="dark bg-studio">
       <div className="mx-auto max-w-6xl px-5 py-16 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
-            <h2 id="privacy-heading" className="max-w-[22ch] text-balance text-[2rem] font-bold leading-[1.02] sm:text-[2.75rem]">
+            <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Privacy</p>
+            <h2 id="privacy-heading" className="mt-2 max-w-[22ch] text-balance text-[2rem] font-bold tracking-tight leading-[1.02] sm:text-[2.75rem]">
               Your research files never leave your computer
             </h2>
             <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-muted-foreground">

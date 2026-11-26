@@ -65,8 +65,9 @@ function Invites({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   const [busy, setBusy] = useState(false);
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="text-xl font-bold">Invite people</h2>
+    <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-lift">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Invites</p>
+      <h2 className="mt-2 text-xl font-bold tracking-tight">Invite people</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Anyone with the link can join until it expires or runs out of uses. For the iOS app, prefer the short join code below.
       </p>
@@ -228,8 +229,9 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
   });
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="text-xl font-bold">Members {members && <span className="text-sm text-muted-foreground">{members.length}</span>}</h2>
+    <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-lift">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Team</p>
+      <h2 className="mt-2 text-xl font-bold tracking-tight">Members {members && <span className="text-sm font-normal text-muted-foreground">{members.length}</span>}</h2>
       <ul className="mt-4 divide-y divide-border">
         {members === undefined
           ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="my-2 h-12 w-full" />)
@@ -286,7 +288,7 @@ export default function SettingsPage() {
       <PageHeader eyebrow="Workspace" title={current.name} description={`You're ${current.role === "owner" ? "an owner" : current.role === "editor" ? "an editor" : "a member"} of this workspace.`} />
       {isOwner && (
         <form
-          className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-end"
+          className="flex flex-col gap-2 rounded-[1.5rem] border border-border bg-card p-5 shadow-lift sm:flex-row sm:items-end"
           onSubmit={async (e) => {
             e.preventDefault();
             try {
@@ -309,8 +311,9 @@ export default function SettingsPage() {
       {showCreatorTools && <Invites workspaceId={current._id} isOwner={isOwner} />}
       <EmailUpdates workspaceId={current._id} />
       <Members workspaceId={current._id} isOwner={isOwner} />
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl font-bold">Product story</h2>
+      <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-lift">
+        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Onboarding</p>
+        <h2 className="mt-2 text-xl font-bold tracking-tight">Product story</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Replay the short onboarding story — TV to streaming to your research channel.
         </p>

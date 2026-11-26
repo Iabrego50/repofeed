@@ -175,13 +175,13 @@ export default function DemoPage() {
 
   return (
     <DeckSelectionProvider>
-      <div className="dark flex h-dvh bg-background">
-        <div className="relative flex min-w-0 flex-1 flex-col items-center bg-background">
+      <div className="dark flex h-dvh bg-studio">
+        <div className="relative flex min-w-0 flex-1 flex-col items-center bg-studio">
           <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-4 pt-2 sm:bg-none sm:py-3">
             <Link
               to="/"
               aria-label="Back to repofeed.ai"
-              className="flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
+              className="flex min-h-9 min-w-0 cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-studio-panel/80 px-3 font-mono text-[11px] font-semibold tracking-[0.12em] text-white/85 uppercase backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
             >
               <ArrowLeft className="size-3.5 shrink-0" />
               <Logo withText={false} />
@@ -293,12 +293,13 @@ function EndCard({
   showResearcherCtas: boolean;
 }) {
   return (
-    <div className="flex h-full w-full snap-start flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_50%_30%,rgba(47,155,255,0.25),transparent_60%)] px-8 text-center">
+    <div className="flex h-full w-full snap-start flex-col items-center justify-center gap-5 bg-studio px-8 text-center">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Sample study</p>
       <Logo />
-      <h2 className="text-balance text-3xl font-bold text-white">
+      <h2 className="text-balance text-3xl font-bold tracking-tight text-white">
         That's the whole study, in {REELS.length} scenes.
       </h2>
-      <p className="max-w-xs text-sm text-white/70">
+      <p className="max-w-xs text-sm text-white/65">
         Drop in your own interviews and surveys, and get a feed like this for
         your team in minutes.
       </p>
@@ -308,7 +309,7 @@ function EndCard({
         signInText="Get started free"
       />
       {showResearcherCtas && (
-        <Button asChild variant="secondary" className="h-11">
+        <Button asChild variant="secondary" className="h-11 font-semibold">
           <Link to="/demo/explore">
             <Compass className="size-4" /> Search these insights
           </Link>
@@ -316,12 +317,12 @@ function EndCard({
       )}
       {showResearcherCtas && !isNativePlatform() && (
         <>
-          <Button asChild variant="secondary" className="h-11">
+          <Button asChild variant="secondary" className="h-11 font-semibold">
             <Link to="/demo/insights">
               <BarChart3 className="size-4" /> See who watched, in Insights
             </Link>
           </Button>
-          <Button asChild variant="secondary" className="h-11">
+          <Button asChild variant="secondary" className="h-11 font-semibold">
             <Link to="/demo/deck">
               <Presentation className="size-4" /> Make a PowerPoint deck
             </Link>
@@ -331,7 +332,7 @@ function EndCard({
       <Button
         variant="ghost"
         onClick={onRestart}
-        className="h-11 text-white/80 hover:text-white"
+        className="h-11 text-white/80 hover:bg-white/10 hover:text-white"
       >
         <RotateCcw className="size-4" /> Watch again
       </Button>

@@ -75,16 +75,17 @@ export default function SharePage() {
 
   if (data === null) {
     return (
-      <div className="flex h-dvh flex-col items-center justify-center gap-6 bg-background px-5">
+      <div className="flex h-dvh flex-col items-center justify-center gap-6 bg-paper px-5">
         <Logo />
         <Empty>
           <EmptyHeader>
+            <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Share link</p>
             <EmptyMedia variant="icon"><Link2Off /></EmptyMedia>
             <EmptyTitle>This link isn't available</EmptyTitle>
             <EmptyDescription>It may have been turned off or the study was unpublished. Ask the person who sent it for a new link.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button asChild variant="secondary" className="h-11"><Link to="/">Go to repofeed.ai</Link></Button>
+            <Button asChild variant="secondary" className="h-11 font-semibold"><Link to="/">Go to repofeed.ai</Link></Button>
           </EmptyContent>
         </Empty>
       </div>
@@ -93,7 +94,7 @@ export default function SharePage() {
 
   if (previewDeck) {
     return (
-      <div className="dark flex h-dvh flex-col bg-background">
+      <div className="dark flex h-dvh flex-col bg-studio">
         <Presenter
           deck={previewDeck}
           backLabel="Feed"
@@ -126,7 +127,7 @@ export default function SharePage() {
       <Link
         to="/"
         aria-label="Back to repofeed.ai"
-        className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/30 text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
+        className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/10 bg-studio-panel/80 text-white/85 backdrop-blur transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-ring"
       >
         <Logo withText={false} />
       </Link>
@@ -145,10 +146,11 @@ export default function SharePage() {
             toolbar={header}
             asideFooter={isDesktop ? generateAside : undefined}
             empty={
-              <Empty>
+              <Empty className="dark border-0 bg-transparent text-white">
                 <EmptyHeader>
-                  <EmptyTitle>No scenes here yet</EmptyTitle>
-                  <EmptyDescription>Check back later.</EmptyDescription>
+                  <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Shared feed</p>
+                  <EmptyTitle className="text-white">No scenes here yet</EmptyTitle>
+                  <EmptyDescription className="text-white/60">Check back later.</EmptyDescription>
                 </EmptyHeader>
               </Empty>
             }

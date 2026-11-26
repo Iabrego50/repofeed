@@ -29,6 +29,7 @@ const HARNESS_SCREENS = [
   "join",
   "home",
   "feed",
+  "settings",
 ] as const;
 
 type HarnessScreen = (typeof HARNESS_SCREENS)[number];
@@ -374,34 +375,84 @@ function HomeFixture() {
 
 function FeedFixture() {
   return (
-    <div className="dark relative flex h-dvh flex-col overflow-hidden bg-black text-white">
+    <div className="dark relative flex h-dvh flex-col overflow-hidden bg-studio text-white">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between bg-gradient-to-b from-black/70 to-transparent px-3 pb-6 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <div className="pointer-events-auto flex h-11 items-center gap-2 px-2 text-sm font-medium">
+        <div className="pointer-events-auto flex h-11 items-center gap-2 px-2 font-mono text-[11px] tracking-[0.12em] uppercase">
           <span aria-hidden>←</span> Auto
         </div>
+        <span className="pointer-events-auto rounded-xl bg-mark px-3 py-2 text-[11px] font-semibold text-mark-foreground">
+          Add to PPT
+        </span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm rounded-[1.75rem] border border-white/10 bg-[#0f172a] p-5 shadow-sheet">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-white/45 uppercase">CH 01 · Auto</p>
-          <p className="mt-4 font-serif text-xl leading-snug">
+      <div className="relative flex min-h-0 flex-1 flex-col justify-end px-5 pb-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgb(37_99_235_/_0.22),transparent_55%)]" aria-hidden />
+        <div className="relative max-w-[22rem]">
+          <p className="font-mono text-[10px] tracking-[0.14em] text-eyebrow uppercase">CH 01 · Auto</p>
+          <p className="quote-voice mt-4 text-[1.65rem] leading-[1.15]">
             “It stopped feeling like help and started feeling like homework.”
           </p>
-          <p className="mt-3 text-xs text-white/50">Parent of two • 7 months</p>
+          <p className="mt-3 text-xs text-white/55">Parent of two • 7 months</p>
           <span className="mt-4 inline-flex rounded-full bg-white/10 px-2.5 py-1 font-mono text-[10px] text-white/80">
             Cut from interviews.docx
           </span>
-          <div className="mt-6 grid grid-cols-2 gap-2">
-            <span className="rounded-full bg-white/12 px-3 py-2 text-center text-[11px] font-medium">Add to PPT</span>
-            <span className="rounded-full bg-white/12 px-3 py-2 text-center text-[11px] font-medium">Like</span>
-            <span className="rounded-full bg-white/12 px-3 py-2 text-center text-[11px] font-medium">Comment</span>
-            <span className="rounded-full bg-mark px-3 py-2 text-center text-[11px] font-semibold text-mark-foreground">
-              Heard this before
-            </span>
-          </div>
         </div>
-        <p className="mt-6 text-center text-xs text-white/40">Fixture feed · four actions · no live data</p>
+        <div
+          className="absolute right-4 bottom-28 flex flex-col items-center gap-4"
+          role="group"
+          aria-label="Scene actions"
+        >
+          {[
+            ["Like", false],
+            ["Comment", false],
+            ["Heard this before", true],
+          ].map(([label, on]) => (
+            <div key={label as string} className="flex flex-col items-center gap-1 text-white">
+              <span
+                className={cn(
+                  "grid size-12 place-items-center rounded-full text-[10px] font-semibold",
+                  on ? "bg-white text-black" : "bg-black/50",
+                )}
+              >
+                {(label as string).slice(0, 1)}
+              </span>
+              <span className="max-w-[4.5rem] text-center text-[10px] font-semibold leading-tight">{label as string}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="h-1 w-full bg-white/15">
+        <div className="h-full w-2/5 bg-mark" />
       </div>
     </div>
+  );
+}
+
+function SettingsFixture() {
+  return (
+    <DesktopChrome>
+      <div className="space-y-6">
+        <div>
+          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Workspace</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">{WORKSPACE}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">You're an owner of this workspace.</p>
+        </div>
+        <JoinCodePanelView
+          workspaceName={WORKSPACE}
+          code={FIXTURE_CODE}
+          hideEmail
+          onCopy={() => undefined}
+          onRegenerate={() => undefined}
+        />
+        <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-lift">
+          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Invites</p>
+          <h2 className="mt-2 text-xl font-bold tracking-tight">Invite people</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Anyone with the link can join until it expires or runs out of uses.
+          </p>
+          <Button className="mt-4 h-11 font-semibold">Create link</Button>
+        </section>
+      </div>
+    </DesktopChrome>
   );
 }
 
@@ -462,6 +513,8 @@ export default function DesignHarnessPage() {
       return <HomeFixture />;
     case "feed":
       return <FeedFixture />;
+    case "settings":
+      return <SettingsFixture />;
     default:
       return index;
   }

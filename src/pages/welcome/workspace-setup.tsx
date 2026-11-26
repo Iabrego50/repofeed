@@ -32,23 +32,30 @@ function suggestWorkspace(email: string | null | undefined): string {
 
 function Rail({ step }: { step: number }) {
   return (
-    <ol className="flex gap-2 lg:flex-col lg:gap-1">
+    <ol className="flex gap-2 lg:flex-col lg:gap-2">
       {STEPS.map((label, i) => (
         <li
           key={label}
           aria-current={i === step ? "step" : undefined}
-          className={cn("flex flex-1 items-center gap-3 rounded-md lg:flex-none lg:px-2 lg:py-2", i === step && "lg:bg-accent")}
+          className={cn(
+            "flex flex-1 items-center gap-3 rounded-xl lg:flex-none lg:px-3 lg:py-2.5",
+            i === step && "lg:bg-studio lg:text-white",
+          )}
         >
           <span
             className={cn(
-              "grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold",
-              i < step ? "bg-success text-white" : i === step ? "bg-foreground text-background" : "border border-border text-muted-foreground",
+              "grid size-7 shrink-0 place-items-center rounded-full font-mono text-[11px] font-semibold",
+              i < step
+                ? "bg-mark text-mark-foreground"
+                : i === step
+                  ? "bg-primary text-primary-foreground lg:bg-mark lg:text-mark-foreground"
+                  : "border border-border text-muted-foreground",
             )}
           >
             {i < step ? <Check className="size-3.5" strokeWidth={3} /> : i + 1}
           </span>
           <span className={cn("hidden text-sm lg:inline", i === step ? "font-semibold" : "text-muted-foreground")}>{label}</span>
-          <span aria-hidden className={cn("h-0.5 flex-1 rounded lg:hidden", i < step ? "bg-success" : "bg-border")} />
+          <span aria-hidden className={cn("h-0.5 flex-1 rounded lg:hidden", i < step ? "bg-mark" : "bg-border")} />
         </li>
       ))}
     </ol>
@@ -61,15 +68,15 @@ function Choice({ icon: Icon, title, body, onClick, primary }: { icon: typeof Up
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full cursor-pointer items-start gap-4 rounded-xl border bg-card p-4 text-left transition-colors hover:border-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        primary ? "border-foreground" : "border-border",
+        "flex w-full cursor-pointer items-start gap-4 rounded-[1.25rem] border bg-card p-4 text-left shadow-lift transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        primary ? "border-primary" : "border-border",
       )}
     >
-      <span className={cn("grid size-10 shrink-0 place-items-center rounded-md", primary ? "bg-primary text-primary-foreground" : "bg-secondary")}>
+      <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", primary ? "bg-primary text-primary-foreground" : "bg-secondary")}>
         <Icon className="size-5" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-semibold">{title}</span>
+        <span className="block font-semibold tracking-tight">{title}</span>
         <span className="mt-0.5 block text-sm text-muted-foreground">{body}</span>
       </span>
       <ArrowRight className="mt-2.5 size-4 shrink-0 text-muted-foreground" />
@@ -77,12 +84,13 @@ function Choice({ icon: Icon, title, body, onClick, primary }: { icon: typeof Up
   );
 }
 
-function StepShell({ title, lead, children }: { title: string; lead: string; children: ReactNode }) {
+function StepShell({ eyebrow, title, lead, children }: { eyebrow: string; title: string; lead: string; children: ReactNode }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
   return (
     <div>
-      <h1 ref={heading} tabIndex={-1} className="text-balance text-2xl font-bold tracking-tight outline-none sm:text-3xl">{title}</h1>
+      <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">{eyebrow}</p>
+      <h1 ref={heading} tabIndex={-1} className="mt-2 text-balance text-3xl font-bold tracking-tight outline-none sm:text-[2.125rem]">{title}</h1>
       <p className="mt-2 max-w-md text-muted-foreground">{lead}</p>
       <div className="mt-7">{children}</div>
     </div>
@@ -197,19 +205,19 @@ export default function WorkspaceSetup() {
   );
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full bg-paper">
       <div className="mx-auto grid max-w-4xl gap-8 px-5 py-8 lg:grid-cols-[13rem_1fr] lg:gap-16 lg:py-16">
         <aside>
           <Logo />
           <div className="mt-6 lg:mt-10">
             <Rail step={step} />
           </div>
-          <p className="mt-6 hidden text-sm text-muted-foreground lg:block">About two minutes. You can change all of this later.</p>
+          <p className="mt-6 hidden font-mono text-[11px] tracking-[0.12em] text-muted-foreground uppercase lg:block">About two minutes</p>
         </aside>
 
         <main className="max-w-lg" aria-live="polite">
           {step === 0 && (
-            <StepShell key="you" title="Welcome. Who’s setting this up?" lead="Your name is what teammates see next to your comments and on studies you publish.">
+            <StepShell key="you" eyebrow="Step 01" title="Welcome. Who’s setting this up?" lead="Your name is what teammates see next to your comments and on studies you publish.">
               <form onSubmit={(e) => void saveProfile(e)} className="space-y-6">
                 <div className="space-y-1.5">
                   <Label htmlFor="ob-name">Your name</Label>
@@ -225,8 +233,8 @@ export default function WorkspaceSetup() {
                         aria-pressed={role === item}
                         onClick={() => setRole(role === item ? "" : item)}
                         className={cn(
-                          "min-h-10 cursor-pointer rounded-full border px-3.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring",
-                          role === item ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:border-foreground",
+                          "min-h-10 cursor-pointer rounded-xl border px-3.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring",
+                          role === item ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary",
                         )}
                       >
                         {item}
@@ -242,7 +250,7 @@ export default function WorkspaceSetup() {
           )}
 
           {step === 1 && (
-            <StepShell key="workspace" title="Name your workspace" lead="A workspace holds your studies and the people who watch them. Most teams name it after the company or the research team.">
+            <StepShell key="workspace" eyebrow="Step 02" title="Name your workspace" lead="A workspace holds your studies and the people who watch them. Most teams name it after the company or the research team.">
               <form onSubmit={(e) => void createWorkspace(e)} className="space-y-6">
                 <div className="space-y-1.5">
                   <Label htmlFor="ob-workspace">Workspace name</Label>
@@ -272,13 +280,13 @@ export default function WorkspaceSetup() {
           )}
 
           {step === 2 && (
-            <StepShell key="team" title="Who should see your research?" lead="Teammates who join the workspace see every published study in their feed. Watching, reacting and commenting is free for as many people as you like.">
-              <div className="rounded-xl border border-border bg-card p-4">
-                <p className="font-semibold">Invite teammates with a link</p>
+            <StepShell key="team" eyebrow="Step 03" title="Who should see your research?" lead="Teammates who join the workspace see every published study in their feed. Watching, reacting and commenting is free for as many people as you like.">
+              <div className="rounded-[1.25rem] border border-border bg-card p-4 shadow-lift">
+                <p className="font-semibold tracking-tight">Invite teammates with a link</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">Anyone who opens it signs in and joins as a viewer. The link works for seven days.</p>
                 {invite ? (
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                    <output className="min-w-0 flex-1 break-all rounded-md border border-border bg-background px-3 py-2 text-sm">{invite.url}</output>
+                    <output className="min-w-0 flex-1 break-all rounded-xl border border-border bg-paper px-3 py-2 text-sm">{invite.url}</output>
                     <Button type="button" variant="outline" onClick={() => void copyInvite()} className="h-10 shrink-0">
                       {invite.copied ? <Check className="size-4" /> : <Copy className="size-4" />} {invite.copied ? "Copied" : "Copy"}
                     </Button>
@@ -302,7 +310,7 @@ export default function WorkspaceSetup() {
           )}
 
           {step === 3 && (
-            <StepShell key="first" title="How do you want to start?" lead="The quickest way to see what repofeed does is to give it a study you’ve already finished.">
+            <StepShell key="first" eyebrow="Step 04" title="How do you want to start?" lead="The quickest way to see what repofeed does is to give it a study you’ve already finished.">
               <div className="space-y-3">
                 <Choice primary icon={Upload} title="Upload my own research" body="Drop in transcripts, survey exports or a deck. Your files stay on your computer; only the text is read." onClick={() => void finish("upload")} />
                 <Choice icon={Play} title="Watch a sample study first" body="Scroll a finished demo feed to see what your team would get." onClick={() => void finish("demo")} />
