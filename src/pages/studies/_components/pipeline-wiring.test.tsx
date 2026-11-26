@@ -1,6 +1,6 @@
 /**
- * Guards Isaac’s requirement: redesign UI must keep the real upload + AI
- * generation + video pipeline (no mocks/placeholders on production paths).
+ * Guards: redesign UI must keep the real upload + AI generation + video pipeline
+ * (no mocks/placeholders on production paths; no dead `/api/upload` calls).
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -11,12 +11,36 @@ const startGeneration = vi.fn(async (_args: { studyId: string }) => "job-1");
 const latestForStudy = vi.fn(async (_args: { studyId: string }) => null);
 const cancelGeneration = vi.fn(async (_args: { studyId: string }) => undefined);
 const removeSource = vi.fn(async (_args: { sourceId: string }) => undefined);
+const addSource = vi.fn(async (_args: { studyId: string; name: string; kind: string; text: string }) => "src-1");
 const feedList = vi.fn(async (_args: { workspaceId: string; division?: string }) => []);
+const extractText = vi.fn(async (_file: File) => "Interview transcript about meal kits.");
+
+vi.mock("@/lib/extract.ts", () => ({
+  ACCEPTED_EXTENSIONS: ["txt", "md", "pdf", "docx", "pptx", "xlsx"],
+  extractText: (file: File) => extractText(file),
+}));
+
+vi.mock("react-dropzone", () => ({
+  useDropzone: ({ onDrop }: { onDrop: (files: File[]) => void }) => ({
+    getRootProps: () => ({}),
+    getInputProps: () => ({
+      type: "file",
+      multiple: true,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files ? Array.from(e.target.files) : [];
+        if (files.length) onDrop(files);
+      },
+    }),
+    isDragActive: false,
+    open: () => undefined,
+  }),
+}));
 
 vi.mock("@/lib/api/complete", () => ({
   api: {
     studies: {
       removeSource: (args: { sourceId: string }) => removeSource(args),
+      addSource: (args: { studyId: string; name: string; kind: string; text: string }) => addSource(args),
     },
     generation: {
       jobs: {
@@ -91,19 +115,16 @@ describe("production pipeline wiring (design redesign)", () => {
     vi.clearAllMocks();
     latestForStudy.mockResolvedValue(null);
     feedList.mockResolvedValue([]);
+    extractText.mockResolvedValue("Interview transcript about meal kits.");
+    addSource.mockResolvedValue("src-1");
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it("SourcesStep still posts real files to /api/upload", async () => {
-    let uploaded: FormData | null = null;
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      uploaded = (init?.body as FormData) ?? null;
-      return { ok: true };
-    });
-    vi.stubGlobal("fetch", fetchMock);
+  it("SourcesStep extracts text locally and calls api.studies.addSource (not /api/upload)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
 
     render(
       wrap(
@@ -124,16 +145,24 @@ describe("production pipeline wiring (design redesign)", () => {
     });
     fireEvent.change(input, { target: { files: [file] } });
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/upload",
-      expect.objectContaining({ method: "POST", body: expect.any(FormData) }),
-    );
-    expect(uploaded).toBeInstanceOf(FormData);
-    expect(uploaded!.get("studyId")).toBe("study-1");
-    expect((uploaded!.get("file") as File).name).toBe("interviews.docx");
+    await waitFor(() => expect(extractText).toHaveBeenCalled());
+    expect(extractText.mock.calls[0]?.[0]).toBeInstanceOf(File);
+    expect((extractText.mock.calls[0]?.[0] as File).name).toBe("interviews.docx");
 
-    vi.unstubAllGlobals();
+    await waitFor(() =>
+      expect(addSource).toHaveBeenCalledWith({
+        studyId: "study-1",
+        name: "interviews.docx",
+        kind: "file",
+        text: "Interview transcript about meal kits.",
+      }),
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/upload/),
+      expect.anything(),
+    );
+    fetchSpy.mockRestore();
   });
 
   it("GenerateStep still starts the real AI generation job", async () => {
