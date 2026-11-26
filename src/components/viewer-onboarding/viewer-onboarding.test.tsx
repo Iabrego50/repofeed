@@ -33,4 +33,24 @@ describe("ViewerOnboarding", () => {
     expect(screen.getByText(/Join code entry/i)).toBeInTheDocument();
     expect(localStorage.getItem(VIEWER_ONBOARDING_DONE_KEY)).toBe("1");
   });
+
+  it("shows Back after the first step and restores the previous step", async () => {
+    render(
+      <MemoryRouter initialEntries={["/welcome"]}>
+        <Routes>
+          <Route path="/welcome" element={<ViewerOnboarding />} />
+          <Route path="/join" element={<div>Join code entry</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: /^Back$/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Continue$/i }));
+    expect(screen.getByRole("heading", { name: /Scroll\. React\. Ask/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Back$/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Back$/i }));
+    await vi.waitFor(() => {
+      expect(screen.getByRole("heading", { name: /Your team’s research plays here/i })).toBeInTheDocument();
+    });
+  });
 });

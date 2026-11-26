@@ -33,6 +33,8 @@ import StorySignupPlans from "./story-signup-plans.tsx";
 import "./story-onboarding.css";
 
 const SEGMENT_MS = 10000;
+/** History state key so browser / iOS swipe-back stays inside the story. */
+const STORY_HISTORY_KEY = "repofeed_story_step";
 
 type StepKind = "story" | "question" | "finish";
 type Theme = "dark" | "light";
@@ -95,7 +97,7 @@ const STEPS: Step[] = [
     id: "role",
     kind: "question",
     theme: "light",
-    eyebrow: "Your channel · 1 of 4",
+    eyebrow: "Your channel",
     title: "Who’s holding the remote?",
     body: "Pick your role. We’ll tune the channel’s language to how you work.",
     cta: "Continue",
@@ -230,26 +232,72 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const isQuestion = step.kind === "question";
   const isFinish = step.kind === "finish";
   const light = step.theme === "light";
+  const showPricing = isFinish && preview && !isNativePlatform();
+  /** Tall steps (role + pricing) must top-align and scroll; narrative beats stay centered. */
+  const scrollableStep = isQuestion || isFinish;
 
   useEffect(() => {
     headingRef.current?.focus();
   }, [index]);
 
+  // Seed history so the first browser/swipe back from step 1 returns to step 0, not off /welcome.
+  useEffect(() => {
+    try {
+      window.history.replaceState({ ...window.history.state, [STORY_HISTORY_KEY]: 0 }, "");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const onPop = (event: PopStateEvent) => {
+      const raw = (event.state as Record<string, unknown> | null)?.[STORY_HISTORY_KEY];
+      if (typeof raw === "number" && raw >= 0 && raw < STEPS.length) {
+        setIndex(raw);
+        return;
+      }
+      // Mid-story with no step state (e.g. external history entry) — stay put.
+      if (index > 0) {
+        try {
+          window.history.pushState({ [STORY_HISTORY_KEY]: index }, "");
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [index]);
+
   const canAdvance = step.question === "role" ? Boolean(session.role) : true;
 
-  const go = useCallback((delta: number) => {
-    setIndex((i) => Math.min(STEPS.length - 1, Math.max(0, i + delta)));
+  const goTo = useCallback((nextIndex: number, mode: "push" | "replace") => {
+    const clamped = Math.min(STEPS.length - 1, Math.max(0, nextIndex));
+    setIndex(clamped);
+    try {
+      const state = { [STORY_HISTORY_KEY]: clamped };
+      if (mode === "push") window.history.pushState(state, "");
+      else window.history.replaceState({ ...window.history.state, ...state }, "");
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const next = useCallback(() => {
     if (isFinish) return;
     if (isQuestion && !canAdvance) return;
-    go(1);
-  }, [canAdvance, go, isFinish, isQuestion]);
+    goTo(index + 1, "push");
+  }, [canAdvance, goTo, index, isFinish, isQuestion]);
 
+  /** Prefer history.back so the Back button, browser back, and iOS swipe-back stay in sync. */
   const back = useCallback(() => {
-    go(-1);
-  }, [go]);
+    if (index <= 0) return;
+    try {
+      window.history.back();
+    } catch {
+      goTo(index - 1, "replace");
+    }
+  }, [goTo, index]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -367,7 +415,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         else back();
       }}
     >
-      <header className="relative z-20 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-8">
+      <header className="relative z-20 shrink-0 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-8">
         <ProgressBars
           index={index}
           count={STEPS.length}
@@ -391,164 +439,184 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         </div>
       </header>
 
-      <div className="relative z-0 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6 sm:px-8 lg:flex-row lg:items-center lg:gap-12 lg:pt-4">
-        <div className="relative z-20 flex w-full flex-none flex-col lg:max-w-[42%] lg:flex-1">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`copy-${step.id}`}
-              initial={reduced ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduced ? undefined : { opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <p className="font-mono text-[11px] font-medium tracking-[0.16em] text-eyebrow uppercase">
-                {step.eyebrow}
-              </p>
-              <h1
-                ref={headingRef}
-                tabIndex={-1}
-                className={cn(
-                  "mt-3 text-balance text-3xl font-bold leading-[1.1] tracking-tight outline-none sm:text-4xl lg:text-[2.75rem]",
-                  light ? "text-foreground" : "text-white",
-                )}
-              >
-                {step.title}
-              </h1>
-              <p
-                className={cn(
-                  "mt-3 max-w-prose text-pretty text-base leading-relaxed",
-                  light ? "text-muted-foreground" : "text-white/70",
-                )}
-              >
-                {step.body}
-              </p>
-
-              {step.id === "cost" && (
-                <p className={cn("mt-3 text-sm font-medium", light ? "text-foreground" : "text-white/90")}>
-                  Five files. Tap one to start digging.
-                </p>
-              )}
-
-              {step.question === "role" && (
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {STORY_ROLES.map((role) => (
-                    <Chip
-                      key={role}
-                      selected={session.role === role}
-                      onClick={() => setSession((s) => ({ ...s, role: role as StoryRole }))}
-                    >
-                      {ROLE_LABELS[role]}
-                    </Chip>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-8 flex flex-wrap items-center gap-2">
-                {index > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "h-11 px-5 font-semibold",
-                      !light && "border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white",
-                    )}
-                    onClick={back}
-                  >
-                    Back
-                  </Button>
-                )}
-                {isFinish ? (
-                  <>
-                    {!preview && (
-                      <Button
-                        type="button"
-                        className="h-11 px-5 font-semibold"
-                        disabled={busy}
-                        onClick={() =>
-                          void finish(workspaces && workspaces.length > 0 ? "upload" : "setup")
-                        }
-                      >
-                        {workspaces && workspaces.length > 0 ? "Upload research" : "Set up workspace"}
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      className={cn(
-                        "h-11 px-5 font-semibold",
-                        light
-                          ? "bg-foreground text-background hover:bg-foreground/90"
-                          : "bg-white text-[#0b1020] hover:bg-white/90",
-                      )}
-                      disabled={busy}
-                      onClick={() => void finish("demo")}
-                    >
-                      Watch the demo
-                    </Button>
-                  </>
-                ) : (
-                  <Button type="button" className="h-11 px-5 font-semibold" disabled={!canAdvance} onClick={next}>
-                    {step.cta ?? "Continue"}
-                  </Button>
-                )}
-              </div>
-
-              {isFinish && preview && !isNativePlatform() && (
-                <StorySignupPlans
-                  onStartFree={() => void finish("signup")}
-                  onStartPaid={() => void finish("signup")}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        <div className="relative mt-8 flex min-h-0 flex-1 items-center justify-center lg:mt-0">
-          {!isQuestion &&
-            !isFinish &&
-            step.visual !== "crt" &&
-            step.visual !== "yellow" &&
-            step.visual !== "scattered" && (
-              <div className="absolute inset-0 z-10 hidden lg:flex">
-                <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
-                <button
-                  type="button"
-                  aria-label="Pause"
-                  className="w-1/3 cursor-pointer bg-transparent"
-                  onPointerDown={() => setPaused(true)}
-                  onPointerUp={() => setPaused(false)}
-                  onPointerLeave={() => setPaused(false)}
-                  onClick={next}
-                />
-                <button type="button" aria-label="Next" className="w-1/3 cursor-pointer bg-transparent" onClick={next} />
-              </div>
-            )}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step.id}
-              className="relative z-0 flex h-full w-full items-center justify-center"
-              initial={reduced ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduced ? undefined : { opacity: 0, y: -8 }}
-              transition={{ duration: 0.28 }}
-            >
-              {visual}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {(preview || replay) && (
-        <p
+      {/*
+        Scroll the story body. PR #42 put pricing inside the left column under
+        overflow-hidden + lg:items-center, which clipped "You're on air" and
+        made plan CTAs unreachable. Tall steps top-align; narrative stays centered.
+      */}
+      <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div
           className={cn(
-            "relative z-20 px-5 pb-4 text-xs sm:px-8",
-            light ? "text-muted-foreground" : "text-white/40",
+            "mx-auto flex w-full max-w-6xl flex-col px-5 pt-6 sm:px-8 lg:flex-row lg:gap-12 lg:pt-4",
+            scrollableStep ? "lg:items-start" : "min-h-full lg:items-center",
+            showPricing ? "pb-4" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]",
           )}
         >
-          {preview
-            ? "Preview mode. Answers aren't saved until you sign in."
-            : "Replaying the product story. Finish to mark it complete."}
-        </p>
-      )}
+          <div className="relative z-20 flex w-full flex-none flex-col lg:max-w-[42%] lg:flex-1">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`copy-${step.id}`}
+                initial={reduced ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduced ? undefined : { opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <p className="font-mono text-[11px] font-medium tracking-[0.16em] text-eyebrow uppercase">
+                  {step.eyebrow}
+                </p>
+                <h1
+                  ref={headingRef}
+                  tabIndex={-1}
+                  className={cn(
+                    "mt-3 text-balance text-3xl font-bold leading-[1.1] tracking-tight outline-none sm:text-4xl lg:text-[2.75rem]",
+                    light ? "text-foreground" : "text-white",
+                  )}
+                >
+                  {step.title}
+                </h1>
+                <p
+                  className={cn(
+                    "mt-3 max-w-prose text-pretty text-base leading-relaxed",
+                    light ? "text-muted-foreground" : "text-white/70",
+                  )}
+                >
+                  {step.body}
+                </p>
+
+                {step.id === "cost" && (
+                  <p className={cn("mt-3 text-sm font-medium", light ? "text-foreground" : "text-white/90")}>
+                    Five files. Tap one to start digging.
+                  </p>
+                )}
+
+                {step.question === "role" && (
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {STORY_ROLES.map((role) => (
+                      <Chip
+                        key={role}
+                        selected={session.role === role}
+                        onClick={() => setSession((s) => ({ ...s, role: role as StoryRole }))}
+                      >
+                        {ROLE_LABELS[role]}
+                      </Chip>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-8 flex flex-wrap items-center gap-2">
+                  {index > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "h-11 px-5 font-semibold",
+                        !light && "border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white",
+                      )}
+                      onClick={back}
+                    >
+                      Back
+                    </Button>
+                  )}
+                  {isFinish ? (
+                    <>
+                      {!preview && (
+                        <Button
+                          type="button"
+                          className="h-11 px-5 font-semibold"
+                          disabled={busy}
+                          onClick={() =>
+                            void finish(workspaces && workspaces.length > 0 ? "upload" : "setup")
+                          }
+                        >
+                          {workspaces && workspaces.length > 0 ? "Upload research" : "Set up workspace"}
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        className={cn(
+                          "h-11 px-5 font-semibold",
+                          light
+                            ? "bg-foreground text-background hover:bg-foreground/90"
+                            : "bg-white text-[#0b1020] hover:bg-white/90",
+                        )}
+                        disabled={busy}
+                        onClick={() => void finish("demo")}
+                      >
+                        Watch the demo
+                      </Button>
+                    </>
+                  ) : (
+                    <Button type="button" className="h-11 px-5 font-semibold" disabled={!canAdvance} onClick={next}>
+                      {step.cta ?? "Continue"}
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div
+            className={cn(
+              "relative mt-8 flex items-center justify-center lg:mt-0",
+              scrollableStep ? "w-full shrink-0 lg:max-w-[58%] lg:flex-1" : "min-h-0 flex-1",
+            )}
+          >
+            {!isQuestion &&
+              !isFinish &&
+              step.visual !== "crt" &&
+              step.visual !== "yellow" &&
+              step.visual !== "scattered" && (
+                <div className="absolute inset-0 z-10 hidden lg:flex">
+                  <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
+                  <button
+                    type="button"
+                    aria-label="Pause"
+                    className="w-1/3 cursor-pointer bg-transparent"
+                    onPointerDown={() => setPaused(true)}
+                    onPointerUp={() => setPaused(false)}
+                    onPointerLeave={() => setPaused(false)}
+                    onClick={next}
+                  />
+                  <button type="button" aria-label="Next" className="w-1/3 cursor-pointer bg-transparent" onClick={next} />
+                </div>
+              )}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step.id}
+                className="relative z-0 flex h-full w-full items-center justify-center"
+                initial={reduced ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduced ? undefined : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.28 }}
+              >
+                {visual}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {showPricing && (
+          <div className="mx-auto w-full max-w-6xl px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-8">
+            <StorySignupPlans
+              onStartFree={() => void finish("signup")}
+              onStartPaid={() => void finish("signup")}
+            />
+          </div>
+        )}
+
+        {(preview || replay) && (
+          <p
+            className={cn(
+              "relative z-20 px-5 pb-4 text-xs sm:px-8",
+              light ? "text-muted-foreground" : "text-white/40",
+            )}
+          >
+            {preview
+              ? "Preview mode. Answers aren't saved until you sign in."
+              : "Replaying the product story. Finish to mark it complete."}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
