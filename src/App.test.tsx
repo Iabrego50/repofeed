@@ -266,6 +266,8 @@ describe("App routes", () => {
   beforeEach(() => {
     unmatched.length = 0;
     signedOutSession();
+    localStorage.clear();
+    sessionStorage.clear();
     window.history.pushState({}, "", "/");
     warnSpy = vi.spyOn(console, "warn").mockImplementation((...args) => {
       trackRouteWarnings(args);
@@ -281,23 +283,30 @@ describe("App routes", () => {
     cleanup();
   });
 
-  it("renders the landing page at / without throwing", async () => {
+  it("sends new signed-out visitors from / into the product story", async () => {
     expect(() => renderAt("/")).not.toThrow();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/welcome");
+      expect(document.body.textContent).toMatch(/Remember 8pm|Skip the story|You're on air|repofeed/i);
+    });
+  });
+
+  it("serves the marketing landing at /landing", async () => {
+    renderAt("/landing");
     await waitFor(() => {
       expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
     });
     expect(document.body.textContent).toMatch(/repofeed/i);
   });
 
-  it("keeps / as the marketing landing when signed in, and puts the feed at /feed", async () => {
+  it("sends signed-in visitors from / to /feed, and keeps the feed at /feed", async () => {
     signedInSession();
     renderAt("/");
     await waitFor(() => {
-      expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
+      expect(window.location.pathname).toBe("/feed");
+      expect(document.body.textContent).toMatch(/Acme Research/);
     });
-    expect(window.location.pathname).toBe("/");
-    expect(screen.getAllByRole("link", { name: /go to (the|your) feed/i }).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/No scenes in your feed yet/i)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Nobody reads the report/i);
     cleanup();
 
     signedInSession();
@@ -330,12 +339,12 @@ describe("App routes", () => {
     expect(document.body.textContent).not.toMatch(/Nobody reads the report/i);
   });
 
-  it("still shows the landing for a signed-out /?reel= link when sharing is off", async () => {
+  it("sends a signed-out /?reel= visitor into the story when sharing is off", async () => {
     renderAt("/?reel=reel-1");
     await waitFor(() => {
-      expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
+      expect(window.location.pathname).toBe("/welcome");
+      expect(document.body.textContent).toMatch(/Remember 8pm|Skip the story|You're on air|repofeed/i);
     });
-    expect(window.location.pathname).toBe("/");
   });
 
   it("sends a signed-out /?reel= visitor to the public share URL when sharing is on", async () => {
@@ -347,7 +356,7 @@ describe("App routes", () => {
   });
 
   it("crawls every internal landing href and every route without an unmatched warning", async () => {
-    renderAt("/");
+    renderAt("/landing");
     await waitFor(() => {
       expect(screen.getByText(/Nobody reads the report/i)).toBeInTheDocument();
     });
@@ -380,7 +389,9 @@ describe("App routes", () => {
 
   it("renders public routes signed-out with visible copy", async () => {
     const expected: Record<string, RegExp> = {
-      "/": /Nobody reads the report/i,
+      // Root sends new visitors into the product story.
+      "/": /Remember 8pm|Skip the story|You're on air|repofeed/i,
+      "/landing": /Nobody reads the report/i,
       "/for/research-repository": /research repository people open/i,
       "/demo": /Demo feed|Supperly|Help that became homework|That's the whole study/i,
       // Researcher-only demo tools: signed-out visitors are sent back to the feed.

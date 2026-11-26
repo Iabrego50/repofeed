@@ -2,18 +2,18 @@ import { Navigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
-import { hasCompletedStoryOnboarding } from "@/lib/story-onboarding.ts";
+import { hasCompletedStoryOnboarding, hasCompletedViewerOnboarding } from "@/lib/story-onboarding.ts";
 import { appHomePath } from "@/lib/native-access.ts";
+import { isNativePlatform } from "@/lib/native";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import StoryOnboarding from "@/components/story-onboarding/story-onboarding.tsx";
+import ViewerOnboarding from "@/components/viewer-onboarding/viewer-onboarding.tsx";
 import WorkspaceSetup from "./workspace-setup.tsx";
 
 /**
  * `/welcome` serves:
- * 1. Public story preview (signed out).
- * 2. First-run story for signed-in accounts (including iOS).
- * 3. Workspace setup after the story on web (`?setup=1`).
- * Native viewers go to `/join` for the short code after the story.
+ * 1. Web: public story preview (signed out) + first-run story + workspace setup.
+ * 2. Native: viewer-only onboarding (no pricing / researcher signup), then `/join`.
  */
 export default function WelcomePage() {
   const { user, isLoading } = useAuth();
@@ -31,6 +31,17 @@ export default function WelcomePage() {
     );
   }
 
+  // iOS / Capacitor: short viewer onboarding, never the researcher story with pricing.
+  if (isNativePlatform()) {
+    if (forceStory || !hasCompletedViewerOnboarding()) {
+      return <ViewerOnboarding />;
+    }
+    if ((workspaces?.length ?? 0) === 0 || nativeViewerMode) {
+      return <Navigate to="/join" replace />;
+    }
+    return <Navigate to={appHomePath()} replace />;
+  }
+
   if (!user) {
     return <StoryOnboarding preview />;
   }
@@ -39,14 +50,6 @@ export default function WelcomePage() {
 
   if (forceStory || (!storyDone && !forceSetup)) {
     return <StoryOnboarding replay={forceStory && storyDone} />;
-  }
-
-  // iOS viewers: short code, not workspace creation.
-  if (nativeViewerMode) {
-    if ((workspaces?.length ?? 0) === 0) {
-      return <Navigate to="/join" replace />;
-    }
-    return <Navigate to={appHomePath()} replace />;
   }
 
   return (

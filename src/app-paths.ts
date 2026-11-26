@@ -1,7 +1,10 @@
 /** Canonical in-app paths the router must handle. Tests crawl this table. */
 
-/** Marketing site root. Always the landing page, signed-in or not. */
-export const LANDING_PATH = "/";
+/** Site root — routes new visitors into the product story. */
+export const ROOT_PATH = "/";
+
+/** Marketing landing (pricing, FAQ). Reachable after the story via Learn more. */
+export const LANDING_PATH = "/landing";
 
 /** In-app feed (web). On native Capacitor the home surface is Explore. */
 export const FEED_PATH = "/feed";
@@ -11,6 +14,7 @@ export const EXPLORE_PATH = "/explore";
 
 export const PUBLIC_APP_PATHS = [
   "/",
+  "/landing",
   "/for/research-repository",
   "/demo",
   "/demo/insights",
@@ -48,7 +52,13 @@ export const PROTECTED_APP_PATHS = [
 export const APP_PATHS = [...PUBLIC_APP_PATHS, ...PROTECTED_APP_PATHS] as const;
 
 export function signInPath(returnTo?: string): string {
-  if (!returnTo || returnTo === LANDING_PATH || returnTo === FEED_PATH || returnTo.startsWith("/signin")) {
+  if (
+    !returnTo ||
+    returnTo === ROOT_PATH ||
+    returnTo === LANDING_PATH ||
+    returnTo === FEED_PATH ||
+    returnTo.startsWith("/signin")
+  ) {
     return "/signin";
   }
   return `/signin?returnTo=${encodeURIComponent(returnTo)}`;

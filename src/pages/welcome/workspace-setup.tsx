@@ -8,6 +8,7 @@ import { api } from "@/lib/api/complete";
 import { track } from "@/lib/analytics";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import { SHAREABLE_ORIGIN } from "@/lib/site.ts";
+import { takePendingPlan } from "@/lib/story-onboarding.ts";
 import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -195,6 +196,27 @@ export default function WorkspaceSetup() {
     track("onboarding_completed", { role: role || "not given", first, invited: Boolean(invite), workspaceId: workspaceId ?? undefined });
     void api.users.update({ onboardedAt: new Date().toISOString() }).catch(() => undefined);
     await refresh();
+
+    // If they picked Pro/Team on the story sign-up step, start the same Stripe checkout as Billing.
+    const pending = takePendingPlan();
+    if (pending && workspaceId) {
+      try {
+        const { url } = await api.billing.actions.checkout({
+          workspaceId,
+          plan: pending.plan,
+          interval: pending.interval,
+          successUrl: `${window.location.origin}/billing?success=true`,
+          cancelUrl: `${window.location.origin}/billing`,
+        });
+        if (url) {
+          window.location.assign(url);
+          return;
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Couldn't start checkout. You can upgrade later in Billing.");
+      }
+    }
+
     navigate(first === "upload" ? "/studies/new" : first === "demo" ? "/demo" : "/studies", { replace: true });
   };
 

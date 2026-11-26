@@ -90,7 +90,7 @@ function Nav({ variant, focused }: { variant: string; focused: boolean }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-5 py-2.5">
-        <Link to="/" aria-label="repofeed.ai home" className="cursor-pointer">
+        <Link to="/landing" aria-label="repofeed.ai home" className="cursor-pointer">
           <Logo />
         </Link>
         <nav aria-label="Site" className="flex items-center gap-1">
