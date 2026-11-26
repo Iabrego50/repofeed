@@ -4,18 +4,26 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/complete";
 import { useAuth } from "@/lib/auth";
 import { isNativePlatform } from "@/lib/native";
-import { EXPLORE_PATH, signInPath } from "@/app-paths.ts";
+import { appHomePath } from "@/lib/native-access.ts";
+import { EXPLORE_PATH, LANDING_PATH, signInPath } from "@/app-paths.ts";
 import PublicShell from "@/components/public-shell.tsx";
+import {
+  hasCompletedGuestStory,
+  hasCompletedViewerOnboarding,
+  shouldShowWebStory,
+} from "@/lib/story-onboarding.ts";
 
 const Landing = lazy(() => import("./page.tsx"));
-
 const HelpPage = lazy(() => import("@/pages/help/page.tsx"));
+const ViewerOnboarding = lazy(() => import("@/components/viewer-onboarding/viewer-onboarding.tsx"));
 
 /**
- * `/` is the marketing landing on web.
- * On native Capacitor, skip marketing: signed-out → sign-in, signed-in → Explore.
- * Signed-out visitors opening a member reel link (`/?reel=…`) go to the public,
- * no-sign-up version when the study's sharing is on. `/help` shows the public Help Center.
+ * `/` entry:
+ * - Native: short viewer onboarding → join / division home (no marketing, no pricing).
+ * - Web signed-out (new): product story at `/welcome`.
+ * - Web signed-out (story done): marketing `/landing`.
+ * - Web signed-in: app home.
+ * Reel deep-links still resolve to the public share feed when sharing is on.
  */
 export default function PublicEntry({ loader }: { loader: React.ReactNode }) {
   const [params] = useSearchParams();
@@ -39,25 +47,46 @@ export default function PublicEntry({ loader }: { loader: React.ReactNode }) {
     );
   }
 
-  // Native app: no landing page — auth gate then Explore (scene feed).
-  if (isNativePlatform()) {
-    if (authLoading) return <>{loader}</>;
-    if (user) return <Navigate to={EXPLORE_PATH} replace />;
-    return <Navigate to={signInPath(EXPLORE_PATH)} replace />;
-  }
-
-  if (!reelId) {
+  if (pathname === LANDING_PATH) {
     return (
       <Suspense fallback={loader}>
         <Landing />
       </Suspense>
     );
   }
-  if (token === undefined) return <>{loader}</>;
-  if (token) return <Navigate to={`/s/${token}?reel=${encodeURIComponent(reelId)}`} replace />;
-  return (
-    <Suspense fallback={loader}>
-      <Landing />
-    </Suspense>
-  );
+
+  // Native app: viewer onboarding first, then join / channels — never the marketing site.
+  if (isNativePlatform()) {
+    if (!hasCompletedViewerOnboarding()) {
+      return (
+        <Suspense fallback={loader}>
+          <ViewerOnboarding />
+        </Suspense>
+      );
+    }
+    if (authLoading) return <>{loader}</>;
+    if (user) return <Navigate to={EXPLORE_PATH} replace />;
+    return <Navigate to={signInPath("/join")} replace />;
+  }
+
+  if (reelId) {
+    if (token === undefined) return <>{loader}</>;
+    if (token) return <Navigate to={`/s/${token}?reel=${encodeURIComponent(reelId)}`} replace />;
+  }
+
+  if (authLoading) return <>{loader}</>;
+
+  if (user) {
+    return <Navigate to={appHomePath()} replace />;
+  }
+
+  if (shouldShowWebStory(user)) {
+    return <Navigate to="/welcome" replace />;
+  }
+
+  if (hasCompletedGuestStory()) {
+    return <Navigate to={LANDING_PATH} replace />;
+  }
+
+  return <Navigate to="/welcome" replace />;
 }

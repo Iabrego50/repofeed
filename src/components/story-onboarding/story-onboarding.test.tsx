@@ -67,4 +67,19 @@ describe("StoryOnboarding", () => {
     fireEvent.click(continueBtn);
     expect(screen.getByRole("heading", { name: /You're on air/i })).toBeInTheDocument();
   });
+
+  it("shows pricing plans on the sign-up finish step for preview visitors", () => {
+    render(wrap(<StoryOnboarding preview />));
+    fireEvent.click(screen.getByRole("button", { name: /^Turn it on$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Change the channel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^I'd rather not dig$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Build my channel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Researcher$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Continue/i }));
+    expect(screen.getByRole("heading", { name: /You're on air/i })).toBeInTheDocument();
+    expect(screen.getByText(/^Plans$/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Start free$/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Start 14-day trial/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /Learn more/i })).toHaveAttribute("href", "/landing");
+  });
 });

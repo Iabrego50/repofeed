@@ -27,6 +27,8 @@ describe("production SPA rewrites", () => {
         .map((rule) => rule.source),
     );
     expect(sources.has("/")).toBe(true);
+    expect(sources.has("/landing")).toBe(true);
+    expect(sources.has("/about")).toBe(true);
     expect(sources.has("/feed")).toBe(true);
     expect(sources.has("/explore")).toBe(true);
     expect(sources.has("/demo/explore")).toBe(true);

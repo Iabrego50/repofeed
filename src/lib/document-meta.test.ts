@@ -3,14 +3,15 @@ import { NOT_FOUND_META, metaForPath } from "./document-meta";
 
 describe("per-route document meta", () => {
   it("sets public titles and noindexes the 404 page", () => {
-    expect(metaForPath("/").title).toMatch(/Research your team will actually watch/);
+    // Root lands new visitors on the product story; marketing lives at /landing.
+    expect(metaForPath("/").title).toMatch(/Welcome/);
+    expect(metaForPath("/landing").title).toMatch(/Research your team will actually watch/);
     expect(metaForPath("/demo").title).toMatch(/Demo/);
     expect(metaForPath("/demo/explore").title).toMatch(/Explore demo/);
     expect(metaForPath("/help").title).toMatch(/Help/);
     expect(metaForPath("/signin").title).toMatch(/Sign in/);
     expect(metaForPath("/terms").title).toMatch(/Terms/);
     expect(metaForPath("/privacy").title).toMatch(/Privacy/);
-    expect(metaForPath("/").title).toMatch(/Research your team will actually watch/);
     expect(metaForPath("/feed").title).toMatch(/Feed/);
     expect(metaForPath("/feed").robots).toMatch(/noindex/);
     expect(metaForPath("/explore").title).toMatch(/Explore/);

@@ -176,8 +176,8 @@ function NativeDemoRedirect({ to }: { to: string }) {
 }
 
 /**
- * `/help` stays public when signed out (help center). `/` is registered
- * outside this gate so the marketing landing is always public.
+ * `/help` stays public when signed out (help center). `/` and `/landing`
+ * are registered outside this gate so entry + marketing stay public.
  * Every other nested route sends signed-out visitors to sign-in.
  */
 function Gate() {
@@ -195,9 +195,9 @@ function Gate() {
 }
 
 /**
- * First sign-in (web + iOS): send accounts that have not finished the product
- * story to `/welcome`. `/welcome` and `/join` are excluded so those flows are
- * not interrupted.
+ * Web first sign-in: send accounts that have not finished the researcher product
+ * story to `/welcome`. Native uses a separate viewer onboarding (handled at `/`
+ * and `/welcome`), so this gate is web-only. `/welcome` and `/join` are excluded.
  */
 function StoryOnboardingGate() {
   const { user, loading } = useAuth();
@@ -205,6 +205,7 @@ function StoryOnboardingGate() {
   const location = useLocation();
 
   if (loading || (isNativePlatform() && viewerLoading)) return <FullScreenLoader />;
+  if (isNativePlatform()) return <Outlet />;
   if (
     user &&
     !hasCompletedStoryOnboarding(user) &&
@@ -264,6 +265,8 @@ export default function App() {
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/" element={<PublicEntry loader={<FullScreenLoader />} />} />
+              <Route path="/landing" element={<PublicEntry loader={<FullScreenLoader />} />} />
+              <Route path="/about" element={<Navigate to="/landing" replace />} />
               <Route path="/dashboard" element={<Navigate to={appHomePath()} replace />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               {/* DEV / VITE_DESIGN_HARNESS fixture screens — no auth, no DB writes; omitted from prod builds. */}

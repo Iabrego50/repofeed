@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { JoinCodePanelView } from "@/components/design-system/join-code-panel.tsx";
 import { StudyShell } from "@/components/design-system/study-shell.tsx";
+import ViewerOnboarding from "@/components/viewer-onboarding/viewer-onboarding.tsx";
+import StorySignupPlans from "@/components/story-onboarding/story-signup-plans.tsx";
 import {
   DIVISION_CHANNEL_CODES,
   DIVISION_HINTS,
@@ -17,10 +19,29 @@ import {
 } from "@/lib/divisions.ts";
 import { cn } from "@/lib/utils.ts";
 
+/** Fixture for the web story finish step with pricing (desktop + mobile web). */
+function StorySignupFixture() {
+  return (
+    <div className="min-h-dvh bg-paper px-6 py-10 text-foreground">
+      <div className="mx-auto w-full max-w-3xl">
+        <Logo />
+        <p className="mt-8 font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">You&apos;re on air</p>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Pick a plan and start your channel.</h1>
+        <p className="mt-2 max-w-prose text-muted-foreground">
+          Same prices as the site. Viewers stay free. Paid plans open Stripe after workspace setup.
+        </p>
+        <StorySignupPlans onStartFree={() => undefined} onStartPaid={() => undefined} />
+      </div>
+    </div>
+  );
+}
+
 const FIXTURE_CODE = "7K3M9PQ2";
 const WORKSPACE = "Acme Research";
 
 const HARNESS_SCREENS = [
+  "01-viewer-onboarding",
+  "02-story-signup",
   "07-join-code",
   "08-division",
   "10-upload",
@@ -489,6 +510,10 @@ export default function DesignHarnessPage() {
   if (!isHarnessScreen(screen)) return <Navigate to="/__design" replace />;
 
   switch (screen) {
+    case "01-viewer-onboarding":
+      return <ViewerOnboarding />;
+    case "02-story-signup":
+      return <StorySignupFixture />;
     case "07-join-code":
       return (
         <DesktopChrome>

@@ -49,6 +49,8 @@
     { "source": "/terms", "destination": "/index.html" },
     { "source": "/privacy", "destination": "/index.html" },
     { "source": "/help", "destination": "/index.html" },
+    { "source": "/landing", "destination": "/index.html" },
+    { "source": "/about", "destination": "/index.html" },
     { "source": "/welcome", "destination": "/index.html" },
     { "source": "/join", "destination": "/index.html" },
     { "source": "/feed", "destination": "/index.html" },

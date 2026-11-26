@@ -8,11 +8,13 @@ import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { cn } from "@/lib/utils.ts";
 import { appHomePath } from "@/lib/native-access.ts";
 import { isNativePlatform } from "@/lib/native";
+import { LANDING_PATH } from "@/app-paths.ts";
 import { Button } from "@/components/ui/button.tsx";
 import Logo from "@/components/logo.tsx";
 import {
   emptyStorySession,
   hasCompletedStoryOnboarding,
+  markGuestStoryComplete,
   markStoryOnboardingComplete,
   ROLE_LABELS,
   STORY_ROLES,
@@ -27,6 +29,7 @@ import {
   ScatteredFilesVisual,
   YellowScreenVisual,
 } from "./story-visuals.tsx";
+import StorySignupPlans from "./story-signup-plans.tsx";
 import "./story-onboarding.css";
 
 const SEGMENT_MS = 10000;
@@ -105,7 +108,7 @@ const STEPS: Step[] = [
     theme: "light",
     eyebrow: "Ready",
     title: "You're on air.",
-    body: "Research, as a feed. Upload your first study, or watch the demo to see insight scenes in motion.",
+    body: "Research, as a feed. Pick a plan to sign up, watch the demo, or learn more about how it works.",
     visual: "ready",
   },
 ];
@@ -200,6 +203,7 @@ export type StoryOnboardingProps = {
   /** Forced replay from settings/help. */
   replay?: boolean;
   onFinished?: (destination: "upload" | "demo" | "home" | "setup") => void;
+  // "signup" is web-preview only and maps to setup for onFinished callers.
 };
 
 /**
@@ -262,20 +266,22 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     return () => window.removeEventListener("keydown", onKey);
   }, [back, next]);
 
-  const finish = async (destination: "upload" | "demo" | "home" | "setup") => {
+  const finish = async (destination: "upload" | "demo" | "home" | "setup" | "signup") => {
     if (busy) return;
     setBusy(true);
     try {
+      if (preview) markGuestStoryComplete();
       if (!preview && user) {
         await markStoryOnboardingComplete();
       }
-      onFinished?.(destination);
+      onFinished?.(destination === "signup" ? "setup" : destination);
       if (onFinished) return;
       if (preview) {
-        navigate(
-          destination === "demo" ? "/demo" : "/signin?returnTo=/studies/new",
-          { replace: true },
-        );
+        if (destination === "demo") {
+          navigate("/demo", { replace: true });
+          return;
+        }
+        navigate("/signin?returnTo=/welcome%3Fsetup%3D1", { replace: true });
         return;
       }
       const needsTeam = !workspaces || workspaces.length === 0;
@@ -283,7 +289,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         navigate("/join", { replace: true });
         return;
       }
-      if (destination === "setup" || needsTeam) {
+      if (destination === "setup" || destination === "signup" || needsTeam) {
         navigate("/welcome?setup=1", { replace: true });
         return;
       }
@@ -302,11 +308,12 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     if (busy) return;
     setBusy(true);
     try {
+      if (preview) markGuestStoryComplete();
       if (!preview && user && !hasCompletedStoryOnboarding(user)) {
         await markStoryOnboardingComplete();
       }
       if (preview) {
-        navigate("/", { replace: true });
+        navigate(LANDING_PATH, { replace: true });
         return;
       }
       if (!workspaces || workspaces.length === 0) {
@@ -452,20 +459,18 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                 )}
                 {isFinish ? (
                   <>
-                    <Button
-                      type="button"
-                      className="h-11 px-5 font-semibold"
-                      disabled={busy}
-                      onClick={() =>
-                        void finish(preview || (workspaces && workspaces.length > 0) ? "upload" : "setup")
-                      }
-                    >
-                      {preview
-                        ? "Sign in to upload"
-                        : workspaces && workspaces.length > 0
-                          ? "Upload research"
-                          : "Set up workspace"}
-                    </Button>
+                    {!preview && (
+                      <Button
+                        type="button"
+                        className="h-11 px-5 font-semibold"
+                        disabled={busy}
+                        onClick={() =>
+                          void finish(workspaces && workspaces.length > 0 ? "upload" : "setup")
+                        }
+                      >
+                        {workspaces && workspaces.length > 0 ? "Upload research" : "Set up workspace"}
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       className={cn(
@@ -486,6 +491,13 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                   </Button>
                 )}
               </div>
+
+              {isFinish && preview && !isNativePlatform() && (
+                <StorySignupPlans
+                  onStartFree={() => void finish("signup")}
+                  onStartPaid={() => void finish("signup")}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>

@@ -15,7 +15,11 @@ export const DEFAULT_ROUTE_META: RouteMeta = {
 };
 
 const EXACT: Record<string, RouteMeta> = {
-  "/": DEFAULT_ROUTE_META,
+  "/": {
+    title: "Welcome — repofeed.ai",
+    description: "Research, as a feed: a short story of how repofeed turns raw research into a shared channel of insight scenes.",
+  },
+  "/landing": DEFAULT_ROUTE_META,
   // Ad landing pages share the home page's content, so search engines are pointed at "/" only.
   ...Object.fromEntries(
     LANDING_VARIANTS.map((v) => [`/for/${v.slug}`, { title: v.metaTitle, description: v.metaDescription, robots: "noindex,follow" }]),
