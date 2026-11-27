@@ -1,4 +1,12 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
@@ -7,11 +15,9 @@ import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { cn } from "@/lib/utils.ts";
 import { appHomePath } from "@/lib/native-access.ts";
 import { isNativePlatform } from "@/lib/native";
-import { LANDING_PATH } from "@/app-paths.ts";
 import SlopShell, { SlopBrand, SlopPill } from "@/components/slop/slop-shell.tsx";
 import {
   emptyStorySession,
-  hasCompletedStoryOnboarding,
   markGuestStoryComplete,
   markStoryOnboardingComplete,
   ROLE_LABELS,
@@ -28,36 +34,44 @@ import {
   ChannelPhoneVisual,
   ChannelPreviewCard,
   CrtTvVisual,
+  DemoWhatYouGetCard,
   ScatteredFilesVisual,
   YellowScreenVisual,
 } from "./story-visuals.tsx";
 import StorySignupPlans from "./story-signup-plans.tsx";
+import {
+  DEMO_EMAIL_ERROR,
+  isValidDemoEmail,
+  submitDemoRequest,
+} from "@/lib/demo-request.ts";
 import "./story-onboarding.css";
 
 const SEGMENT_MS = 10000;
 const STORY_HISTORY_KEY = "repofeed_story_step";
-/** Six design scenes; build-channel substeps share progress bar 5. */
-const PROGRESS_COUNT = 6;
+/** Seven design scenes; build-channel substeps share progress bar 6. */
+const PROGRESS_COUNT = 7;
+/** Index of the “Set up a demo” step in STEPS (Skip jumps here). */
+const DEMO_STEP_INDEX = 4;
 
-type StepKind = "story" | "question" | "finish";
+type StepKind = "story" | "demo" | "question" | "finish";
 
 type Step = {
   id: string;
   kind: StepKind;
-  /** 0–5 for the six artboard scenes */
+  /** 0–6 for the seven artboard scenes */
   scene: number;
   eyebrow: string;
   /** Title may include markers: *word* → serif emphasis */
   title: string;
   body: string;
   cta?: string;
-  visual?: "crt" | "yellow" | "scattered" | "phone" | "preview" | "ready";
+  visual?: "crt" | "yellow" | "scattered" | "phone" | "demo" | "preview" | "ready";
   question?: "role" | "research" | "audience" | "channel";
 };
 
 /**
- * SlopMain scenes 0–5. Build-your-channel is four history steps (role → research →
- * audience → name) so Back restores selections; progress bars still show six scenes.
+ * SlopMain scenes 0–6. Demo is scene 4; build-your-channel is four history steps
+ * (role → research → audience → name) sharing progress scene 5; On air is scene 6.
  */
 const STEPS: Step[] = [
   {
@@ -97,13 +111,22 @@ const STEPS: Step[] = [
     eyebrow: "repofeed",
     title: "Now it plays *like* a *channel*.",
     body: "It's not just a repository — it's a channel. That buried interview file is now a reel of short insight scenes in one common feed. Go on — swipe, like, add one to the deck.",
-    cta: "Build my channel ⚡",
+    cta: "Set up a demo ⚡",
     visual: "phone",
+  },
+  {
+    id: "demo",
+    kind: "demo",
+    scene: 4,
+    eyebrow: "Your demo",
+    title: "Want *this* with *your* research?",
+    body: "Enter your work email — we’ll set up a demo channel with your team’s own research in it.",
+    visual: "demo",
   },
   {
     id: "role",
     kind: "question",
-    scene: 4,
+    scene: 5,
     eyebrow: "Your channel · 1 of 4",
     title: "Who's holding *the* *remote*?",
     body: "Pick your role. We'll tune the channel's language to how you work.",
@@ -114,7 +137,7 @@ const STEPS: Step[] = [
   {
     id: "research",
     kind: "question",
-    scene: 4,
+    scene: 5,
     eyebrow: "Your channel · 2 of 4",
     title: "What goes *on air*?",
     body: "The research you work with. Pick all that apply. You can change this later.",
@@ -125,7 +148,7 @@ const STEPS: Step[] = [
   {
     id: "audience",
     kind: "question",
-    scene: 4,
+    scene: 5,
     eyebrow: "Your channel · 3 of 4",
     title: "Who's *watching*?",
     body: "Start small or go wide — you invite people when you're ready.",
@@ -136,7 +159,7 @@ const STEPS: Step[] = [
   {
     id: "name",
     kind: "question",
-    scene: 4,
+    scene: 5,
     eyebrow: "Your channel · 4 of 4",
     title: "Name the *channel*.",
     body: "Something short your teammates will recognize in the feed.",
@@ -147,7 +170,7 @@ const STEPS: Step[] = [
   {
     id: "ready",
     kind: "finish",
-    scene: 5,
+    scene: 6,
     eyebrow: "Ready",
     title: "You're *on air*.",
     body: "Research, as a feed. Upload your first study — or watch the demo to see insight scenes in motion.",
@@ -158,18 +181,30 @@ const STEPS: Step[] = [
 function Title({ text }: { text: string }) {
   // Keep non-emphasis text as raw nodes so accessible names keep spaces
   // (wrapping every segment in <span> can glue "Remember"+"8pm" → "Remember8pm").
+  // First *word* uses underline-cyan (artboard “this”); later *word* uses serif hot (“your”).
   const parts = text.split(/(\*[^*]+\*)/g);
+  let emphasis = 0;
   return (
     <>
-      {parts.map((part, i) =>
-        part.startsWith("*") && part.endsWith("*") ? (
-          <span key={i} className="slop-serif-emphasis slop-text-gradient-hot">
-            {part.slice(1, -1)}
-          </span>
-        ) : (
-          <Fragment key={i}>{part}</Fragment>
-        ),
-      )}
+      {parts.map((part, i) => {
+        if (part.startsWith("*") && part.endsWith("*")) {
+          const n = emphasis++;
+          const inner = part.slice(1, -1);
+          if (n === 0 && text.includes("*this*")) {
+            return (
+              <span key={i} className="slop-underline slop-underline-cyan">
+                {inner}
+              </span>
+            );
+          }
+          return (
+            <span key={i} className="slop-serif-emphasis slop-text-gradient-hot">
+              {inner}
+            </span>
+          );
+        }
+        return <Fragment key={i}>{part}</Fragment>;
+      })}
     </>
   );
 }
@@ -215,21 +250,36 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const { workspaces } = useWorkspace();
   const { nativeViewerMode } = useNativeViewer();
   const reduced = useReducedMotion();
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => {
+    // Preview-only deep link for screenshots / harness (?storyStep=role|demo|ready|0–N).
+    if (!preview || typeof window === "undefined") return 0;
+    const raw = new URLSearchParams(window.location.search).get("storyStep");
+    if (!raw) return 0;
+    const byId = STEPS.findIndex((s) => s.id === raw);
+    if (byId >= 0) return byId;
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.min(STEPS.length - 1, Math.max(0, n)) : 0;
+  });
   const [session, setSession] = useState<StorySession>(() => ({
     ...emptyStorySession(),
     channelName: suggestChannelName(user?.email),
   }));
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [demoEmail, setDemoEmail] = useState("");
+  const [demoError, setDemoError] = useState("");
+  const [demoSent, setDemoSent] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const step = STEPS[index]!;
   const isQuestion = step.kind === "question";
+  const isDemo = step.kind === "demo";
   const isFinish = step.kind === "finish";
   const showPricing = isFinish && preview && !isNativePlatform();
-  const scrollableStep = isQuestion || isFinish;
+  const scrollableStep = isQuestion || isFinish || isDemo;
+  const showSkip = index < DEMO_STEP_INDEX;
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -298,10 +348,30 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   }, [goTo, index]);
 
   useEffect(() => {
-    if (paused || reduced || isQuestion || isFinish) return;
+    if (paused || reduced || isQuestion || isFinish || isDemo) return;
     const id = window.setTimeout(next, SEGMENT_MS);
     return () => window.clearTimeout(id);
-  }, [index, paused, reduced, isQuestion, isFinish, next]);
+  }, [index, paused, reduced, isQuestion, isFinish, isDemo, next]);
+
+  const onSubmitDemo = async (e: FormEvent) => {
+    e.preventDefault();
+    if (demoBusy) return;
+    const value = demoEmail.trim();
+    if (!isValidDemoEmail(value)) {
+      setDemoError(DEMO_EMAIL_ERROR);
+      return;
+    }
+    setDemoBusy(true);
+    setDemoError("");
+    try {
+      await submitDemoRequest(value);
+      setDemoSent(true);
+    } catch (err) {
+      setDemoError(err instanceof Error ? err.message : DEMO_EMAIL_ERROR);
+    } finally {
+      setDemoBusy(false);
+    }
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -356,26 +426,10 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     }
   };
 
-  const skip = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      if (preview) markGuestStoryComplete();
-      if (!preview && user && !hasCompletedStoryOnboarding(user)) {
-        await markStoryOnboardingComplete();
-      }
-      if (preview) {
-        navigate(LANDING_PATH, { replace: true });
-        return;
-      }
-      if (!workspaces || workspaces.length === 0) {
-        navigate(nativeViewerMode || isNativePlatform() ? "/join" : "/welcome?setup=1", { replace: true });
-        return;
-      }
-      navigate(appHomePath(), { replace: true });
-    } finally {
-      setBusy(false);
-    }
+  /** Skip the early story beats → jump to the demo capture step (artboard scene 4). */
+  const skip = () => {
+    if (busy || index >= DEMO_STEP_INDEX) return;
+    goTo(DEMO_STEP_INDEX, "push");
   };
 
   const visual = (() => {
@@ -388,6 +442,8 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         return <ScatteredFilesVisual reduced={reduced} onActivate={next} />;
       case "phone":
         return <ChannelPhoneVisual reduced={reduced} />;
+      case "demo":
+        return <DemoWhatYouGetCard />;
       case "preview":
         return <ChannelPreviewCard session={session} status="setting" />;
       case "ready":
@@ -405,10 +461,12 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         : step.scene === 2
           ? "amber"
           : step.scene === 3
-            ? "cyan"
-            : step.scene === 5
-              ? "green"
-              : "purple";
+            ? "green"
+            : step.scene === 4
+              ? "cyan"
+              : step.scene === 6
+                ? "green"
+                : "purple";
 
   return (
     <SlopShell className="h-dvh" contentClassName="min-h-0">
@@ -453,9 +511,11 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                   Preview mode
                 </span>
               )}
-              <button type="button" className="slop-btn slop-btn-ghost min-h-11" onClick={() => void skip()}>
-                Skip the story
-              </button>
+              {showSkip && (
+                <button type="button" className="slop-btn slop-btn-ghost min-h-11" onClick={skip}>
+                  Skip the story
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -478,7 +538,62 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
               >
                 <Title text={step.title} />
               </h1>
-              <p className="slop-lead m-0 max-w-[44ch]">{step.body}</p>
+
+              {isDemo && !demoSent && (
+                <>
+                  <p className="slop-lead m-0 max-w-[44ch]">{step.body}</p>
+                  <form
+                    noValidate
+                    onSubmit={(e) => void onSubmitDemo(e)}
+                    className="mt-1 flex w-full max-w-md flex-col gap-2"
+                  >
+                    <label htmlFor="rf-demo-email" className="text-[15px] font-semibold">
+                      Work email
+                    </label>
+                    <div className="slop-ai-bar" style={{ minHeight: 56 }}>
+                      <span aria-hidden>✨</span>
+                      <input
+                        id="rf-demo-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@company.com"
+                        value={demoEmail}
+                        onChange={(e) => {
+                          setDemoEmail(e.target.value);
+                          setDemoError("");
+                        }}
+                        aria-describedby="rf-demo-error"
+                        style={{ height: 44, fontSize: 18 }}
+                      />
+                      <button type="submit" className="slop-btn slop-btn-primary" style={{ minHeight: 44 }} disabled={demoBusy}>
+                        {demoBusy ? "Sending…" : "Set up my demo 🚀"}
+                      </button>
+                    </div>
+                    <span
+                      id="rf-demo-error"
+                      role="alert"
+                      className="min-h-5 text-[14px] font-semibold"
+                      style={{ color: "#fca5a5" }}
+                    >
+                      {demoError}
+                    </span>
+                  </form>
+                </>
+              )}
+
+              {isDemo && demoSent && (
+                <>
+                  <div className="slop-alert slop-border-l-emerald w-full max-w-md" role="status">
+                    <span className="slop-dot slop-dot-green" style={{ marginTop: 7 }} />
+                    <div>Thanks — we’ll email {demoEmail.trim()} to set up your demo.</div>
+                  </div>
+                  <p className="slop-lead m-0 max-w-[44ch]">
+                    No need to wait around — you can build your channel now and it will be ready when we talk.
+                  </p>
+                </>
+              )}
+
+              {!isDemo && <p className="slop-lead m-0 max-w-[44ch]">{step.body}</p>}
 
               {step.question === "role" && (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -548,10 +663,27 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
               )}
 
               <div className="slop-row mt-2 flex-wrap gap-2">
-                {index > 0 && (
+                {index > 0 && !(isDemo && demoSent) && (
                   <button type="button" className="slop-btn slop-btn-ghost slop-btn-lg" onClick={back}>
                     Back
                   </button>
+                )}
+                {isDemo && demoSent && (
+                  <>
+                    <button
+                      type="button"
+                      className="slop-btn slop-btn-ghost slop-btn-lg"
+                      onClick={() => {
+                        setDemoSent(false);
+                        setDemoError("");
+                      }}
+                    >
+                      Change email
+                    </button>
+                    <button type="button" className="slop-btn slop-btn-primary slop-btn-lg" onClick={next}>
+                      Build my channel
+                    </button>
+                  </>
                 )}
                 {isFinish ? (
                   <>
@@ -585,7 +717,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                       Watch the demo
                     </button>
                   </>
-                ) : (
+                ) : !isDemo ? (
                   <button
                     type="button"
                     className="slop-btn slop-btn-primary slop-btn-lg"
@@ -594,7 +726,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                   >
                     {step.cta ?? "Continue"}
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -604,7 +736,13 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                 scrollableStep ? "shrink-0 lg:max-w-[58%] lg:flex-1" : "min-h-[280px] flex-1",
               )}
             >
-              {!isQuestion && !isFinish && step.visual !== "crt" && step.visual !== "yellow" && step.visual !== "scattered" && (
+              {!isQuestion &&
+                !isFinish &&
+                !isDemo &&
+                step.visual !== "crt" &&
+                step.visual !== "yellow" &&
+                step.visual !== "scattered" &&
+                step.visual !== "phone" && (
                 <div className="absolute inset-0 z-10 hidden lg:flex">
                   <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
                   <button

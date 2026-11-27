@@ -189,6 +189,30 @@ export type Database = {
           }
         ]
       }
+      demo_requests: {
+        Row: {
+          id: string
+          email: string
+          source: string
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          source?: string
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          source?: string
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       email_prefs: {
         Row: {
           id: string

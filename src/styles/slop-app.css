@@ -85,6 +85,26 @@
   }
 }
 
+@keyframes rf-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+
+.rf-nudge {
+  animation: rf-nudge 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-nudge {
+    animation: none !important;
+  }
+}
+
 .rf-rise {
   animation: rf-rise 0.5s ease both;
 }
