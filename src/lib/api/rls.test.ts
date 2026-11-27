@@ -573,4 +573,42 @@ describe("RLS policies from supabase/migrations", () => {
     );
     await asSuper();
   });
+
+  it("a user can insert…returning a workspace then add themselves as owner", async () => {
+    // Mirrors createWorkspace(): insert().select().single() then workspace_members owner insert
+    // (no RETURNING on members). RETURNING on workspaces is gated by SELECT RLS; creators must
+    // see their row before a workspace_members row exists.
+    await asSuper();
+    await setAuth(STRANGER);
+    await asTester();
+
+    const created = await db.query<{ id: string; name: string; created_by: string }>(
+      `insert into public.workspaces (name, created_by)
+       values ('Fresh workspace', $1)
+       returning id, name, created_by`,
+      [STRANGER],
+    );
+    expect(created.rows).toHaveLength(1);
+    expect(created.rows[0]?.created_by).toBe(STRANGER);
+    expect(created.rows[0]?.name).toBe("Fresh workspace");
+    const workspaceId = created.rows[0]!.id;
+
+    await db.query(
+      `insert into public.workspace_members (workspace_id, user_id, role)
+       values ($1, $2, 'owner')`,
+      [workspaceId, STRANGER],
+    );
+
+    const membership = await db.query<{ role: string }>(
+      `select role from public.workspace_members where workspace_id = $1 and user_id = $2`,
+      [workspaceId, STRANGER],
+    );
+    expect(membership.rows).toEqual([{ role: "owner" }]);
+
+    const visible = await db.query<{ id: string }>(
+      `select id from public.workspaces where id = $1`,
+      [workspaceId],
+    );
+    expect(visible.rows.map((r) => r.id)).toEqual([workspaceId]);
+  });
 });
