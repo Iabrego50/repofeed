@@ -26,6 +26,15 @@ vi.mock("@/hooks/use-reduced-motion.ts", () => ({
   useReducedMotion: () => true,
 }));
 
+const submitDemoRequest = vi.fn();
+vi.mock("@/lib/demo-request.ts", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/demo-request.ts")>("@/lib/demo-request.ts");
+  return {
+    ...actual,
+    submitDemoRequest: (...args: unknown[]) => submitDemoRequest(...args),
+  };
+});
+
 function wrap(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
@@ -35,16 +44,35 @@ function wrap(ui: React.ReactElement) {
   );
 }
 
+function clickPrimary(name: RegExp) {
+  // Prefer the slop primary CTA when the visual also exposes the same accessible name.
+  const matches = screen.getAllByRole("button", { name });
+  const primary = matches.find((el) => el.className.includes("slop-btn-primary")) ?? matches[0]!;
+  fireEvent.click(primary);
+}
+
+async function advanceToDemo() {
+  clickPrimary(/^Keep watching$/i);
+  clickPrimary(/^Change the channel$/i);
+  clickPrimary(/^I'd rather not dig$/i);
+  clickPrimary(/Set up a demo/i);
+}
+
 async function advanceToBuild() {
-  fireEvent.click(screen.getByRole("button", { name: /^Keep watching$/i }));
-  fireEvent.click(screen.getByRole("button", { name: /^Change the channel$/i }));
-  fireEvent.click(screen.getByRole("button", { name: /^I'd rather not dig$/i }));
+  await advanceToDemo();
+  submitDemoRequest.mockResolvedValue(undefined);
+  fireEvent.change(screen.getByLabelText(/Work email/i), { target: { value: "you@company.com" } });
+  fireEvent.click(screen.getByRole("button", { name: /Set up my demo/i }));
+  await vi.waitFor(() => {
+    expect(screen.getByRole("button", { name: /Build my channel/i })).toBeInTheDocument();
+  });
   fireEvent.click(screen.getByRole("button", { name: /Build my channel/i }));
 }
 
 describe("StoryOnboarding", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
+    submitDemoRequest.mockReset();
   });
 
   afterEach(() => {
@@ -58,6 +86,32 @@ describe("StoryOnboarding", () => {
     expect(screen.getByRole("button", { name: /Skip the story/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Keep watching$/i }));
     expect(screen.getByRole("heading", { name: /Then everyone got their own screen/i })).toBeInTheDocument();
+  });
+
+  it("skips early beats to the demo step", () => {
+    render(wrap(<StoryOnboarding preview />));
+    fireEvent.click(screen.getByRole("button", { name: /Skip the story/i }));
+    expect(screen.getByRole("heading", { name: /Want this with your research/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Skip the story/i })).not.toBeInTheDocument();
+  });
+
+  it("shows validation error and success on the demo form", async () => {
+    render(wrap(<StoryOnboarding preview />));
+    fireEvent.click(screen.getByRole("button", { name: /Skip the story/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Set up my demo/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/doesn.t look like an email/i);
+
+    submitDemoRequest.mockResolvedValue(undefined);
+    fireEvent.change(screen.getByLabelText(/Work email/i), { target: { value: "you@company.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /Set up my demo/i }));
+    await vi.waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(/Thanks — we’ll email you@company.com/i);
+    });
+    expect(submitDemoRequest).toHaveBeenCalledWith("you@company.com");
+    expect(screen.getByRole("button", { name: /Build my channel/i })).toBeInTheDocument();
+    expect(screen.getByText(/What you get/i)).toBeInTheDocument();
+    expect(screen.getByText(/The iOS app streams your insights/i)).toBeInTheDocument();
+    expect(screen.queryByText(/never leave your servers/i)).not.toBeInTheDocument();
   });
 
   it("walks the four build-channel substeps and restores role on Back", async () => {
@@ -86,7 +140,6 @@ describe("StoryOnboarding", () => {
     await vi.waitFor(() => {
       expect(screen.getByRole("heading", { name: /Name the channel/i })).toBeInTheDocument();
     });
-    // Back further to role — wait between pops so history.back() doesn't race
     fireEvent.click(screen.getByRole("button", { name: /^Back$/i }));
     await vi.waitFor(() => {
       expect(screen.getByRole("heading", { name: /Who's watching/i })).toBeInTheDocument();
