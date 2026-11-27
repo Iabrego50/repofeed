@@ -179,4 +179,30 @@ describe("StoryOnboarding", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Keep watching$/i }));
     expect(screen.getByRole("button", { name: /^Back$/i })).toBeInTheDocument();
   });
+
+  it("does not auto-advance story scenes without a button press", async () => {
+    vi.useFakeTimers();
+    render(wrap(<StoryOnboarding preview />));
+    expect(screen.getByRole("heading", { name: /Remember 8pm/i })).toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(screen.getByRole("heading", { name: /Remember 8pm/i })).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("keeps Cost file cards interactive with dig-line copy in the left column", () => {
+    render(wrap(<StoryOnboarding preview />));
+    fireEvent.click(screen.getByRole("button", { name: /^Keep watching$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Change the channel$/i }));
+    expect(screen.getByRole("heading", { name: /Your research went the same way/i })).toBeInTheDocument();
+    expect(screen.getByText(/Five files\. Tap one to start digging/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /interviews\.docx/i }));
+    expect(screen.getByText(/1 opened\. Still not it/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Give up digging/i })).toBeInTheDocument();
+  });
+
+  it("shows Tap to turn it on before any video plays on the Then step", () => {
+    render(wrap(<StoryOnboarding preview />));
+    expect(screen.getByRole("button", { name: /Tap to turn it on/i })).toBeInTheDocument();
+    expect(document.querySelector("video")).toBeNull();
+  });
 });

@@ -1,9 +1,13 @@
 import type { User } from "@supabase/supabase-js";
 import { getBrowserSupabase } from "./supabase";
 
-/** Only the completion timestamp is stored — answers are session-local / visual only. */
+/** Completion timestamp + optional answers persisted for signed-in users. */
 export const STORY_META = {
   completedAt: "story_onboarding_completed_at",
+  role: "story_onboarding_role",
+  researchKinds: "story_onboarding_research_kinds",
+  audience: "story_onboarding_audience",
+  channelName: "story_onboarding_channel_name",
 } as const;
 
 /** Signed-out web visitors: remember they finished/skipped the product story. */
@@ -40,7 +44,7 @@ export const STORY_AUDIENCES = ["Just me", "My team", "My company", "Clients"] a
 
 export type StoryAudience = (typeof STORY_AUDIENCES)[number];
 
-/** Session-local choices for the channel preview card — never written to user_metadata. */
+/** Channel preview choices — written to user_metadata when a signed-in user finishes. */
 export type StorySession = {
   role?: StoryRole;
   researchKinds: StoryResearchKind[];
@@ -157,14 +161,25 @@ export function suggestChannelName(email: string | null | undefined): string {
   return `${brand} insights`;
 }
 
-/** Mark the product story complete so it does not auto-replay. Does not store answers. */
-export async function markStoryOnboardingComplete(): Promise<void> {
+/**
+ * Mark the product story complete so it does not auto-replay.
+ * When `session` is provided (signed-in finish), persist role / research / audience / name.
+ */
+export async function markStoryOnboardingComplete(session?: StorySession): Promise<void> {
   const client = getBrowserSupabase();
   if (!client) return;
-  const { error } = await client.auth.updateUser({
-    data: {
-      [STORY_META.completedAt]: new Date().toISOString(),
-    },
-  });
+  const data: Record<string, unknown> = {
+    [STORY_META.completedAt]: new Date().toISOString(),
+  };
+  if (session) {
+    if (session.role) data[STORY_META.role] = session.role;
+    if (session.researchKinds.length > 0) {
+      data[STORY_META.researchKinds] = session.researchKinds;
+    }
+    if (session.audience) data[STORY_META.audience] = session.audience;
+    const name = session.channelName.trim();
+    if (name) data[STORY_META.channelName] = name.slice(0, 60);
+  }
+  const { error } = await client.auth.updateUser({ data });
   if (error) throw error;
 }

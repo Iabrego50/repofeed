@@ -152,11 +152,16 @@ export default function FeedPage() {
           {showCreateCta ? "Create a study from your research files and publish it to fill the feed." : "When an editor publishes a study, its scenes show up here."}
         </EmptyDescription>
       </EmptyHeader>
-      {showCreateCta && (
-        <EmptyContent>
+      <EmptyContent className="flex flex-wrap items-center justify-center gap-3">
+        {showCreateCta && (
           <Button asChild className="h-11 font-semibold"><Link to="/studies/new">Create a study</Link></Button>
-        </EmptyContent>
-      )}
+        )}
+        {!isNativePlatform() && (
+          <Button asChild variant="outline" className="h-11 font-semibold">
+            <Link to="/?story=1">Watch the story</Link>
+          </Button>
+        )}
+      </EmptyContent>
     </Empty>
   );
 
