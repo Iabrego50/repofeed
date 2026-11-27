@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>repofeed onboarding story, Slopstrap version</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+<link rel="stylesheet" href="./assets/11b9b58aba84609684279bf975f7125a.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&amp;family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#030712}
+button{font:inherit}
+.slop-scope a:focus-visible,.slop-scope button:focus-visible,.slop-scope label:focus-within,.slop-scope .slop-ai-bar:focus-within{outline:3px solid #c084fc;outline-offset:3px}
+@keyframes rf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes rf-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes rf-cut{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
+@keyframes rf-fill{from{width:0}to{width:100%}}
+@keyframes rf-on{0%{opacity:.15}30%{opacity:1}45%{opacity:.55}100%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.slop-scope *,.slop-scope *::before,.slop-scope *::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div class="slop-scope slop-grid-bg" data-slop-level="3" style="min-height: 100vh; display: flex; flex-direction: column; overflow: hidden">
+  <div class="slop-orb-layer" aria-hidden="true" style="position: absolute">
+    <div class="slop-orb slop-orb-purple"></div>
+    <div class="slop-orb slop-orb-cyan"></div>
+    <div class="slop-orb slop-orb-pink"></div>
+    <div class="slop-orb slop-orb-emerald"></div>
+  </div>
+  <div class="slop-content-layer" style="flex: 1 1 auto; display: flex; flex-direction: column">
+  <div aria-hidden="true" style="position: relative; z-index: 2; display: flex; gap: 6px; padding: 14px 24px 0">
+    <sc-for list="{{ segs }}" as="g" hint-placeholder-count="6">
+      <span style="flex: 1 1 0; height: 4px; border-radius: 2px; background: {{g.bg}}; transition: background .4s ease"></span>
+    </sc-for>
+  </div>
+  <header class="slop-navbar" style="position: relative; z-index: 2">
+    <div class="slop-navbar-inner" style="flex-wrap: wrap; padding: 8px 24px">
+      <span class="slop-brand"><span class="slop-brand-mark" aria-hidden="true">✨</span><span>repofeed<span style="color: #94a3b8">.ai</span></span></span>
+      <div class="slop-row"><span class="slop-status"><span class="slop-dot slop-dot-green"></span>Preview mode</span><sc-if value="{{ showSkip }}" hint-placeholder-val="{{ true }}">
+        <button type="button" class="slop-btn slop-btn-ghost" onClick="{{ skip }}" style="min-height: 44px">Skip the story</button>
+      </sc-if></div>
+    </div>
+  </header>
+  <main style="position: relative; z-index: 1; flex: 1 1 auto; display: grid; align-items: center; padding: 24px clamp(24px, 6vw, 96px) 40px">
+
+    <sc-if value="{{ is0 }}" hint-placeholder-val="{{ true }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+          <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-purple"></span><span class="slop-sparkle">Then</span></div>
+          <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Remember <span class="slop-serif-emphasis slop-text-gradient-hot">8pm</span>?</h1>
+          <p class="slop-lead" style="margin: 0; max-width: 44ch">One channel. One story. Families, offices, whole cities tuned in together — and had one conversation about it the next morning.</p>
+          <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ p0 }}">{{cta0}}</button></div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
+          <div style="width: 440px; max-width: 100%; padding: 16px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 28px; background: rgba(15, 23, 42, .9); box-shadow: 0 0 120px rgba(168, 85, 247, .45)">
+            <div role="group" aria-label="Live broadcast playing on the TV" style="position: relative; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #000000; color: #ffffff">
+              <video src="./assets/a07605b59e6dad810c4f9eb59413d172.mp4" poster="./assets/42a6acbff47091bad213710292f4ef45.jpg" loop="" playsinline="" preload="auto" onCanPlay="{{ startVideo }}" aria-label="Archive television footage of the Apollo 11 moonwalk, July 1969" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none"></video>
+              <span class="slop-status" style="position: absolute; top: 10px; left: 10px"><span class="slop-dot slop-dot-red"></span>Live</span>
+              <button type="button" onClick="{{ togglePlay }}" aria-label="{{playLabel}}" style="position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(2, 6, 23, .7); color: #ffffff; cursor: pointer">
+                <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>
+                </sc-if>
+                <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
+                </sc-if>
+              </button>
+              <div style="position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(2, 6, 23, .78); color: #ffffff; text-align: left">
+                <div style="font-size: 15px; font-weight: 700">July 20, 1969 — the Moon landing</div>
+                <div style="font-size: 13px; font-weight: 500">One broadcast. The whole world watching.</div>
+              </div>
+            </div>
+          </div>
+          <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px; width: 300px; max-width: 100%">
+            <sc-for list="{{ dots }}" as="d" hint-placeholder-count="18">
+              <span style="aspect-ratio: 1 / 1; border-radius: 50%; background: {{d.bg}}; box-shadow: 0 0 12px {{d.bg}}; transition: background .5s ease {{d.delay}}"></span>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ is1 }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+          <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-pink"></span><span class="slop-sparkle">Now</span></div>
+          <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Then everyone got their <span class="slop-serif-emphasis slop-text-gradient-hot">own</span> screen.</h1>
+          <p class="slop-lead" style="margin: 0; max-width: 44ch">Streaming built a private bubble for every person. Infinite choice — zero common plot. (Ask anyone what they watched last night.)</p>
+          <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ back }}">Back</button><button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ p1 }}">{{cta1}}</button></div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
+          <sc-if value="{{ whole }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ p1 }}" aria-label="Change the channel" style="width: 440px; max-width: 100%; padding: 16px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 28px; background: rgba(15, 23, 42, .9); color: inherit; cursor: pointer; box-shadow: 0 0 120px rgba(168, 85, 247, .45)">
+              <span style="position: relative; display: block; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #000000; color: #ffffff">
+                <video src="./assets/a07605b59e6dad810c4f9eb59413d172.mp4" poster="./assets/42a6acbff47091bad213710292f4ef45.jpg" loop="" playsinline="" preload="auto" onCanPlay="{{ startVideo }}" aria-label="Archive television footage of the Apollo 11 moonwalk, July 1969" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none"></video>
+                <span style="position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(2, 6, 23, .78); color: #ffffff; text-align: left; display: block; font-size: 14px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; text-align: center">Tap to change the channel</span>
+              </span>
+            </button>
+          </sc-if>
+          <sc-if value="{{ shattered }}" hint-placeholder-val="{{ false }}">
+            <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; width: 520px; max-width: 100%">
+              <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="12">
+                <div style="aspect-ratio: 4 / 3; padding: 10px; border-radius: 12px; background: rgba(15, 23, 42, .9); border: 1px solid rgba(255, 255, 255, .1); border-left: 4px solid {{t.hue}}; box-shadow: 0 0 18px {{t.glow}}; display: flex; flex-direction: column; justify-content: space-between; transform: rotate({{t.rot}}); animation: rf-pop .45s cubic-bezier(.2, 1.4, .4, 1) both; animation-delay: {{t.delay}}">
+                  <span style="font-size: 12px; font-weight: 600; line-height: 1.2">{{t.label}}</span>
+                  <span style="width: 60%; height: 5px; border-radius: 3px; background: {{t.hue}}"></span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px; width: 300px; max-width: 100%">
+            <sc-for list="{{ dots }}" as="d" hint-placeholder-count="18">
+              <span style="aspect-ratio: 1 / 1; border-radius: 50%; background: {{d.bg}}; box-shadow: 0 0 12px {{d.bg}}; transition: background .5s ease {{d.delay}}"></span>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ is2 }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+          <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-amber"></span><span class="slop-sparkle">The cost</span></div>
+          <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Your research went the <span class="slop-underline ">same</span> way.</h1>
+          <p class="slop-lead" style="margin: 0; max-width: 44ch">Interviews, surveys, decks — all filed, none watched. Somewhere in there is the quote that should have changed the roadmap. Go find it.</p>
+          <p aria-live="polite" style="margin: 0; font-size: 16px; font-weight: 600">{{digLine}}</p>
+          <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ back }}">Back</button><button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ next }}">{{cta2}}</button></div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 20px">
+          <sc-for list="{{ files }}" as="f" hint-placeholder-count="5">
+            <button type="button" class="{{f.cls}}" onClick="{{ f.open }}" aria-pressed="{{ f.on }}" style="width: 236px; max-width: 100%; min-height: 136px; padding: 16px; display: flex; flex-direction: column; gap: 10px; text-align: left; color: #f8fafc; cursor: pointer; transform: rotate({{f.rot}})">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px">{{f.name}}</span>
+              <span aria-hidden="true" style="height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14)"></span>
+              <span aria-hidden="true" style="width: 80%; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14)"></span>
+              <span aria-hidden="true" style="width: 55%; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14)"></span>
+              <span style="margin-top: auto; font-size: 14px; font-weight: 500; color: {{f.statusColor}}">{{f.status}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ is3 }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+          <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-green"></span><span class="slop-sparkle">repofeed</span></div>
+          <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Now it plays <span class="slop-underline ">like</span> a <span class="slop-serif-emphasis slop-text-gradient">channel</span>.</h1>
+          <p class="slop-lead" style="margin: 0; max-width: 44ch">It’s not just a repository — it’s a channel. That buried interview file is now a reel of short insight scenes in one common feed. Go on — swipe, like, add one to the deck.</p>
+          <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ back }}">Back</button><button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ next }}">Build my channel ⚡</button></div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 28px">
+          <article class="slop-card slop-card-beam" aria-label="Insight reel" style="width: 320px; max-width: 100%; padding: 0; border-radius: 36px">
+            <div style="min-height: 560px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; padding: 16px 16px 14px; border-radius: 34px; background: {{reelBg}}; color: #ffffff">
+              <div style="display: flex; flex-direction: column; gap: 12px">
+                <div aria-hidden="true" style="display: flex; gap: 4px">
+                  <sc-for list="{{ reelBars }}" as="b" hint-placeholder-count="3">
+                    <span style="flex: 1 1 0; height: 3px; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, .3)"><span style="display: block; height: 100%; width: {{b.w}}; background: #ffffff; transition: {{b.t}}"></span></span>
+                  </sc-for>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span aria-hidden="true" style="flex: none; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #ec4899, #7e22ce); border: 2px solid #ffffff; font-size: 13px; font-weight: 800">TR</span>
+                  <span style="display: flex; flex-direction: column; line-height: 1.25">
+                    <span style="font-size: 15px; font-weight: 700">Team research</span>
+                    <span aria-live="polite" style="font-size: 12px; font-weight: 500">{{reelCount}}</span>
+                  </span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: flex-end; gap: 12px">
+                <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 12px">
+                  <blockquote style="margin: 0; font-weight: 800; font-size: 25px; line-height: 1.18; letter-spacing: -0.02em">{{reelQuote}}</blockquote>
+                  <span style="font-size: 13px; font-weight: 500">{{reelWho}}</span>
+                  <span class="slop-badge slop-badge-ai" style="white-space: normal">{{reelSource}}</span>
+                </div>
+                <div style="flex: none; display: flex; flex-direction: column; gap: 12px">
+                  <span style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600">
+                    <button type="button" onClick="{{ toggleLike }}" aria-pressed="{{ liked }}" aria-label="Like this scene" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; cursor: pointer; transition: background .2s ease; background: {{likeBg}}; color: #ffffff">
+                      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="{{likeFill}}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+                    </button>
+                    <span aria-hidden="true">Like</span>
+                  </span>
+                  <span style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600">
+                    <button type="button" onClick="{{ touch }}" aria-label="Comment on this scene" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; cursor: pointer; transition: background .2s ease; background: rgba(2, 6, 23, .45); color: #ffffff">
+                      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M20 12a8 8 0 0 1-11.8 7L4 20l1-4.2A8 8 0 1 1 20 12z"></path></svg>
+                    </button>
+                    <span aria-hidden="true">Comment</span>
+                  </span>
+                  <span style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600">
+                    <button type="button" onClick="{{ toggleHeard }}" aria-pressed="{{ heard }}" aria-label="Mark as heard this before" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; cursor: pointer; transition: background .2s ease; background: {{heardBg}}; color: #ffffff">
+                      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>
+                    </button>
+                    <span aria-hidden="true">Heard</span>
+                  </span>
+                  <span style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600">
+                    <button type="button" onClick="{{ toggleAdd }}" aria-pressed="{{ addedHere }}" aria-label="Add this scene to the deck" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; cursor: pointer; transition: background .2s ease; background: {{addBg}}; color: #ffffff">
+                      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                    </button>
+                    <span aria-hidden="true">{{addLabel}}</span>
+                  </span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                <button type="button" onClick="{{ prevReel }}" aria-label="Previous scene" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(2, 6, 23, .45); color: #ffffff; cursor: pointer">
+                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"></path></svg>
+                </button>
+                <span style="font-size: 13px; font-weight: 600">Swipe for the next scene</span>
+                <button type="button" onClick="{{ nextReel }}" aria-label="Next scene" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(2, 6, 23, .45); color: #ffffff; cursor: pointer">
+                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+                </button>
+              </div>
+            </div>
+          </article>
+          <div style="width: 220px; max-width: 100%; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">
+              <span style="color: #f8fafc">Deck</span>
+              <span aria-live="polite">{{deckCount}}</span>
+            </div>
+            <sc-if value="{{ added }}" hint-placeholder-val="{{ false }}">
+              <div class="slop-card slop-border-l-gradient" style="aspect-ratio: 16 / 9; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; animation: rf-pop .4s cubic-bezier(.2, 1.4, .4, 1) both">
+                <span style="font-weight: 700; font-size: 14px; line-height: 1.2">{{deckThumb}}</span>
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #94a3b8">{{deckSlide}}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ notAdded }}" hint-placeholder-val="{{ true }}">
+              <div style="aspect-ratio: 16 / 9; padding: 14px; display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 14px; border: 1.5px dashed rgba(192, 132, 252, .5); font-size: 14px; color: #94a3b8">Add a scene to start a deck</div>
+            </sc-if>
+            <span style="font-size: 14px; color: #94a3b8">The best scenes export to PowerPoint.</span>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isChannel }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+          <sc-if value="{{ sub0 }}" hint-placeholder-val="{{ false }}">
+            <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-purple"></span><span class="slop-sparkle">Your channel · 1 of 4</span></div>
+            <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Who’s holding <span class="slop-underline slop-underline-squiggle slop-underline-cyan">the</span> <span class="slop-serif-emphasis slop-text-gradient-hot">remote</span>?</h1>
+            <p class="slop-lead" style="margin: 0; max-width: 44ch">Pick your role. We’ll tune the channel’s language to how you work.</p>
+            <div role="group" aria-label="Your role" class="slop-row" style="align-self: stretch">
+              <sc-for list="{{ roles }}" as="o" hint-placeholder-count="4">
+                <button type="button" class="{{o.cls}}" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height: 48px">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sub1 }}" hint-placeholder-val="{{ false }}">
+            <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-purple"></span><span class="slop-sparkle">Your channel · 2 of 4</span></div>
+            <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">What goes <span class="slop-text-gradient">on air</span>?</h1>
+            <p class="slop-lead" style="margin: 0; max-width: 44ch">The research you work with. Pick all that apply. You can change this later.</p>
+            <div role="group" aria-label="Research types" class="slop-row" style="align-self: stretch">
+              <sc-for list="{{ kinds }}" as="o" hint-placeholder-count="4">
+                <button type="button" class="{{o.cls}}" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height: 48px">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sub2 }}" hint-placeholder-val="{{ false }}">
+            <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-purple"></span><span class="slop-sparkle">Your channel · 3 of 4</span></div>
+            <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Who’s <span class="slop-serif-emphasis slop-text-gradient-hot">watching</span>?</h1>
+            <p class="slop-lead" style="margin: 0; max-width: 44ch">Start small or go wide — you invite people when you’re ready.</p>
+            <div role="group" aria-label="Audience" class="slop-row" style="align-self: stretch">
+              <sc-for list="{{ audiences }}" as="o" hint-placeholder-count="4">
+                <button type="button" class="{{o.cls}}" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height: 48px">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sub3 }}" hint-placeholder-val="{{ false }}">
+            <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-purple"></span><span class="slop-sparkle">Your channel · 4 of 4</span></div>
+            <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Name the <span class="slop-underline slop-underline-cyan">channel</span>.</h1>
+            <p class="slop-lead" style="margin: 0; max-width: 44ch">Something short your teammates will recognize in the feed.</p>
+            <div style="align-self: stretch; display: flex; flex-direction: column; gap: 8px">
+              <label for="rf-slop-channel-name" style="font-size: 15px; font-weight: 600">Channel name</label>
+              <div class="slop-ai-bar" style="min-height: 56px">
+                <span aria-hidden="true">✨</span>
+                <input id="rf-slop-channel-name" type="text" maxlength="40" autocomplete="off" placeholder="Team research" value="{{ name }}" onChange="{{ setName }}" style="height: 44px; font-size: 18px">
+              </div>
+              <span style="font-size: 14px; color: #94a3b8">Suggestion from your email. Edit freely.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ onAir }}" hint-placeholder-val="{{ false }}">
+            <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-green"></span><span class="slop-sparkle">Ready</span></div>
+            <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">You’re <span class="slop-serif-emphasis slop-text-gradient">on air</span>.</h1>
+            <p class="slop-lead" style="margin: 0; max-width: 44ch">Research, as a feed. Upload your first study — or watch the demo to see insight scenes in motion.</p>
+          </sc-if>
+          <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ back }}">Back</button>
+            <sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+              <button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ p4 }}">{{cta4}}</button>
+            </sc-if>
+            <sc-if value="{{ onAir }}" hint-placeholder-val="{{ false }}">
+              <a class="slop-btn slop-btn-primary slop-btn-lg" href="SlopSignIn.dc.html">Sign in to upload 🚀</a>
+              <button type="button" class="slop-btn slop-btn-rainbow slop-btn-lg">Watch the demo</button>
+            </sc-if>
+          </div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
+          <div class="slop-card slop-card-beam" style="width: 440px; max-width: 100%; padding: 28px; display: flex; flex-direction: column; gap: 20px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+              <span class="slop-row"><span class="slop-icon-box" aria-hidden="true" style="margin-bottom: 0">📺</span><span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">Channel preview</span></span>
+              <span class="slop-status"><span class="{{pillDot}}"></span>{{pill}}</span>
+            </div>
+            <div class="{{cardNameCls}}" style="font-weight: 800; font-size: 36px; line-height: 1.1; letter-spacing: -0.04em; overflow-wrap: anywhere">{{cardName}}</div>
+            <dl style="margin: 0; display: flex; flex-direction: column">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+                <div style="display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid rgba(255, 255, 255, .1)">
+                  <dt style="font-size: 15px; color: #94a3b8">{{r.k}}</dt>
+                  <dd style="margin: 0; text-align: right; font-size: 15px; font-weight: 600; color: {{r.c}}">{{r.v}}</dd>
+                </div>
+              </sc-for>
+            </dl>
+            <sc-if value="{{ onAir }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, .1)">
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">What happens next</span>
+                <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px">
+                  <li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #4338ca, #7e22ce); color: #ffffff; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">1</span><span>Upload your research files</span></li><li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #4338ca, #7e22ce); color: #ffffff; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">2</span><span>AI cuts them into short insight scenes</span></li><li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #4338ca, #7e22ce); color: #ffffff; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">3</span><span>Your team scrolls, likes and comments</span></li><li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #4338ca, #7e22ce); color: #ffffff; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">4</span><span>The best scenes go to a PowerPoint deck</span></li>
+                </ol>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+  </main>
+  <footer style="position: relative; z-index: 1; padding: 0 24px 20px; font-size: 14px; color: #94a3b8">Preview mode — answers aren’t saved until you sign in.</footer>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"int","default":0,"min":0,"max":5,"step":1},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  sceneNow() {
+    const s = this.state || {};
+    const start = Math.max(0, Math.min(5, Number(this.props.scene ?? 0) || 0));
+    return s.scene ?? start;
+  }
+  componentDidMount() {
+    let reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (reduce) { this.setState({ paused: true, touched: true }); return; }
+    this._tick = 0;
+    this._i = setInterval(() => {
+      const s = this.state || {};
+      const scene = this.sceneNow();
+      this._tick += 1;
+      if (scene === 3 && !s.touched && this._tick % 2 === 0) this.setState({ reel: ((s.reel ?? 0) + 1) % 3 });
+    }, 2400);
+  }
+  componentWillUnmount() {
+    clearInterval(this._i);
+  }
+  renderVals() {
+    const s = this.state || {};
+    const set = (o) => this.setState(o);
+    const start = Math.max(0, Math.min(5, Number(this.props.scene ?? 0) || 0));
+    const scene = s.scene ?? start;
+    const sub = s.sub ?? 0;
+    const hues = ['#a855f7', '#06b6d4', '#ec4899', '#10b981', '#f59e0b', '#6366f1'];
+
+    const paused = !!s.paused;
+    const shattered = !!s.shattered;
+    const opened = s.opened || {};
+    const r = s.reel ?? 0;
+    const likedMap = s.liked || {};
+    const heardMap = s.heardMap || {};
+    const addedMap = s.addedMap || {};
+    const liked = !!likedMap[r];
+    const heard = !!heardMap[r];
+    const added = !!addedMap[r];
+    const reels = [
+      { quote: '“It stopped feeling like help and started feeling like homework.”', who: 'Parent of two · 7 months', source: 'interviews.docx', short: '“It stopped feeling like help…”', bg: 'linear-gradient(160deg, #312e81 0%, #6b21a8 100%)' },
+      { quote: '“I only open it when it nags me.”', who: 'Demo quote · swap in your own', source: 'interviews.docx', short: '“I only open it when it nags me.”', bg: 'linear-gradient(160deg, #0c4a6e 0%, #3730a3 100%)' },
+      { quote: '“Week one felt like magic. By week three I’d muted it.”', who: 'Demo quote · swap in your own', source: 'usability.pdf', short: '“Week one felt like magic…”', bg: 'linear-gradient(160deg, #831843 0%, #581c87 100%)' }
+    ];
+    const reel = reels[r];
+    const auto = !s.touched;
+    const reelBars = reels.map((x, i) => ({
+      w: i <= r ? '100%' : '0%',
+      t: (i === r && auto) ? 'width 4.6s linear' : 'none'
+    }));
+    const addedIdx = [0, 1, 2].filter((i) => addedMap[i]);
+    const deckN = addedIdx.length;
+    const flip = (key, map) => () => set({ [key]: Object.assign({}, map, { [r]: !map[r] }), touched: true });
+    const role = s.role || '';
+    const picked = s.kinds || {};
+    const audience = s.audience || '';
+    const name = s.name ?? '';
+
+    const next = () => set({ scene: Math.min(5, scene + 1) });
+    const back = () => {
+      if (scene === 4 && sub > 0) return set({ sub: sub - 1 });
+      if (scene === 5) return set({ scene: 4, sub: 3 });
+      set({ scene: Math.max(0, scene - 1) });
+    };
+
+    const segs = [0, 1, 2, 3, 4, 5].map((i) => ({ bg: i <= scene ? '#c084fc' : 'rgba(255,255,255,.14)' }));
+
+    const dots = Array.from({ length: 18 }, (_, i) => {
+      let bg = 'rgba(148,163,184,.22)';
+      if (scene === 0) bg = '#a855f7';
+      if (scene === 1) bg = shattered ? hues[(i * 5 + 2) % 6] : '#a855f7';
+      return { bg: bg, delay: (i * 25) + 'ms' };
+    });
+
+    const tileLabels = ['For you', 'Continue watching', 'Suggested', 'Because you watched', 'Up next', 'Your mix', 'Recommended', 'Watch again', 'New for you', 'Top picks', 'Trending for you', 'Skip intro'];
+    const rots = [-3, 2, -1, 3, 1, -2, 2, -3, 3, -1, 1, -2];
+    const tiles = tileLabels.map((label, i) => {
+      const hue = hues[(i * 5) % 6];
+      return { label: label, hue: hue, glow: hue + '55', rot: rots[i] + 'deg', delay: (i * 40) + 'ms' };
+    });
+
+    const fileNames = ['interviews.docx', 'survey-q3.xlsx', 'usability.pdf', 'notes.md', 'deck.pptx'];
+    const fileRots = [-4, 3, -2, 4, -3];
+    const count = fileNames.filter((n) => opened[n]).length;
+    const files = fileNames.map((n, i) => {
+      const on = !!opened[n];
+      return {
+        name: n,
+        on: on,
+        cls: on ? 'slop-card slop-border-l-purple' : 'slop-card slop-border-l-amber',
+        rot: on ? '0deg' : fileRots[i] + 'deg',
+        status: on ? 'Opened · not in here' : 'Unread · buried',
+        statusColor: on ? '#94a3b8' : '#fbbf24',
+        open: () => set({ opened: Object.assign({}, opened, { [n]: true }) })
+      };
+    });
+    let digLine = 'Five files. Tap one to start digging.';
+    if (count > 0) digLine = count + ' opened. Still not it.';
+    if (count >= 3) digLine = count + ' opened, nothing found. Nobody digs past this.';
+    if (count === 5) digLine = 'All five opened. It was one line on a page you skimmed.';
+    const cta2 = count >= 3 ? 'Exactly. Show me better' : (count > 0 ? 'Give up digging' : 'I’d rather not dig');
+
+    const chip = (label, on, pick) => ({
+      label: label, on: on, pick: pick,
+      cls: on ? 'slop-btn slop-btn-primary' : 'slop-btn slop-btn-ghost'
+    });
+    const roles = ['Researcher', 'Product manager', 'Designer', 'Marketer', 'Founder', 'Other']
+      .map((l) => chip(l, role === l, () => set({ role: l, sub: 1 })));
+    const kindLabels = ['Interviews', 'Surveys', 'Reports', 'Usability tests', 'Market research'];
+    const kinds = kindLabels.map((l) => chip(l, !!picked[l], () => set({ kinds: Object.assign({}, picked, { [l]: !picked[l] }) })));
+    const audiences = ['Just me', 'My team', 'My company', 'Clients']
+      .map((l) => chip(l, audience === l, () => set({ audience: l, sub: 3 })));
+
+    const kindList = kindLabels.filter((l) => picked[l]).join(' · ');
+    const trimmed = name.trim();
+    const onAir = scene === 5;
+    const row = (k, v) => ({ k: k, v: v || 'Not set yet', c: v ? '#f8fafc' : '#94a3b8' });
+    const rows = [row('Tuned for', role), row('On air', kindList), row('Watching', audience)];
+
+    return {
+      segs: segs, dots: dots, tiles: tiles, files: files,
+      showSkip: scene < 5,
+      skip: () => set({ scene: 5 }),
+      next: next, back: back,
+
+      is0: scene === 0, is1: scene === 1, is2: scene === 2, is3: scene === 3,
+      isChannel: scene >= 4, isSetup: scene === 4, onAir: onAir,
+      sub0: scene === 4 && sub === 0, sub1: scene === 4 && sub === 1,
+      sub2: scene === 4 && sub === 2, sub3: scene === 4 && sub === 3,
+
+      playing: !paused, paused: paused,
+      playLabel: paused ? 'Play the broadcast' : 'Pause the broadcast',
+      startVideo: (e) => {
+        const v = e.target;
+        v.muted = true;
+        v.loop = true;
+        v.playsInline = true;
+        if (!paused) { try { const pr = v.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (err) {} }
+      },
+      togglePlay: (e) => {
+        const v = e.currentTarget.parentNode.querySelector('video');
+        if (v) {
+          v.muted = true;
+          if (paused) { try { const pr = v.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (err) {} }
+          else v.pause();
+        }
+        set({ paused: !paused });
+      },
+      p0: next,
+      cta0: 'Keep watching',
+
+      shattered: shattered, whole: !shattered,
+      p1: shattered ? next : () => set({ shattered: true }),
+      cta1: shattered ? 'So what?' : 'Change the channel',
+
+      digLine: digLine, cta2: cta2,
+
+      reelBg: reel.bg, reelBars: reelBars,
+      reelQuote: reel.quote, reelWho: reel.who,
+      reelSource: 'Cut from ' + reel.source,
+      reelCount: 'Insight scene ' + (r + 1) + ' of 3',
+      prevReel: () => set({ reel: (r + 2) % 3, touched: true }),
+      nextReel: () => set({ reel: (r + 1) % 3, touched: true }),
+      touch: () => set({ touched: true }),
+      liked: liked, heard: heard, addedHere: added, added: deckN > 0, notAdded: deckN === 0,
+      toggleLike: flip('liked', likedMap),
+      toggleHeard: flip('heardMap', heardMap),
+      toggleAdd: flip('addedMap', addedMap),
+      likeBg: liked ? '#be185d' : 'rgba(2,6,23,.45)',
+      likeFill: liked ? '#ffffff' : 'none',
+      heardBg: heard ? '#047857' : 'rgba(2,6,23,.45)',
+      addBg: added ? '#6d28d9' : 'rgba(2,6,23,.45)',
+      addLabel: added ? 'In deck' : 'Deck',
+      deckThumb: deckN > 0 ? reels[addedIdx[deckN - 1]].short : '',
+      deckSlide: 'Slide ' + deckN,
+      deckCount: deckN === 0 ? 'Empty' : (deckN === 1 ? '1 slide' : deckN + ' slides'),
+
+      roles: roles, kinds: kinds, audiences: audiences,
+      name: name,
+      setName: (e) => set({ name: e.target.value }),
+      p4: sub < 3 ? () => set({ sub: sub + 1 }) : () => set({ scene: 5 }),
+      cta4: sub < 3 ? 'Continue' : 'Put it on air 🚀',
+
+      rows: rows,
+      cardName: trimmed || (onAir ? 'Team research' : 'Unnamed channel'),
+      cardNameCls: (trimmed || onAir) ? 'slop-text-gradient' : '',
+      pill: onAir ? 'On air' : 'Setting up',
+      pillDot: onAir ? 'slop-dot slop-dot-green' : 'slop-dot slop-dot-amber'
+    };
+  }
+}
+</script>
+</body>
+</html>

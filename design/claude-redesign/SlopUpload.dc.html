@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Upload your first study, Slopstrap version</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+<link rel="stylesheet" href="./assets/11b9b58aba84609684279bf975f7125a.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&amp;family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#030712}
+button{font:inherit}
+.slop-scope a:focus-visible,.slop-scope button:focus-visible,.slop-scope label:focus-within,.slop-scope .slop-ai-bar:focus-within{outline:3px solid #c084fc;outline-offset:3px}
+@keyframes rf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes rf-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes rf-on{0%{opacity:.15}30%{opacity:1}45%{opacity:.55}100%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.slop-scope *,.slop-scope *::before,.slop-scope *::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div class="slop-scope slop-grid-bg" data-slop-level="3" style="min-height: 100vh; display: flex; flex-direction: column; overflow: hidden">
+  <div class="slop-orb-layer" aria-hidden="true" style="position: absolute">
+    <div class="slop-orb slop-orb-purple"></div>
+    <div class="slop-orb slop-orb-cyan"></div>
+    <div class="slop-orb slop-orb-pink"></div>
+    <div class="slop-orb slop-orb-emerald"></div>
+  </div>
+  <div class="slop-content-layer" style="flex: 1 1 auto; display: flex; flex-direction: column">
+  <header class="slop-navbar" style="position: relative; z-index: 2">
+    <div class="slop-navbar-inner" style="flex-wrap: wrap; padding: 8px 24px">
+      <span class="slop-brand"><span class="slop-brand-mark" aria-hidden="true">✨</span><span>repofeed<span style="color: #94a3b8">.ai</span></span></span>
+      <div class="slop-row"><span class="slop-status"><span class="slop-dot slop-dot-green"></span>Signed in</span><ol class="slop-tabs" aria-label="Progress" style="margin: 0; list-style: none"><li class="slop-tab is-active" aria-current="step" style="cursor: default; color: #ffffff">1 Upload</li><li class="slop-tab" style="cursor: default">2 Scenes</li><li class="slop-tab" style="cursor: default">3 Publish</li></ol></div>
+    </div>
+  </header>
+  <main style="position: relative; z-index: 1; flex: 1 1 auto; display: grid; align-items: center; padding: 24px clamp(24px, 6vw, 96px) 40px">
+    <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+      <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+        <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-purple"></span><span class="slop-sparkle">Team research · First study</span></div>
+        <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Empty <span class="slop-underline slop-underline-squiggle slop-underline-pink">the</span> <span class="slop-serif-emphasis slop-text-gradient-hot">drawer</span>.</h1>
+        <p class="slop-lead" style="margin: 0; max-width: 44ch">Drop in the interviews, surveys and decks from one study. Messy is fine — we’ll cut them into short insight scenes.</p>
+        <div style="align-self: stretch; display: flex; flex-direction: column; gap: 8px">
+          <label for="rf-slop-study-name" style="font-size: 15px; font-weight: 600">Study name</label>
+          <div class="slop-ai-bar" style="min-height: 56px">
+            <span aria-hidden="true">✨</span>
+            <input id="rf-slop-study-name" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Q3 onboarding interviews" value="{{ study }}" onChange="{{ setStudy }}" style="height: 44px; font-size: 18px">
+          </div>
+        </div>
+        <div class="slop-row" style="margin-top: 8px">
+          <sc-if value="{{ hasFiles }}" hint-placeholder-val="{{ false }}">
+            <a class="slop-btn slop-btn-primary slop-btn-lg" href="SlopCutting.dc.html">Cut into scenes ⚡</a>
+          </sc-if>
+          <sc-if value="{{ noFiles }}" hint-placeholder-val="{{ true }}">
+            <button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ sample }}">No files handy? Use the sample study</button>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div class="slop-card" onDragOver="{{ over }}" onDragLeave="{{ leave }}" onDrop="{{ drop }}" style="min-height: 300px; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; border: 2px dashed {{zoneBd}}; box-shadow: {{zoneGlow}}">
+          <span class="slop-icon-box slop-icon-cyan" aria-hidden="true" style="margin-bottom: 0">📂</span>
+          <div class="slop-text-gradient" style="font-weight: 800; font-size: 28px; letter-spacing: -0.03em">Drop research files here</div>
+          <label class="slop-btn slop-btn-primary" style="min-height: 48px">
+            Choose files
+            <input type="file" multiple="" onChange="{{ pick }}" style="position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden">
+          </label>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: #94a3b8">docx · xlsx · pdf · md · pptx</span>
+        </div>
+        <sc-if value="{{ hasFiles }}" hint-placeholder-val="{{ false }}">
+          <ul aria-label="Files in this study" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{ files }}" as="f" hint-placeholder-count="3">
+              <li class="slop-card-nested" style="margin-top: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 6px 6px 16px">
+                <span style="min-width: 0; overflow-wrap: anywhere; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px">{{f.name}}</span>
+                <button type="button" onClick="{{ f.remove }}" aria-label="{{f.removeLabel}}" style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 10px; background: transparent; color: #94a3b8; cursor: pointer">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+                </button>
+              </li>
+            </sc-for>
+          </ul>
+        </sc-if>
+        <p aria-live="polite" style="margin: 0; font-size: 15px; color: #94a3b8">{{countLine}}</p>
+      </div>
+    </section>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const list = s.files || [];
+    const hot = !!s.hot;
+    const add = (fileList) => {
+      const names = Array.from(fileList || []).map((f) => f.name);
+      const merged = list.concat(names.filter((n) => list.indexOf(n) < 0));
+      this.setState({ files: merged, hot: false });
+    };
+    const files = list.map((n) => ({
+      name: n,
+      removeLabel: 'Remove ' + n,
+      remove: () => this.setState({ files: list.filter((x) => x !== n) })
+    }));
+    const c = list.length;
+    return {
+      study: s.study ?? '',
+      setStudy: (e) => this.setState({ study: e.target.value }),
+      files: files,
+      hasFiles: c > 0,
+      noFiles: c === 0,
+      countLine: c === 0 ? 'Nothing here yet.' : (c === 1 ? '1 file ready to cut.' : c + ' files ready to cut.'),
+      zoneBd: hot ? '#22d3ee' : 'rgba(192,132,252,.5)',
+      zoneGlow: hot ? '0 0 48px rgba(34,211,238,.35)' : 'none',
+      over: (e) => { e.preventDefault(); if (!hot) this.setState({ hot: true }); },
+      leave: () => this.setState({ hot: false }),
+      drop: (e) => { e.preventDefault(); add(e.dataTransfer && e.dataTransfer.files); },
+      pick: (e) => { add(e.target.files); e.target.value = ''; },
+      sample: () => this.setState({ files: ['interviews.docx', 'survey-q3.xlsx', 'usability.pdf'] })
+    };
+  }
+}
+</script>
+</body>
+</html>

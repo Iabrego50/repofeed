@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review and publish, Slopstrap version</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+<link rel="stylesheet" href="./assets/11b9b58aba84609684279bf975f7125a.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&amp;family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#030712}
+button{font:inherit}
+.slop-scope a:focus-visible,.slop-scope button:focus-visible,.slop-scope label:focus-within,.slop-scope .slop-ai-bar:focus-within{outline:3px solid #c084fc;outline-offset:3px}
+@keyframes rf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes rf-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes rf-on{0%{opacity:.15}30%{opacity:1}45%{opacity:.55}100%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.slop-scope *,.slop-scope *::before,.slop-scope *::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div class="slop-scope slop-grid-bg" data-slop-level="3" style="min-height: 100vh; display: flex; flex-direction: column; overflow: hidden">
+  <div class="slop-orb-layer" aria-hidden="true" style="position: absolute">
+    <div class="slop-orb slop-orb-purple"></div>
+    <div class="slop-orb slop-orb-cyan"></div>
+    <div class="slop-orb slop-orb-pink"></div>
+    <div class="slop-orb slop-orb-emerald"></div>
+  </div>
+  <div class="slop-content-layer" style="flex: 1 1 auto; display: flex; flex-direction: column">
+  <header class="slop-navbar" style="position: relative; z-index: 2">
+    <div class="slop-navbar-inner" style="flex-wrap: wrap; padding: 8px 24px">
+      <span class="slop-brand"><span class="slop-brand-mark" aria-hidden="true">✨</span><span>repofeed<span style="color: #94a3b8">.ai</span></span></span>
+      <div class="slop-row"><span class="slop-status"><span class="slop-dot slop-dot-green"></span>Signed in</span><ol class="slop-tabs" aria-label="Progress" style="margin: 0; list-style: none"><li class="slop-tab" style="cursor: default">1 Upload</li><li class="slop-tab" style="cursor: default">2 Scenes</li><li class="slop-tab is-active" aria-current="step" style="cursor: default; color: #ffffff">3 Publish</li></ol></div>
+    </div>
+  </header>
+  <main style="position: relative; z-index: 1; flex: 1 1 auto; padding: clamp(32px, 5vw, 64px) clamp(24px, 6vw, 96px) 48px">
+    <div style="max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px">
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 16px">
+        <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-cyan"></span><span class="slop-sparkle">Review &amp; publish</span></div>
+        <h1 class="slop-h1" style="margin: 0; font-size: clamp(36px, 4.4vw, 56px); text-wrap: balance">Which <span class="slop-serif-emphasis slop-text-gradient-hot">channel</span> gets <span class="slop-underline slop-underline-cyan">this</span> study?</h1>
+        <p class="slop-lead" style="margin: 0; max-width: 52ch">Assign it to a phone division feed — before or after publishing.</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 24px">
+        <section class="slop-card" aria-labelledby="slop-pd-title" style="flex: 999 1 520px; min-width: 0; padding: 32px; display: flex; flex-direction: column; gap: 20px">
+          <h2 id="slop-pd-title" style="margin: 0; font-weight: 400; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">Phone division feed</h2>
+          <div role="group" aria-labelledby="slop-pd-title" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px">
+            <sc-for list="{{ channels }}" as="c" hint-placeholder-count="5">
+              <button type="button" class="{{c.cls}}" onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="min-height: 88px; padding: 16px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 10px; text-align: left; color: #f8fafc; cursor: pointer">
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .08em; color: {{c.sub}}">{{c.num}}</span>
+                <span class="{{c.nameCls}}" style="font-weight: 800; font-size: 24px; letter-spacing: -0.03em">{{c.label}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <button type="button" class="{{noneCls}}" onClick="{{ pickNone }}" aria-pressed="{{ noneOn }}" style="min-height: 52px; justify-content: flex-start; text-align: left">None. Keep this study off phone division feeds</button>
+        </section>
+        <section class="slop-card slop-border-l-gradient" aria-labelledby="slop-pv-title" aria-live="polite" style="flex: 1 1 300px; min-width: 0; padding: 32px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px">
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <span class="slop-icon-box" aria-hidden="true" style="margin-bottom: 0; align-self: flex-start">📡</span>
+            <h2 id="slop-pv-title" style="margin: 0; font-weight: 400; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">Where it lands</h2>
+            <div class="{{landCls}}" style="font-weight: 800; font-size: 40px; line-height: 1.1; letter-spacing: -0.04em">{{landTitle}}</div>
+            <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #cbd5e1">{{landBody}}</p>
+          </div>
+          <span class="slop-status" style="align-self: flex-start"><span class="{{pillDot}}"></span>{{pill}}</span>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const sel = s.sel ?? 'Auto';
+    const names = ['Auto', 'GI', 'Wood', 'Marine', 'Website'];
+    const channels = names.map((label, i) => {
+      const on = sel === label;
+      return {
+        label: label,
+        num: 'CH 0' + (i + 1),
+        on: on,
+        cls: on ? 'slop-card slop-card-beam' : 'slop-card',
+        nameCls: on ? 'slop-text-gradient' : '',
+        sub: on ? '#c084fc' : '#94a3b8',
+        pick: () => this.setState({ sel: label })
+      };
+    });
+    const none = sel === '';
+    return {
+      channels: channels,
+      pickNone: () => this.setState({ sel: '' }),
+      noneOn: none,
+      noneCls: none ? 'slop-btn slop-btn-primary' : 'slop-btn slop-btn-ghost',
+      landTitle: none ? 'Off phone feeds' : sel + ' channel',
+      landCls: none ? '' : 'slop-text-gradient',
+      landBody: none
+        ? 'Scenes from this study won’t appear in any phone division feed.'
+        : 'Scenes from this study appear in the ' + sel + ' channel on the iOS app.',
+      pill: none ? 'Not assigned' : 'iOS app',
+      pillDot: none ? 'slop-dot slop-dot-amber' : 'slop-dot slop-dot-green'
+    };
+  }
+}
+</script>
+</body>
+</html>

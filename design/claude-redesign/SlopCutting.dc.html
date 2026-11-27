@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cutting your scenes, Slopstrap version</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+<link rel="stylesheet" href="./assets/11b9b58aba84609684279bf975f7125a.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&amp;family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#030712}
+button{font:inherit}
+.slop-scope a:focus-visible,.slop-scope button:focus-visible,.slop-scope label:focus-within,.slop-scope .slop-ai-bar:focus-within{outline:3px solid #c084fc;outline-offset:3px}
+@keyframes rf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes rf-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes rf-on{0%{opacity:.15}30%{opacity:1}45%{opacity:.55}100%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.slop-scope *,.slop-scope *::before,.slop-scope *::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div class="slop-scope slop-grid-bg" data-slop-level="3" style="min-height: 100vh; display: flex; flex-direction: column; overflow: hidden">
+  <div class="slop-orb-layer" aria-hidden="true" style="position: absolute">
+    <div class="slop-orb slop-orb-purple"></div>
+    <div class="slop-orb slop-orb-cyan"></div>
+    <div class="slop-orb slop-orb-pink"></div>
+    <div class="slop-orb slop-orb-emerald"></div>
+  </div>
+  <div class="slop-content-layer" style="flex: 1 1 auto; display: flex; flex-direction: column">
+  <header class="slop-navbar" style="position: relative; z-index: 2">
+    <div class="slop-navbar-inner" style="flex-wrap: wrap; padding: 8px 24px">
+      <span class="slop-brand"><span class="slop-brand-mark" aria-hidden="true">✨</span><span>repofeed<span style="color: #94a3b8">.ai</span></span></span>
+      <div class="slop-row"><span class="slop-status"><span class="slop-dot slop-dot-green"></span>Signed in</span><ol class="slop-tabs" aria-label="Progress" style="margin: 0; list-style: none"><li class="slop-tab" style="cursor: default">1 Upload</li><li class="slop-tab is-active" aria-current="step" style="cursor: default; color: #ffffff">2 Scenes</li><li class="slop-tab" style="cursor: default">3 Publish</li></ol></div>
+    </div>
+  </header>
+  <main style="position: relative; z-index: 1; flex: 1 1 auto; display: grid; align-items: center; padding: 24px clamp(24px, 6vw, 96px) 40px">
+    <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+      <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+        <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-pink"></span><span class="slop-sparkle">In the edit room</span></div>
+        <h1 class="slop-h1 slop-text-gradient" aria-live="polite" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">{{headline}}</h1>
+        <p class="slop-lead" style="margin: 0; max-width: 44ch">We’re reading every file so your team doesn’t have to. You can leave this tab — nothing goes on air until you’ve reviewed it.</p>
+        <div class="slop-row" style="margin-top: 8px">
+          <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+            <a class="slop-btn slop-btn-primary slop-btn-lg" href="SlopScenes.dc.html">Review the scenes</a>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
+        <div class="slop-card slop-card-beam" style="width: 440px; max-width: 100%; padding: 28px; display: flex; flex-direction: column; gap: 24px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+            <span class="slop-row"><span class="slop-icon-box slop-icon-pink" aria-hidden="true" style="margin-bottom: 0">✂️</span><span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">Sample study</span></span>
+            <span class="slop-status"><span class="{{pillDot}}"></span>{{pill}}</span>
+          </div>
+          <div class="slop-progress" aria-hidden="true">
+            <div class="slop-progress-bar" style="width: {{pct}}; transition: width .8s ease"></div>
+          </div>
+          <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 18px">
+            <sc-for list="{{ steps }}" as="t" hint-placeholder-count="4">
+              <li style="display: flex; align-items: center; gap: 14px; color: {{t.fg}}; transition: color .4s ease">
+                <span aria-hidden="true" class="{{t.dot}}" style="flex: none; {{t.dotStyle}}"></span>
+                <span style="flex: 1 1 auto; font-size: 18px; font-weight: 600">{{t.label}}</span>
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">{{t.state}}</span>
+              </li>
+            </sc-for>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  componentDidMount() {
+    this._i = setInterval(() => {
+      const st = (this.state || {}).step || 0;
+      if (st >= 4) { clearInterval(this._i); return; }
+      this.setState({ step: st + 1 });
+    }, 1300);
+  }
+  componentWillUnmount() {
+    clearInterval(this._i);
+  }
+  renderVals() {
+    const step = (this.state || {}).step || 0;
+    const done = step >= 4;
+    const labels = ['Reading your files', 'Finding the moments that matter', 'Writing short insight scenes', 'Lining up the feed'];
+    const steps = labels.map((label, i) => {
+      const isDone = i < step;
+      const active = i === step;
+      return {
+        label: label,
+        fg: isDone || active ? '#f8fafc' : '#94a3b8',
+        dot: active ? 'slop-dot slop-dot-purple' : '',
+        dotStyle: active ? '' : ('width: 9px; height: 9px; border-radius: 50%; background: ' + (isDone ? '#10b981' : 'rgba(148,163,184,.35)')),
+        state: isDone ? 'Done' : (active ? 'Working' : 'Queued')
+      };
+    });
+    return {
+      steps: steps,
+      done: done,
+      headline: done ? 'That’s a cut.' : 'Cutting your scenes.',
+      pct: (step * 25) + '%',
+      pill: done ? 'Ready for review' : 'Cutting',
+      pillDot: done ? 'slop-dot slop-dot-green' : 'slop-dot slop-dot-purple'
+    };
+  }
+}
+</script>
+</body>
+</html>
