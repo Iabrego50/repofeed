@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
@@ -9,16 +8,19 @@ import { cn } from "@/lib/utils.ts";
 import { appHomePath } from "@/lib/native-access.ts";
 import { isNativePlatform } from "@/lib/native";
 import { LANDING_PATH } from "@/app-paths.ts";
-import { Button } from "@/components/ui/button.tsx";
-import Logo from "@/components/logo.tsx";
+import SlopShell, { SlopBrand, SlopPill } from "@/components/slop/slop-shell.tsx";
 import {
   emptyStorySession,
   hasCompletedStoryOnboarding,
   markGuestStoryComplete,
   markStoryOnboardingComplete,
   ROLE_LABELS,
+  STORY_AUDIENCES,
+  STORY_RESEARCH_KINDS,
   STORY_ROLES,
   suggestChannelName,
+  type StoryAudience,
+  type StoryResearchKind,
   type StoryRole,
   type StorySession,
 } from "@/lib/story-onboarding.ts";
@@ -33,87 +35,144 @@ import StorySignupPlans from "./story-signup-plans.tsx";
 import "./story-onboarding.css";
 
 const SEGMENT_MS = 10000;
-/** History state key so browser / iOS swipe-back stays inside the story. */
 const STORY_HISTORY_KEY = "repofeed_story_step";
+/** Six design scenes; build-channel substeps share progress bar 5. */
+const PROGRESS_COUNT = 6;
 
 type StepKind = "story" | "question" | "finish";
-type Theme = "dark" | "light";
 
 type Step = {
   id: string;
   kind: StepKind;
-  theme: Theme;
+  /** 0–5 for the six artboard scenes */
+  scene: number;
   eyebrow: string;
+  /** Title may include markers: *word* → serif emphasis */
   title: string;
   body: string;
   cta?: string;
   visual?: "crt" | "yellow" | "scattered" | "phone" | "preview" | "ready";
-  question?: "role";
+  question?: "role" | "research" | "audience" | "channel";
 };
 
-/** Design screens 01–06 exactly — no extra answer-collection steps. */
+/**
+ * SlopMain scenes 0–5. Build-your-channel is four history steps (role → research →
+ * audience → name) so Back restores selections; progress bars still show six scenes.
+ */
 const STEPS: Step[] = [
   {
     id: "then",
     kind: "story",
-    theme: "dark",
+    scene: 0,
     eyebrow: "Then",
-    title: "Remember 8pm?",
-    body: "One channel. One story. Families, offices, whole cities tuned in together, and had one conversation about it the next morning.",
-    cta: "Turn it on",
+    title: "Remember *8pm*?",
+    body: "One channel. One story. Families, offices, whole cities tuned in together — and had one conversation about it the next morning.",
+    cta: "Keep watching",
     visual: "crt",
   },
   {
     id: "now",
     kind: "story",
-    theme: "dark",
+    scene: 1,
     eyebrow: "Now",
-    title: "Then everyone got their own screen.",
-    body: "Streaming built a private bubble for every person. Infinite choice, zero common plot. (Ask anyone what they watched last night.)",
+    title: "Then everyone got their *own* screen.",
+    body: "Streaming built a private bubble for every person. Infinite choice — zero common plot. (Ask anyone what they watched last night.)",
     cta: "Change the channel",
     visual: "yellow",
   },
   {
     id: "cost",
     kind: "story",
-    theme: "dark",
+    scene: 2,
     eyebrow: "The cost",
-    title: "Your research went the same way.",
-    body: "Interviews, surveys, decks. All filed, none watched. Somewhere in there is the quote that should have changed the roadmap. Go find it.",
+    title: "Your research went the *same* way.",
+    body: "Interviews, surveys, decks — all filed, none watched. Somewhere in there is the quote that should have changed the roadmap. Go find it.",
     cta: "I'd rather not dig",
     visual: "scattered",
   },
   {
-    id: "channel",
+    id: "feed",
     kind: "story",
-    theme: "light",
+    scene: 3,
     eyebrow: "repofeed",
-    title: "Now it plays like a channel.",
-    body: "That buried interview file? Here it is as a short insight scene. One common feed, everyone scrolls the same findings. Go on, react to it.",
-    cta: "Build my channel",
+    title: "Now it plays *like* a *channel*.",
+    body: "It's not just a repository — it's a channel. That buried interview file is now a reel of short insight scenes in one common feed. Go on — swipe, like, add one to the deck.",
+    cta: "Build my channel ⚡",
     visual: "phone",
   },
   {
     id: "role",
     kind: "question",
-    theme: "light",
-    eyebrow: "Your channel",
-    title: "Who’s holding the remote?",
-    body: "Pick your role. We’ll tune the channel’s language to how you work.",
+    scene: 4,
+    eyebrow: "Your channel · 1 of 4",
+    title: "Who's holding *the* *remote*?",
+    body: "Pick your role. We'll tune the channel's language to how you work.",
     cta: "Continue",
     question: "role",
     visual: "preview",
   },
   {
+    id: "research",
+    kind: "question",
+    scene: 4,
+    eyebrow: "Your channel · 2 of 4",
+    title: "What goes *on air*?",
+    body: "The research you work with. Pick all that apply. You can change this later.",
+    cta: "Continue",
+    question: "research",
+    visual: "preview",
+  },
+  {
+    id: "audience",
+    kind: "question",
+    scene: 4,
+    eyebrow: "Your channel · 3 of 4",
+    title: "Who's *watching*?",
+    body: "Start small or go wide — you invite people when you're ready.",
+    cta: "Continue",
+    question: "audience",
+    visual: "preview",
+  },
+  {
+    id: "name",
+    kind: "question",
+    scene: 4,
+    eyebrow: "Your channel · 4 of 4",
+    title: "Name the *channel*.",
+    body: "Something short your teammates will recognize in the feed.",
+    cta: "Put it on air 🚀",
+    question: "channel",
+    visual: "preview",
+  },
+  {
     id: "ready",
     kind: "finish",
-    theme: "light",
+    scene: 5,
     eyebrow: "Ready",
-    title: "You're on air.",
-    body: "Research, as a feed. Pick a plan to sign up, watch the demo, or learn more about how it works.",
+    title: "You're *on air*.",
+    body: "Research, as a feed. Upload your first study — or watch the demo to see insight scenes in motion.",
     visual: "ready",
   },
 ];
+
+function Title({ text }: { text: string }) {
+  // Keep non-emphasis text as raw nodes so accessible names keep spaces
+  // (wrapping every segment in <span> can glue "Remember"+"8pm" → "Remember8pm").
+  const parts = text.split(/(\*[^*]+\*)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith("*") && part.endsWith("*") ? (
+          <span key={i} className="slop-serif-emphasis slop-text-gradient-hot">
+            {part.slice(1, -1)}
+          </span>
+        ) : (
+          <Fragment key={i}>{part}</Fragment>
+        ),
+      )}
+    </>
+  );
+}
 
 function Chip({
   selected,
@@ -130,10 +189,9 @@ function Chip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "min-h-11 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        selected
-          ? "border-foreground bg-foreground text-background"
-          : "border-border bg-card text-foreground hover:border-foreground/40",
+        "slop-btn",
+        selected ? "slop-btn-primary" : "slop-btn-ghost",
+        "min-h-11 rounded-full px-4 text-sm font-semibold",
       )}
     >
       {children}
@@ -141,76 +199,15 @@ function Chip({
   );
 }
 
-function ProgressBars({
-  index,
-  count,
-  paused,
-  reduced,
-  onSegmentEnd,
-  light,
-}: {
-  index: number;
-  count: number;
-  paused: boolean;
-  reduced: boolean;
-  onSegmentEnd: () => void;
-  light?: boolean;
-}) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    setTick((t) => t + 1);
-  }, [index]);
-
-  useEffect(() => {
-    if (paused || reduced) return;
-    const id = window.setTimeout(onSegmentEnd, SEGMENT_MS);
-    return () => window.clearTimeout(id);
-  }, [index, paused, reduced, onSegmentEnd, tick]);
-
-  return (
-    <div
-      className="flex gap-1.5"
-      role="progressbar"
-      aria-valuemin={1}
-      aria-valuemax={count}
-      aria-valuenow={index + 1}
-      aria-label="Story progress"
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <div
-          key={i}
-          className={cn("h-0.5 flex-1 overflow-hidden rounded-full", light ? "bg-foreground/15" : "bg-white/20")}
-        >
-          <div
-            key={i === index ? `fill-${tick}` : `seg-${i}`}
-            className={cn(
-              "h-full rounded-full",
-              light ? "bg-foreground" : "bg-white",
-              i < index && "w-full",
-              i > index && "w-0",
-              i === index && !reduced && !paused && "story-progress-fill w-full",
-              i === index && (reduced || paused) && "w-full",
-            )}
-            style={i === index && !reduced && !paused ? { animationDuration: `${SEGMENT_MS}ms` } : undefined}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export type StoryOnboardingProps = {
-  /** Unauthenticated preview — no Supabase writes. */
   preview?: boolean;
-  /** Forced replay from settings/help. */
   replay?: boolean;
   onFinished?: (destination: "upload" | "demo" | "home" | "setup") => void;
-  // "signup" is web-preview only and maps to setup for onFinished callers.
 };
 
 /**
- * Full-screen story onboarding matching Isaac’s design screens 01–06.
- * Role chips are visual only; only the completion flag is persisted.
+ * Full-screen product story (web). Matches SlopMain artboards; pricing stays on
+ * the finish step. Native viewer onboarding is a separate component.
  */
 export default function StoryOnboarding({ preview = false, replay = false, onFinished }: StoryOnboardingProps) {
   const navigate = useNavigate();
@@ -231,16 +228,13 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
   const step = STEPS[index]!;
   const isQuestion = step.kind === "question";
   const isFinish = step.kind === "finish";
-  const light = step.theme === "light";
   const showPricing = isFinish && preview && !isNativePlatform();
-  /** Tall steps (role + pricing) must top-align and scroll; narrative beats stay centered. */
   const scrollableStep = isQuestion || isFinish;
 
   useEffect(() => {
     headingRef.current?.focus();
   }, [index]);
 
-  // Seed history so the first browser/swipe back from step 1 returns to step 0, not off /welcome.
   useEffect(() => {
     try {
       window.history.replaceState({ ...window.history.state, [STORY_HISTORY_KEY]: 0 }, "");
@@ -256,7 +250,6 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
         setIndex(raw);
         return;
       }
-      // Mid-story with no step state (e.g. external history entry) — stay put.
       if (index > 0) {
         try {
           window.history.pushState({ [STORY_HISTORY_KEY]: index }, "");
@@ -269,7 +262,13 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     return () => window.removeEventListener("popstate", onPop);
   }, [index]);
 
-  const canAdvance = step.question === "role" ? Boolean(session.role) : true;
+  const canAdvance = (() => {
+    if (step.question === "role") return Boolean(session.role);
+    if (step.question === "research") return session.researchKinds.length > 0;
+    if (step.question === "audience") return Boolean(session.audience);
+    if (step.question === "channel") return session.channelName.trim().length > 0;
+    return true;
+  })();
 
   const goTo = useCallback((nextIndex: number, mode: "push" | "replace") => {
     const clamped = Math.min(STEPS.length - 1, Math.max(0, nextIndex));
@@ -289,7 +288,6 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     goTo(index + 1, "push");
   }, [canAdvance, goTo, index, isFinish, isQuestion]);
 
-  /** Prefer history.back so the Back button, browser back, and iOS swipe-back stay in sync. */
   const back = useCallback(() => {
     if (index <= 0) return;
     try {
@@ -298,6 +296,12 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
       goTo(index - 1, "replace");
     }
   }, [goTo, index]);
+
+  useEffect(() => {
+    if (paused || reduced || isQuestion || isFinish) return;
+    const id = window.setTimeout(next, SEGMENT_MS);
+    return () => window.clearTimeout(id);
+  }, [index, paused, reduced, isQuestion, isFinish, next]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -393,179 +397,214 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     }
   })();
 
+  const pillDot =
+    step.scene === 0
+      ? "purple"
+      : step.scene === 1
+        ? "pink"
+        : step.scene === 2
+          ? "amber"
+          : step.scene === 3
+            ? "cyan"
+            : step.scene === 5
+              ? "green"
+              : "purple";
+
   return (
-    <div
-      className={cn(
-        "relative flex h-dvh flex-col overflow-hidden",
-        light ? "bg-paper text-foreground" : "dark bg-studio text-foreground",
-      )}
-      onTouchStart={(e) => {
-        const t = e.changedTouches[0];
-        if (t) touchStart.current = { x: t.clientX, y: t.clientY };
-      }}
-      onTouchEnd={(e) => {
-        const start = touchStart.current;
-        const t = e.changedTouches[0];
-        touchStart.current = null;
-        if (!start || !t) return;
-        const dx = t.clientX - start.x;
-        const dy = t.clientY - start.y;
-        if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
-        if (dx < 0) next();
-        else back();
-      }}
-    >
-      <header className="relative z-20 shrink-0 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-8">
-        <ProgressBars
-          index={index}
-          count={STEPS.length}
-          paused={paused || isQuestion || isFinish}
-          reduced={reduced}
-          onSegmentEnd={next}
-          light={light}
-        />
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <Logo className={light ? undefined : "text-white"} />
-          <button
-            type="button"
-            onClick={() => void skip()}
-            className={cn(
-              "cursor-pointer text-sm font-medium underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              light ? "text-foreground/70 hover:text-foreground" : "text-white/70 hover:text-white",
-            )}
-          >
-            Skip the story
-          </button>
+    <SlopShell className="h-dvh" contentClassName="min-h-0">
+      <div
+        className="flex min-h-0 flex-1 flex-col"
+        onTouchStart={(e) => {
+          const t = e.changedTouches[0];
+          if (t) touchStart.current = { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={(e) => {
+          const start = touchStart.current;
+          const t = e.changedTouches[0];
+          touchStart.current = null;
+          if (!start || !t) return;
+          const dx = t.clientX - start.x;
+          const dy = t.clientY - start.y;
+          if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
+          if (dx < 0) next();
+          else back();
+        }}
+      >
+        <div className="relative z-20 flex gap-1.5 px-6 pt-3.5" aria-hidden>
+          {Array.from({ length: PROGRESS_COUNT }, (_, i) => (
+            <span
+              key={i}
+              className="h-1 flex-1 rounded-sm"
+              style={{
+                background: i <= step.scene ? "#c084fc" : "rgba(255,255,255,0.12)",
+                transition: reduced ? undefined : "background .4s ease",
+              }}
+            />
+          ))}
         </div>
-      </header>
 
-      {/*
-        Scroll the story body. PR #42 put pricing inside the left column under
-        overflow-hidden + lg:items-center, which clipped "You're on air" and
-        made plan CTAs unreachable. Tall steps top-align; narrative stays centered.
-      */}
-      <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div
-          className={cn(
-            "mx-auto flex w-full max-w-6xl flex-col px-5 pt-6 sm:px-8 lg:flex-row lg:gap-12 lg:pt-4",
-            scrollableStep ? "lg:items-start" : "min-h-full lg:items-center",
-            showPricing ? "pb-4" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]",
-          )}
-        >
-          <div className="relative z-20 flex w-full flex-none flex-col lg:max-w-[42%] lg:flex-1">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`copy-${step.id}`}
-                initial={reduced ? false : { opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduced ? undefined : { opacity: 0 }}
-                transition={{ duration: 0.25 }}
-              >
-                <p className="font-mono text-[11px] font-medium tracking-[0.16em] text-eyebrow uppercase">
-                  {step.eyebrow}
-                </p>
-                <h1
-                  ref={headingRef}
-                  tabIndex={-1}
-                  className={cn(
-                    "mt-3 text-balance text-3xl font-bold leading-[1.1] tracking-tight outline-none sm:text-4xl lg:text-[2.75rem]",
-                    light ? "text-foreground" : "text-white",
-                  )}
-                >
-                  {step.title}
-                </h1>
-                <p
-                  className={cn(
-                    "mt-3 max-w-prose text-pretty text-base leading-relaxed",
-                    light ? "text-muted-foreground" : "text-white/70",
-                  )}
-                >
-                  {step.body}
-                </p>
-
-                {step.id === "cost" && (
-                  <p className={cn("mt-3 text-sm font-medium", light ? "text-foreground" : "text-white/90")}>
-                    Five files. Tap one to start digging.
-                  </p>
-                )}
-
-                {step.question === "role" && (
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {STORY_ROLES.map((role) => (
-                      <Chip
-                        key={role}
-                        selected={session.role === role}
-                        onClick={() => setSession((s) => ({ ...s, role: role as StoryRole }))}
-                      >
-                        {ROLE_LABELS[role]}
-                      </Chip>
-                    ))}
-                  </div>
-                )}
-
-                <div className="mt-8 flex flex-wrap items-center gap-2">
-                  {index > 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "h-11 px-5 font-semibold",
-                        !light && "border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white",
-                      )}
-                      onClick={back}
-                    >
-                      Back
-                    </Button>
-                  )}
-                  {isFinish ? (
-                    <>
-                      {!preview && (
-                        <Button
-                          type="button"
-                          className="h-11 px-5 font-semibold"
-                          disabled={busy}
-                          onClick={() =>
-                            void finish(workspaces && workspaces.length > 0 ? "upload" : "setup")
-                          }
-                        >
-                          {workspaces && workspaces.length > 0 ? "Upload research" : "Set up workspace"}
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        className={cn(
-                          "h-11 px-5 font-semibold",
-                          light
-                            ? "bg-foreground text-background hover:bg-foreground/90"
-                            : "bg-white text-[#0b1020] hover:bg-white/90",
-                        )}
-                        disabled={busy}
-                        onClick={() => void finish("demo")}
-                      >
-                        Watch the demo
-                      </Button>
-                    </>
-                  ) : (
-                    <Button type="button" className="h-11 px-5 font-semibold" disabled={!canAdvance} onClick={next}>
-                      {step.cta ?? "Continue"}
-                    </Button>
-                  )}
-                </div>
-              </motion.div>
-            </AnimatePresence>
+        <header className="slop-navbar relative z-20 shrink-0">
+          <div className="slop-navbar-inner" style={{ flexWrap: "wrap", padding: "8px 24px" }}>
+            <SlopBrand />
+            <div className="slop-row">
+              {(preview || replay) && (
+                <span className="slop-status">
+                  <span className="slop-dot slop-dot-green" />
+                  Preview mode
+                </span>
+              )}
+              <button type="button" className="slop-btn slop-btn-ghost min-h-11" onClick={() => void skip()}>
+                Skip the story
+              </button>
+            </div>
           </div>
+        </header>
 
-          <div
+        <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <main
             className={cn(
-              "relative mt-8 flex items-center justify-center lg:mt-0",
-              scrollableStep ? "w-full shrink-0 lg:max-w-[58%] lg:flex-1" : "min-h-0 flex-1",
+              "mx-auto flex w-full max-w-[1200px] flex-col gap-12 px-6 py-6 lg:flex-row lg:gap-16",
+              scrollableStep ? "lg:items-start" : "min-h-full items-center lg:items-center",
+              showPricing ? "pb-4" : "pb-[max(1.5rem,env(safe-area-inset-bottom))]",
             )}
           >
-            {!isQuestion &&
-              !isFinish &&
-              step.visual !== "crt" &&
-              step.visual !== "yellow" &&
-              step.visual !== "scattered" && (
+            <div className={cn("rf-rise flex w-full flex-col items-start gap-5", "lg:max-w-[520px] lg:flex-1")}>
+              <SlopPill dot={pillDot as "purple"}>{step.eyebrow}</SlopPill>
+              <h1
+                ref={headingRef}
+                tabIndex={-1}
+                className="slop-h1 m-0 text-balance outline-none"
+                style={{ fontSize: "clamp(32px, 5.2vw, 68px)" }}
+              >
+                <Title text={step.title} />
+              </h1>
+              <p className="slop-lead m-0 max-w-[44ch]">{step.body}</p>
+
+              {step.question === "role" && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {STORY_ROLES.map((role) => (
+                    <Chip
+                      key={role}
+                      selected={session.role === role}
+                      onClick={() => setSession((s) => ({ ...s, role: role as StoryRole }))}
+                    >
+                      {ROLE_LABELS[role]}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+
+              {step.question === "research" && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {STORY_RESEARCH_KINDS.map((kind) => {
+                    const on = session.researchKinds.includes(kind);
+                    return (
+                      <Chip
+                        key={kind}
+                        selected={on}
+                        onClick={() =>
+                          setSession((s) => ({
+                            ...s,
+                            researchKinds: on
+                              ? s.researchKinds.filter((k) => k !== kind)
+                              : [...s.researchKinds, kind as StoryResearchKind],
+                          }))
+                        }
+                      >
+                        {kind}
+                      </Chip>
+                    );
+                  })}
+                </div>
+              )}
+
+              {step.question === "audience" && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {STORY_AUDIENCES.map((aud) => (
+                    <Chip
+                      key={aud}
+                      selected={session.audience === aud}
+                      onClick={() => setSession((s) => ({ ...s, audience: aud as StoryAudience }))}
+                    >
+                      {aud}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+
+              {step.question === "channel" && (
+                <div className="mt-2 w-full max-w-md">
+                  <label className="slop-ai-bar block">
+                    <span className="sr-only">Channel name</span>
+                    <input
+                      value={session.channelName}
+                      onChange={(e) => setSession((s) => ({ ...s, channelName: e.target.value.slice(0, 60) }))}
+                      placeholder="Team research"
+                      className="w-full bg-transparent text-base font-semibold outline-none"
+                    />
+                  </label>
+                  <p className="slop-muted mt-2 text-sm">Suggestion from your email. Edit freely.</p>
+                </div>
+              )}
+
+              <div className="slop-row mt-2 flex-wrap gap-2">
+                {index > 0 && (
+                  <button type="button" className="slop-btn slop-btn-ghost slop-btn-lg" onClick={back}>
+                    Back
+                  </button>
+                )}
+                {isFinish ? (
+                  <>
+                    {preview ? (
+                      <button
+                        type="button"
+                        className="slop-btn slop-btn-primary slop-btn-lg"
+                        disabled={busy}
+                        onClick={() => void finish("signup")}
+                      >
+                        Sign in to upload 🚀
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="slop-btn slop-btn-primary slop-btn-lg"
+                        disabled={busy}
+                        onClick={() =>
+                          void finish(workspaces && workspaces.length > 0 ? "upload" : "setup")
+                        }
+                      >
+                        {workspaces && workspaces.length > 0 ? "Upload research" : "Set up workspace"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="slop-btn slop-btn-rainbow slop-btn-lg"
+                      disabled={busy}
+                      onClick={() => void finish("demo")}
+                    >
+                      Watch the demo
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="slop-btn slop-btn-primary slop-btn-lg"
+                    disabled={!canAdvance}
+                    onClick={next}
+                  >
+                    {step.cta ?? "Continue"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                "relative flex w-full items-center justify-center",
+                scrollableStep ? "shrink-0 lg:max-w-[58%] lg:flex-1" : "min-h-[280px] flex-1",
+              )}
+            >
+              {!isQuestion && !isFinish && step.visual !== "crt" && step.visual !== "yellow" && step.visual !== "scattered" && (
                 <div className="absolute inset-0 z-10 hidden lg:flex">
                   <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
                   <button
@@ -580,43 +619,28 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                   <button type="button" aria-label="Next" className="w-1/3 cursor-pointer bg-transparent" onClick={next} />
                 </div>
               )}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={step.id}
-                className="relative z-0 flex h-full w-full items-center justify-center"
-                initial={reduced ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduced ? undefined : { opacity: 0, y: -8 }}
-                transition={{ duration: 0.28 }}
-              >
-                {visual}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+              <div className="rf-rise relative z-0 w-full">{visual}</div>
+            </div>
+          </main>
+
+          {showPricing && (
+            <div className="mx-auto w-full max-w-[1200px] px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              <StorySignupPlans
+                onStartFree={() => void finish("signup")}
+                onStartPaid={() => void finish("signup")}
+              />
+            </div>
+          )}
+
+          {(preview || replay) && (
+            <p className="slop-muted relative z-20 px-6 pb-4 text-xs">
+              {preview
+                ? "Preview mode — answers aren't saved until you sign in."
+                : "Replaying the product story. Finish to mark it complete."}
+            </p>
+          )}
         </div>
-
-        {showPricing && (
-          <div className="mx-auto w-full max-w-6xl px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-8">
-            <StorySignupPlans
-              onStartFree={() => void finish("signup")}
-              onStartPaid={() => void finish("signup")}
-            />
-          </div>
-        )}
-
-        {(preview || replay) && (
-          <p
-            className={cn(
-              "relative z-20 px-5 pb-4 text-xs sm:px-8",
-              light ? "text-muted-foreground" : "text-white/40",
-            )}
-          >
-            {preview
-              ? "Preview mode. Answers aren't saved until you sign in."
-              : "Replaying the product story. Finish to mark it complete."}
-          </p>
-        )}
       </div>
-    </div>
+    </SlopShell>
   );
 }

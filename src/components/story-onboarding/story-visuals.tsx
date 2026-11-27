@@ -181,46 +181,49 @@ export function ChannelPreviewCard({
   className?: string;
 }) {
   const tuned = session.role ? ROLE_LABELS[session.role] : "Not set yet";
+  const onAir =
+    session.researchKinds.length > 0 ? session.researchKinds.join(" · ") : "Not set yet";
+  const watching = session.audience ?? "Not set yet";
   const title = session.channelName.trim() || "Unnamed channel.";
 
   return (
-    <aside
-      className={cn(
-        "w-full max-w-md rounded-[1.5rem] border border-border bg-card p-6 shadow-lift",
-        className,
-      )}
-    >
+    <aside className={cn("slop-card slop-card-beam w-full max-w-md p-6", className)}>
       <div className="flex items-start justify-between gap-3">
-        <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Channel preview</p>
-        <span
-          className={cn(
-            "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
-            status === "air" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-          )}
-        >
+        <p className="font-mono text-[10px] tracking-[0.14em] text-[var(--slop-text-muted)] uppercase">
+          Channel preview
+        </p>
+        <span className={cn("slop-pill", status === "air" ? "slop-pill-green" : "")}>
+          <span className={cn("slop-dot", status === "air" ? "slop-dot-green" : "slop-dot-amber")} />
           {status === "air" ? "On air" : "Setting up"}
         </span>
       </div>
-      <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground">{title}</h2>
-      <dl className="mt-5 divide-y divide-border text-sm">
+      <h2 className="mt-3 text-2xl font-bold tracking-tight">{title}</h2>
+      <dl className="mt-5 divide-y divide-white/10 text-sm">
         {(
           [
             ["Tuned for", tuned],
-            ["On air", "Not set yet"],
-            ["Watching", "Not set yet"],
+            ["On air", onAir],
+            ["Watching", watching],
           ] as const
         ).map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-4 py-3">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className={cn("text-right font-medium", value === "Not set yet" ? "text-muted-foreground" : "text-foreground")}>
+            <dt className="text-[var(--slop-text-muted)]">{label}</dt>
+            <dd
+              className={cn(
+                "text-right font-medium",
+                value === "Not set yet" ? "text-[var(--slop-text-dim)]" : "",
+              )}
+            >
               {value}
             </dd>
           </div>
         ))}
       </dl>
       {showNext && (
-        <div className="mt-4 border-t border-border pt-4">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">What happens next</p>
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <p className="font-mono text-[10px] tracking-[0.14em] text-[var(--slop-text-muted)] uppercase">
+            What happens next
+          </p>
           <ol className="mt-3 space-y-2.5">
             {[
               "Upload your research files",
@@ -228,8 +231,8 @@ export function ChannelPreviewCard({
               "Your team scrolls, likes and comments",
               "The best scenes go to a PowerPoint deck",
             ].map((line, i) => (
-              <li key={line} className="flex items-start gap-3 text-sm text-foreground">
-                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-bold text-background">
+              <li key={line} className="flex items-start gap-3 text-sm">
+                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white text-[10px] font-bold text-[#030712]">
                   {i + 1}
                 </span>
                 {line}

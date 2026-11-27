@@ -84,6 +84,6 @@ describe("story onboarding metadata", () => {
   });
 
   it("starts with a default channel name and no role", () => {
-    expect(emptyStorySession()).toEqual({ channelName: "Team research" });
+    expect(emptyStorySession()).toEqual({ channelName: "Team research", researchKinds: [] });
   });
 });

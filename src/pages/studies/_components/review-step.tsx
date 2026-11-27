@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 import ReelCanvas from "@/components/reel/reel-canvas.tsx";
+import { SlopPill } from "@/components/slop/slop-shell.tsx";
 import { trackColor } from "@/lib/reel/constants.ts";
 import { reelScript } from "@/lib/reel/painter.ts";
 import { cn } from "@/lib/utils.ts";
@@ -26,7 +27,6 @@ import {
   PaintReelButton,
   PaintStudyButton,
 } from "./art-controls.tsx";
-import HelpHint from "@/components/help-hint.tsx";
 import DivisionAssign from "./division-assign.tsx";
 
 interface ReviewReel {
@@ -80,9 +80,9 @@ function ReelCard({
   return (
     <li
       className={cn(
-        "flex flex-col overflow-hidden rounded-[1.5rem] border border-studio/80 bg-studio text-white transition-opacity shadow-lift",
-        reel.warning && "ring-2 ring-mark/60",
-        !reel.enabled && "opacity-55",
+        "slop-card flex flex-col overflow-hidden text-white transition-opacity",
+        reel.warning && "ring-2 ring-amber-400/60",
+        !reel.enabled && "opacity-70",
       )}
     >
       <button
@@ -139,10 +139,8 @@ function ReelCard({
             aria-label={`${reel.enabled ? "Keeping" : "Cut"} ${reel.title}`}
             onClick={() => setEnabledMutation.mutate(!reel.enabled)}
             className={cn(
-              "flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors",
-              reel.enabled
-                ? "bg-mark text-mark-foreground"
-                : "bg-white/10 text-white/70 hover:bg-white/15",
+              "slop-btn w-full",
+              reel.enabled ? "slop-btn-primary" : "slop-btn-ghost",
             )}
           >
             {reel.enabled ? "Keeping. Tap to cut" : "Cut. Tap to keep"}
@@ -251,36 +249,44 @@ export default function ReviewStep({ studyId, study }: ReviewStepProps) {
   const isPublished = study.status === "published";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">
-            {study?.title ?? "Sample study"} · first cut
-          </p>
-          <h3 className="mt-2 text-3xl font-bold tracking-tight">You're the editor.</h3>
-          <p className="mt-2 max-w-prose text-sm text-muted-foreground">
-            Keep the scenes worth your team's scroll. Cut the rest. Nothing airs without your say.
-            {" "}
-            {enabled.length} of {reels.length} scenes kept
-            {flagged.length > 0 && ` · ${flagged.length} flagged`}.
+    <div className="slop-scope space-y-6 rounded-2xl p-1">
+      <div className="rf-rise flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col items-start gap-4">
+          <SlopPill dot="purple">
+            {study?.title ?? "Sample study"} · First cut
+          </SlopPill>
+          <h3
+            className="slop-h1 m-0 text-balance"
+            style={{ fontSize: "clamp(2rem, 4vw, 3.25rem)" }}
+          >
+            You&apos;re <span className="slop-underline slop-underline-emerald">the</span>{" "}
+            <span className="slop-serif-emphasis slop-text-gradient-hot">editor</span>.
+          </h3>
+          <p className="slop-lead m-0 max-w-[52ch]">
+            Keep the scenes worth your team&apos;s scroll — cut the rest. Nothing airs without your say.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="slop-row flex-wrap">
+          <span className="slop-status" aria-live="polite">
+            <span className="slop-dot slop-dot-green" />
+            {enabled.length} of {reels.length} scenes kept
+            {flagged.length > 0 ? ` · ${flagged.length} flagged` : ""}
+          </span>
           <PaintStudyButton studyId={studyId} />
-          <Button
+          <button
+            type="button"
+            className="slop-btn slop-btn-primary slop-btn-lg"
             onClick={() => publishMutation.mutate()}
             disabled={busy || enabled.length === 0}
-            size="lg"
-            className="font-semibold"
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             {isPublished ? "Update" : "Pick a channel"}
-          </Button>
+          </button>
         </div>
       </div>
 
       {flagged.length > 0 && (
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: "#cbd5e1" }}>
           <Switch checked={onlyFlagged} onCheckedChange={setOnlyFlagged} />
           Show only flagged scenes ({flagged.length})
         </label>

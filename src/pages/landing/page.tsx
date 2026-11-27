@@ -86,12 +86,12 @@ const INSIGHT_ROWS: Array<[string, string, number, number]> = [
 function Nav({ variant, focused }: { variant: string; focused: boolean }) {
   const { user } = useAuth();
   const link =
-    "hidden min-h-10 cursor-pointer items-center rounded-md px-3 text-[0.9375rem] font-medium text-muted-foreground hover:text-foreground sm:flex";
+    "hidden min-h-10 cursor-pointer items-center rounded-md px-3 text-[0.9375rem] font-medium text-slate-300 hover:text-white sm:flex";
   return (
-    <header className="sticky top-0 z-30 border-b border-border/70 bg-paper/90 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#030712]/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-5 py-2.5">
         <Link to="/landing" aria-label="repofeed.ai home" className="cursor-pointer">
-          <Logo />
+          <Logo className="text-white" />
         </Link>
         <nav aria-label="Site" className="flex items-center gap-1">
           {!focused && (
@@ -112,7 +112,7 @@ function Nav({ variant, focused }: { variant: string; focused: boolean }) {
             <>
               <Link
                 to="/signin"
-                className="flex min-h-10 cursor-pointer items-center rounded-md px-3 text-[0.9375rem] font-medium text-muted-foreground hover:text-foreground"
+                className="flex min-h-10 cursor-pointer items-center rounded-md px-3 text-[0.9375rem] font-medium text-slate-300 hover:text-white"
               >
                 Sign in
               </Link>
@@ -144,19 +144,31 @@ export default function Landing() {
       <Nav variant={variant.slug} focused={focused} />
 
       <main>
-        <section className={cn(SHELL, "grid items-center gap-x-10 gap-y-14 pb-16 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:pb-24 lg:pt-16")}>
+        <section
+          className={cn(
+            SHELL,
+            "relative grid items-center gap-x-10 gap-y-14 overflow-hidden pb-16 pt-10 text-white lg:grid-cols-[1.05fr_0.95fr] lg:pb-24 lg:pt-16",
+          )}
+          style={{
+            marginInline: "calc(50% - 50vw)",
+            width: "100vw",
+            paddingInline: "max(1.25rem, calc((100vw - 72rem) / 2 + 1.25rem))",
+            background:
+              "radial-gradient(ellipse at 20% 0%, rgba(139,92,246,0.28), transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(6,182,212,0.18), transparent 45%), #030712",
+          }}
+        >
           <div>
-            <p className={EYEBROW}>Research, on air</p>
-            <h1 className="title-card mt-3 max-w-[13ch] text-[3.25rem] sm:text-[4.5rem] lg:text-[5.25rem]">{variant.headline}</h1>
-            <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-muted-foreground sm:text-xl">{variant.sub}</p>
+            <p className="font-mono text-[11px] tracking-[0.14em] text-violet-300 uppercase">Research, on air</p>
+            <h1 className="title-card mt-3 max-w-[13ch] text-[3.25rem] text-white sm:text-[4.5rem] lg:text-[5.25rem]">{variant.headline}</h1>
+            <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-slate-300 sm:text-xl">{variant.sub}</p>
             <div ref={heroCtaRef} className="mt-8">
               <HeroSignup variant={variant.slug} />
-              <p className="mt-3 text-[0.9375rem] text-muted-foreground">
+              <p className="mt-3 text-[0.9375rem] text-slate-400">
                 {FREE_NOTE}{" "}
                 <Link
                   to="/demo"
                   onClick={() => track("demo_open", { location: "hero_text" })}
-                  className="cursor-pointer font-medium whitespace-nowrap text-foreground underline underline-offset-4"
+                  className="cursor-pointer font-medium whitespace-nowrap text-white underline underline-offset-4"
                 >
                   Watch the demo first
                 </Link>

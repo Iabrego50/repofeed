@@ -1,4 +1,4 @@
-import Logo from "@/components/logo.tsx";
+import SlopShell, { SlopBrand } from "@/components/slop/slop-shell.tsx";
 import { cn } from "@/lib/utils.ts";
 
 const STUDY_STEPS = [
@@ -9,38 +9,51 @@ const STUDY_STEPS = [
 
 export type StudyShellStep = (typeof STUDY_STEPS)[number]["key"];
 
-/** Design chrome for screens 10–12: logo + 1 Upload / 2 Scenes / 3 Publish pills. */
+/** Slop chrome for Upload / Scenes / Publish (design screens 08–11). */
 export function StudyShell({
   step,
   children,
   className,
+  signedIn = true,
 }: {
   step: StudyShellStep;
   children: React.ReactNode;
   className?: string;
+  signedIn?: boolean;
 }) {
   return (
-    <div className={cn("min-h-dvh bg-paper text-foreground", className)}>
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-        <Logo />
-        <nav className="flex flex-wrap gap-2" aria-label="Study steps">
-          {STUDY_STEPS.map((s, i) => {
-            const active = s.key === step;
-            return (
-              <span
-                key={s.key}
-                className={cn(
-                  "rounded-full px-3.5 py-1.5 text-sm font-semibold",
-                  active ? "bg-studio text-white" : "bg-secondary text-foreground/70",
-                )}
-              >
-                {i + 1} {s.label}
+    <SlopShell className={cn("min-h-dvh", className)} contentClassName="min-h-0">
+      <header className="slop-navbar relative z-20">
+        <div className="slop-navbar-inner flex-wrap px-6 py-2">
+          <SlopBrand />
+          <div className="slop-row flex-wrap">
+            {signedIn ? (
+              <span className="slop-status">
+                <span className="slop-dot slop-dot-green" />
+                Signed in
               </span>
-            );
-          })}
-        </nav>
+            ) : null}
+            <ol className="slop-tabs m-0 list-none" aria-label="Progress">
+              {STUDY_STEPS.map((s, i) => {
+                const active = s.key === step;
+                return (
+                  <li
+                    key={s.key}
+                    className={cn("slop-tab", active && "is-active")}
+                    aria-current={active ? "step" : undefined}
+                    style={{ cursor: "default", color: active ? "#ffffff" : undefined }}
+                  >
+                    {i + 1} {s.label}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-6 pb-16 pt-4">{children}</main>
-    </div>
+      <main className="relative z-10 mx-auto flex w-full max-w-[1200px] flex-1 flex-col justify-center px-6 py-8 lg:px-16 lg:py-10">
+        {children}
+      </main>
+    </SlopShell>
   );
 }
