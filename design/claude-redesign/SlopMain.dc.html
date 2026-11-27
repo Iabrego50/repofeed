@@ -11,7 +11,7 @@
 <body>
 <x-dc>
 <helmet>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&amp;family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 body{margin:0;background:#030712}
 button{font:inherit}
@@ -20,6 +20,7 @@ button{font:inherit}
 @keyframes rf-pop{from{opacity:0;transform:scale(.4)}}
 @keyframes rf-cut{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
 @keyframes rf-fill{from{width:0}to{width:100%}}
+@keyframes rf-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
 @keyframes rf-on{0%{opacity:.15}30%{opacity:1}45%{opacity:.55}100%{opacity:1}}
 @media (prefers-reduced-motion: reduce){.slop-scope *,.slop-scope *::before,.slop-scope *::after{animation:none!important;transition:none!important}}
 </style>
@@ -33,7 +34,7 @@ button{font:inherit}
   </div>
   <div class="slop-content-layer" style="flex: 1 1 auto; display: flex; flex-direction: column">
   <div aria-hidden="true" style="position: relative; z-index: 2; display: flex; gap: 6px; padding: 14px 24px 0">
-    <sc-for list="{{ segs }}" as="g" hint-placeholder-count="6">
+    <sc-for list="{{ segs }}" as="g" hint-placeholder-count="7">
       <span style="flex: 1 1 0; height: 4px; border-radius: 2px; background: {{g.bg}}; transition: background .4s ease"></span>
     </sc-for>
   </div>
@@ -58,7 +59,7 @@ button{font:inherit}
         <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
           <div style="width: 440px; max-width: 100%; padding: 16px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 28px; background: rgba(15, 23, 42, .9); box-shadow: 0 0 120px rgba(168, 85, 247, .45)">
             <div role="group" aria-label="Live broadcast playing on the TV" style="position: relative; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #000000; color: #ffffff">
-              <video src="./assets/a07605b59e6dad810c4f9eb59413d172.mp4" poster="./assets/42a6acbff47091bad213710292f4ef45.jpg" loop="" playsinline="" preload="auto" onCanPlay="{{ startVideo }}" aria-label="Archive television footage of the Apollo 11 moonwalk, July 1969" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none"></video>
+              <video src="./assets/a07605b59e6dad810c4f9eb59413d172.mp4" poster="./assets/42a6acbff47091bad213710292f4ef45.jpg" loop playsInline preload="auto" onCanPlay="{{ startVideo }}" aria-label="Archive television footage of the Apollo 11 moonwalk, July 1969" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none"></video>
               <span class="slop-status" style="position: absolute; top: 10px; left: 10px"><span class="slop-dot slop-dot-red"></span>Live</span>
               <button type="button" onClick="{{ togglePlay }}" aria-label="{{playLabel}}" style="position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(2, 6, 23, .7); color: #ffffff; cursor: pointer">
                 <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}">
@@ -95,7 +96,7 @@ button{font:inherit}
           <sc-if value="{{ whole }}" hint-placeholder-val="{{ true }}">
             <button type="button" onClick="{{ p1 }}" aria-label="Change the channel" style="width: 440px; max-width: 100%; padding: 16px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 28px; background: rgba(15, 23, 42, .9); color: inherit; cursor: pointer; box-shadow: 0 0 120px rgba(168, 85, 247, .45)">
               <span style="position: relative; display: block; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #000000; color: #ffffff">
-                <video src="./assets/a07605b59e6dad810c4f9eb59413d172.mp4" poster="./assets/42a6acbff47091bad213710292f4ef45.jpg" loop="" playsinline="" preload="auto" onCanPlay="{{ startVideo }}" aria-label="Archive television footage of the Apollo 11 moonwalk, July 1969" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none"></video>
+                <video src="./assets/a07605b59e6dad810c4f9eb59413d172.mp4" poster="./assets/42a6acbff47091bad213710292f4ef45.jpg" loop playsInline preload="auto" onCanPlay="{{ startVideo }}" aria-label="Archive television footage of the Apollo 11 moonwalk, July 1969" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none"></video>
                 <span style="position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(2, 6, 23, .78); color: #ffffff; text-align: left; display: block; font-size: 14px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; text-align: center">Tap to change the channel</span>
               </span>
             </button>
@@ -148,12 +149,14 @@ button{font:inherit}
           <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-green"></span><span class="slop-sparkle">repofeed</span></div>
           <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Now it plays <span class="slop-underline ">like</span> a <span class="slop-serif-emphasis slop-text-gradient">channel</span>.</h1>
           <p class="slop-lead" style="margin: 0; max-width: 44ch">It’s not just a repository — it’s a channel. That buried interview file is now a reel of short insight scenes in one common feed. Go on — swipe, like, add one to the deck.</p>
-          <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ back }}">Back</button><button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ next }}">Build my channel ⚡</button></div>
+          <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ back }}">Back</button><button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ next }}">Set up a demo ⚡</button></div>
         </div>
         <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 28px">
           <article class="slop-card slop-card-beam" aria-label="Insight reel" style="width: 320px; max-width: 100%; padding: 0; border-radius: 36px">
-            <div style="min-height: 560px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; padding: 16px 16px 14px; border-radius: 34px; background: {{reelBg}}; color: #ffffff">
-              <div style="display: flex; flex-direction: column; gap: 12px">
+            <div style="position: relative; overflow: hidden; min-height: 560px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; padding: 16px 16px 14px; border-radius: 34px; background: #020617; color: #ffffff">
+              <video src="{{reelSrc}}" poster="{{reelPoster}}" preload="auto" onCanPlay="{{ startReel }}" aria-label="Stock footage of a person being interviewed" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none"></video>
+              <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2, 6, 23, .72) 0%, rgba(2, 6, 23, .28) 26%, rgba(2, 6, 23, .5) 48%, rgba(2, 6, 23, .9) 74%)"></div>
+              <div style="position: relative; display: flex; flex-direction: column; gap: 12px">
                 <div aria-hidden="true" style="display: flex; gap: 4px">
                   <sc-for list="{{ reelBars }}" as="b" hint-placeholder-count="3">
                     <span style="flex: 1 1 0; height: 3px; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, .3)"><span style="display: block; height: 100%; width: {{b.w}}; background: #ffffff; transition: {{b.t}}"></span></span>
@@ -167,11 +170,16 @@ button{font:inherit}
                   </span>
                 </div>
               </div>
-              <div style="display: flex; align-items: flex-end; gap: 12px">
+              <div style="position: relative; display: flex; align-items: flex-end; gap: 12px">
                 <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 12px">
                   <blockquote style="margin: 0; font-weight: 800; font-size: 25px; line-height: 1.18; letter-spacing: -0.02em">{{reelQuote}}</blockquote>
                   <span style="font-size: 13px; font-weight: 500">{{reelWho}}</span>
                   <span class="slop-badge slop-badge-ai" style="white-space: normal">{{reelSource}}</span>
+                  <sc-if value="{{ deckHint }}" hint-placeholder-val="{{ true }}">
+                    <span aria-hidden="true" style="align-self: flex-end; margin: 6px 0 20px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px 7px 12px; border-radius: 999px; background: #fbbf24; color: #0f172a; font-size: 13px; font-weight: 800; white-space: nowrap; box-shadow: 0 0 24px rgba(251, 191, 36, .55); animation: rf-nudge 1s ease-in-out infinite">Add to deck
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="m13 6 6 6-6 6"></path></svg>
+                    </span>
+                  </sc-if>
                 </div>
                 <div style="flex: none; display: flex; flex-direction: column; gap: 12px">
                   <span style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600">
@@ -200,7 +208,7 @@ button{font:inherit}
                   </span>
                 </div>
               </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+              <div style="position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px">
                 <button type="button" onClick="{{ prevReel }}" aria-label="Previous scene" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: rgba(2, 6, 23, .45); color: #ffffff; cursor: pointer">
                   <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"></path></svg>
                 </button>
@@ -211,21 +219,72 @@ button{font:inherit}
               </div>
             </div>
           </article>
-          <div style="width: 220px; max-width: 100%; display: flex; flex-direction: column; gap: 12px">
+          <div style="width: 260px; max-width: 100%; display: flex; flex-direction: column; gap: 12px">
             <div style="display: flex; align-items: baseline; justify-content: space-between; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">
               <span style="color: #f8fafc">Deck</span>
               <span aria-live="polite">{{deckCount}}</span>
             </div>
             <sc-if value="{{ added }}" hint-placeholder-val="{{ false }}">
-              <div class="slop-card slop-border-l-gradient" style="aspect-ratio: 16 / 9; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; animation: rf-pop .4s cubic-bezier(.2, 1.4, .4, 1) both">
-                <span style="font-weight: 700; font-size: 14px; line-height: 1.2">{{deckThumb}}</span>
-                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #94a3b8">{{deckSlide}}</span>
-              </div>
+              <ol aria-label="Slides in the deck" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px">
+                <sc-for list="{{ deckSlides }}" as="d" hint-placeholder-count="1">
+                  <li style="aspect-ratio: 16 / 9; box-sizing: border-box; padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 6px; border-radius: 4px; background: #ffffff; color: #0f172a; box-shadow: 0 12px 28px rgba(0, 0, 0, .5); animation: rf-pop .4s cubic-bezier(.2, 1.4, .4, 1) both">
+                    <span style="font-weight: 800; font-size: 14px; line-height: 1.15; letter-spacing: -0.01em">{{d.title}}</span>
+                    <span aria-hidden="true" style="flex: none; width: 36px; height: 3px; border-radius: 2px; background: #7e22ce"></span>
+                    <ul style="margin: 0; padding: 0 0 0 14px; display: flex; flex-direction: column; gap: 3px; font-size: 11px; line-height: 1.3; color: #1e293b">
+                      <li>{{d.b1}}</li>
+                      <li>{{d.b2}}</li>
+                      <li>{{d.b3}}</li>
+                    </ul>
+                    <span style="margin-top: auto; display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: #475569">
+                      <span>repofeed · Team research</span>
+                      <span>{{d.n}}</span>
+                    </span>
+                  </li>
+                </sc-for>
+              </ol>
             </sc-if>
             <sc-if value="{{ notAdded }}" hint-placeholder-val="{{ true }}">
               <div style="aspect-ratio: 16 / 9; padding: 14px; display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 14px; border: 1.5px dashed rgba(192, 132, 252, .5); font-size: 14px; color: #94a3b8">Add a scene to start a deck</div>
             </sc-if>
             <span style="font-size: 14px; color: #94a3b8">The best scenes export to PowerPoint.</span>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isDemo }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px">
+          <div class="slop-pill slop-pill-shimmer" style="margin-bottom: 0"><span class="slop-dot slop-dot-cyan"></span><span class="slop-sparkle">Your demo</span></div>
+          <h1 class="slop-h1" style="margin: 0; font-size: clamp(40px, 5.2vw, 68px); text-wrap: balance">Want <span class="slop-underline slop-underline-cyan">this</span> with <span class="slop-serif-emphasis slop-text-gradient-hot">your</span> research?</h1>
+          <sc-if value="{{ demoAsk }}" hint-placeholder-val="{{ true }}">
+            <p class="slop-lead" style="margin: 0; max-width: 44ch">Enter your work email — we’ll set up a demo channel with your team’s own research in it.</p>
+            <form onSubmit="{{ submitDemo }}" noValidate style="align-self: stretch; display: flex; flex-direction: column; gap: 8px; margin: 0">
+              <label for="rf-slop-demo-email" style="font-size: 15px; font-weight: 600">Work email</label>
+              <div class="slop-ai-bar" style="min-height: 56px">
+                <span aria-hidden="true">✨</span>
+                <input id="rf-slop-demo-email" type="email" autocomplete="email" placeholder="you@company.com" value="{{ email }}" onChange="{{ setEmail }}" aria-describedby="rf-slop-demo-error" style="height: 44px; font-size: 18px">
+                <button type="submit" class="slop-btn slop-btn-primary" style="min-height: 44px">Set up my demo 🚀</button>
+              </div>
+              <span id="rf-slop-demo-error" role="alert" style="min-height: 20px; font-size: 14px; font-weight: 600; color: #fca5a5">{{emailError}}</span>
+            </form>
+            <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ back }}">Back</button></div>
+          </sc-if>
+          <sc-if value="{{ demoSent }}" hint-placeholder-val="{{ false }}">
+            <div class="slop-alert slop-border-l-emerald" role="status" style="align-self: stretch">
+              <span class="slop-dot slop-dot-green" style="margin-top: 7px"></span>
+              <div>{{demoThanks}}</div>
+            </div>
+            <p class="slop-lead" style="margin: 0; max-width: 44ch">No need to wait around — you can build your channel now and it will be ready when we talk.</p>
+            <div class="slop-row" style="margin-top: 8px"><button type="button" class="slop-btn slop-btn-ghost slop-btn-lg" onClick="{{ editEmail }}">Change email</button><button type="button" class="slop-btn slop-btn-primary slop-btn-lg" onClick="{{ next }}">Build my channel</button></div>
+          </sc-if>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
+          <div class="slop-card slop-card-beam" style="width: 440px; max-width: 100%; padding: 28px; display: flex; flex-direction: column; gap: 20px">
+            <span class="slop-row"><span class="slop-icon-box slop-icon-cyan" aria-hidden="true" style="margin-bottom: 0">🎬</span><span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8">What you get</span></span>
+            <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px">
+              <li style="display: flex; align-items: flex-start; gap: 14px"><span class="slop-icon-box slop-icon-cyan" aria-hidden="true" style="flex: none; margin-bottom: 0">📂</span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700; line-height: 1.3">Just upload your files</span><span style="font-size: 14px; line-height: 1.45; color: #cbd5e1">Any research files, any format — repofeed does the work from there.</span></span></li><li style="display: flex; align-items: flex-start; gap: 14px"><span class="slop-icon-box " aria-hidden="true" style="flex: none; margin-bottom: 0">✨</span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700; line-height: 1.3">AI builds the reels and the decks</span><span style="font-size: 14px; line-height: 1.45; color: #cbd5e1">Insight reels and PowerPoint decks, created automatically from your findings.</span></span></li><li style="display: flex; align-items: flex-start; gap: 14px"><span class="slop-icon-box slop-icon-pink" aria-hidden="true" style="flex: none; margin-bottom: 0">📱</span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700; line-height: 1.3">A channel in every stakeholder’s pocket</span><span style="font-size: 14px; line-height: 1.45; color: #cbd5e1">iOS and Android apps stream your insights on dedicated research channels.</span></span></li><li style="display: flex; align-items: flex-start; gap: 14px"><span class="slop-icon-box slop-icon-emerald" aria-hidden="true" style="flex: none; margin-bottom: 0">🔒</span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700; line-height: 1.3">Your files never leave your servers</span><span style="font-size: 14px; line-height: 1.45; color: #cbd5e1">Your research stays where it already lives, so your work stays safe.</span></span></li>
+            </ul>
           </div>
         </div>
       </section>
@@ -325,17 +384,17 @@ button{font:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"int","default":0,"min":0,"max":5,"step":1},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"int","default":0,"min":0,"max":6,"step":1},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   sceneNow() {
     const s = this.state || {};
-    const start = Math.max(0, Math.min(5, Number(this.props.scene ?? 0) || 0));
+    const start = Math.max(0, Math.min(6, Number(this.props.scene ?? 0) || 0));
     return s.scene ?? start;
   }
   componentDidMount() {
     let reduce = false;
     try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
-    if (reduce) { this.setState({ paused: true, touched: true }); return; }
+    if (reduce) { this.setState({ paused: true, touched: true, reduce: true }); return; }
     this._tick = 0;
     this._i = setInterval(() => {
       const s = this.state || {};
@@ -350,7 +409,7 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state || {};
     const set = (o) => this.setState(o);
-    const start = Math.max(0, Math.min(5, Number(this.props.scene ?? 0) || 0));
+    const start = Math.max(0, Math.min(6, Number(this.props.scene ?? 0) || 0));
     const scene = s.scene ?? start;
     const sub = s.sub ?? 0;
     const hues = ['#a855f7', '#06b6d4', '#ec4899', '#10b981', '#f59e0b', '#6366f1'];
@@ -366,11 +425,12 @@ class Component extends DCLogic {
     const heard = !!heardMap[r];
     const added = !!addedMap[r];
     const reels = [
-      { quote: '“It stopped feeling like help and started feeling like homework.”', who: 'Parent of two · 7 months', source: 'interviews.docx', short: '“It stopped feeling like help…”', bg: 'linear-gradient(160deg, #312e81 0%, #6b21a8 100%)' },
-      { quote: '“I only open it when it nags me.”', who: 'Demo quote · swap in your own', source: 'interviews.docx', short: '“I only open it when it nags me.”', bg: 'linear-gradient(160deg, #0c4a6e 0%, #3730a3 100%)' },
-      { quote: '“Week one felt like magic. By week three I’d muted it.”', who: 'Demo quote · swap in your own', source: 'usability.pdf', short: '“Week one felt like magic…”', bg: 'linear-gradient(160deg, #831843 0%, #581c87 100%)' }
+      { quote: '“It stopped feeling like help and started feeling like homework.”', who: 'Parent of two · 7 months', source: 'interviews.docx', short: '“It stopped feeling like help…”', src: './assets/6a8f52a70bcb3115cd6b8f5583a330e4.mp4', poster: './assets/c6b6e1f3b5efaf9c1970f05ff4fe77d2.jpg' },
+      { quote: '“I only open it when it nags me.”', who: 'Demo quote · swap in your own', source: 'interviews.docx', short: '“I only open it when it nags me.”', src: './assets/add84196b9ebed9a8d1da45ee66640d1.mp4', poster: './assets/3a74d0d5ffb5c7374a8ad1bc98892f63.jpg' },
+      { quote: '“Week one felt like magic. By week three I’d muted it.”', who: 'Demo quote · swap in your own', source: 'usability.pdf', short: '“Week one felt like magic…”', src: './assets/633f84eeaf661c907e7f535df5255565.mp4', poster: './assets/32636cceae53c319197015b14b1ffc3c.jpg' }
     ];
     const reel = reels[r];
+    const slideTitles = ['Help started to feel like homework', 'People open it only when nagged', 'The magic fades by week three'];
     const auto = !s.touched;
     const reelBars = reels.map((x, i) => ({
       w: i <= r ? '100%' : '0%',
@@ -383,15 +443,17 @@ class Component extends DCLogic {
     const picked = s.kinds || {};
     const audience = s.audience || '';
     const name = s.name ?? '';
+    const email = s.email ?? '';
+    const demoSent = !!s.demoSent;
 
-    const next = () => set({ scene: Math.min(5, scene + 1) });
+    const next = () => set({ scene: Math.min(6, scene + 1) });
     const back = () => {
-      if (scene === 4 && sub > 0) return set({ sub: sub - 1 });
-      if (scene === 5) return set({ scene: 4, sub: 3 });
+      if (scene === 5 && sub > 0) return set({ sub: sub - 1 });
+      if (scene === 6) return set({ scene: 5, sub: 3 });
       set({ scene: Math.max(0, scene - 1) });
     };
 
-    const segs = [0, 1, 2, 3, 4, 5].map((i) => ({ bg: i <= scene ? '#c084fc' : 'rgba(255,255,255,.14)' }));
+    const segs = [0, 1, 2, 3, 4, 5, 6].map((i) => ({ bg: i <= scene ? '#c084fc' : 'rgba(255,255,255,.14)' }));
 
     const dots = Array.from({ length: 18 }, (_, i) => {
       let bg = 'rgba(148,163,184,.22)';
@@ -441,20 +503,34 @@ class Component extends DCLogic {
 
     const kindList = kindLabels.filter((l) => picked[l]).join(' · ');
     const trimmed = name.trim();
-    const onAir = scene === 5;
+    const onAir = scene === 6;
     const row = (k, v) => ({ k: k, v: v || 'Not set yet', c: v ? '#f8fafc' : '#94a3b8' });
     const rows = [row('Tuned for', role), row('On air', kindList), row('Watching', audience)];
 
     return {
       segs: segs, dots: dots, tiles: tiles, files: files,
-      showSkip: scene < 5,
-      skip: () => set({ scene: 5 }),
+      showSkip: scene < 4,
+      skip: () => set({ scene: 4 }),
       next: next, back: back,
 
       is0: scene === 0, is1: scene === 1, is2: scene === 2, is3: scene === 3,
-      isChannel: scene >= 4, isSetup: scene === 4, onAir: onAir,
-      sub0: scene === 4 && sub === 0, sub1: scene === 4 && sub === 1,
-      sub2: scene === 4 && sub === 2, sub3: scene === 4 && sub === 3,
+      isChannel: scene >= 5, isSetup: scene === 5, onAir: onAir,
+      sub0: scene === 5 && sub === 0, sub1: scene === 5 && sub === 1,
+      sub2: scene === 5 && sub === 2, sub3: scene === 5 && sub === 3,
+
+      isDemo: scene === 4,
+      email: email,
+      setEmail: (e) => set({ email: e.target.value, emailError: '' }),
+      demoAsk: !demoSent, demoSent: demoSent,
+      emailError: s.emailError || '',
+      demoThanks: 'Thanks — we’ll email ' + email.trim() + ' to set up your demo.',
+      submitDemo: (e) => {
+        e.preventDefault();
+        const ok = /^[^@ ]+@[^@ ]+[.][^@ ]+$/.test(email.trim());
+        if (ok) set({ demoSent: true, emailError: '' });
+        else set({ emailError: 'That doesn’t look like an email address. Check it and try again.' });
+      },
+      editEmail: () => set({ demoSent: false }),
 
       playing: !paused, paused: paused,
       playLabel: paused ? 'Play the broadcast' : 'Pause the broadcast',
@@ -483,7 +559,14 @@ class Component extends DCLogic {
 
       digLine: digLine, cta2: cta2,
 
-      reelBg: reel.bg, reelBars: reelBars,
+      reelSrc: reel.src, reelPoster: reel.poster, reelBars: reelBars,
+      startReel: (e) => {
+        const v = e.target;
+        v.muted = true;
+        v.loop = true;
+        v.playsInline = true;
+        if (!s.reduce) { try { const pr = v.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (err) {} }
+      },
       reelQuote: reel.quote, reelWho: reel.who,
       reelSource: 'Cut from ' + reel.source,
       reelCount: 'Insight scene ' + (r + 1) + ' of 3',
@@ -499,14 +582,20 @@ class Component extends DCLogic {
       heardBg: heard ? '#047857' : 'rgba(2,6,23,.45)',
       addBg: added ? '#6d28d9' : 'rgba(2,6,23,.45)',
       addLabel: added ? 'In deck' : 'Deck',
-      deckThumb: deckN > 0 ? reels[addedIdx[deckN - 1]].short : '',
-      deckSlide: 'Slide ' + deckN,
+      deckHint: deckN === 0,
+      deckSlides: addedIdx.map((i, k) => ({
+        title: slideTitles[i],
+        b1: reels[i].short,
+        b2: 'Who: ' + reels[i].who,
+        b3: 'Source: ' + reels[i].source,
+        n: String(k + 1)
+      })),
       deckCount: deckN === 0 ? 'Empty' : (deckN === 1 ? '1 slide' : deckN + ' slides'),
 
       roles: roles, kinds: kinds, audiences: audiences,
       name: name,
       setName: (e) => set({ name: e.target.value }),
-      p4: sub < 3 ? () => set({ sub: sub + 1 }) : () => set({ scene: 5 }),
+      p4: sub < 3 ? () => set({ sub: sub + 1 }) : () => set({ scene: 6 }),
       cta4: sub < 3 ? 'Continue' : 'Put it on air 🚀',
 
       rows: rows,

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Upload your first study</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,label:focus-within{outline:3px solid #7C9BFF;outline-offset:3px}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; color: #0F1222; font-family: 'Inter', system-ui, sans-serif">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 16px 24px; border-bottom: 1px solid rgba(15, 18, 34, .1)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#2B5BFF" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M14 4 3 9.5 14 15l11-5.5L14 4Z" fill="#2B5BFF"/><path d="m3 14.5 11 5.5 11-5.5"/><path d="m3 19.5 11 5.5 11-5.5"/></svg>
+      <span style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.01em">repofeed<span style="color: #555A6E">.ai</span></span>
+    </div>
+    <ol aria-label="Progress" style="margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; font-weight: 600">
+      <li aria-current="step" style="padding: 6px 12px; border-radius: 999px; background: #0F1222; color: #FFFFFF">1 Upload</li>
+      <li style="padding: 6px 12px; border-radius: 999px; background: #E4E6EE; color: #555A6E">2 Scenes</li>
+      <li style="padding: 6px 12px; border-radius: 999px; background: #E4E6EE; color: #555A6E">3 Publish</li>
+    </ol>
+  </header>
+
+  <main style="flex: 1 1 auto; display: grid; align-items: center; padding: 32px clamp(24px, 6vw, 96px) 48px">
+    <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px">
+      <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; gap: 20px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #2B5BFF">Team research · First study</div>
+        <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Empty the drawer.</h1>
+        <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: #555A6E">Drop in the interviews, surveys and decks from one study. Messy is fine. We’ll cut them into short insight scenes.</p>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label for="rf-study-name" style="font-size: 15px; font-weight: 600">Study name</label>
+          <input id="rf-study-name" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Q3 onboarding interviews" value="{{ study }}" onChange="{{ setStudy }}" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 1.5px solid rgba(15, 18, 34, .3); border-radius: 14px; background: #FFFFFF; color: #0F1222; font: 500 18px 'Inter', system-ui, sans-serif">
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px">
+          <sc-if value="{{ hasFiles }}" hint-placeholder-val="{{ false }}">
+            <a href="Cutting.dc.html" style="display: inline-flex; align-items: center; height: 56px; padding: 0 24px; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; text-decoration: none">Cut into scenes</a>
+          </sc-if>
+          <sc-if value="{{ noFiles }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ sample }}" style="height: 56px; padding: 0 20px; border: 1.5px solid rgba(15, 18, 34, .22); border-radius: 14px; background: transparent; color: inherit; font-weight: 600; font-size: 17px; cursor: pointer">No files handy? Use the sample study</button>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div onDragOver="{{ over }}" onDragLeave="{{ leave }}" onDrop="{{ drop }}" style="min-height: 300px; box-sizing: border-box; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; border: 2px dashed {{zoneBd}}; border-radius: 24px; background: {{zoneBg}}; transition: background .2s ease, border-color .2s ease">
+          <svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2B5BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+          <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -0.01em">Drop research files here</div>
+          <label style="display: inline-flex; align-items: center; height: 48px; padding: 0 20px; border-radius: 14px; background: #0F1222; color: #FFFFFF; font-weight: 600; font-size: 16px; cursor: pointer">
+            Choose files
+            <input type="file" multiple onChange="{{ pick }}" style="position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden">
+          </label>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: #555A6E">docx · xlsx · pdf · md · pptx</span>
+        </div>
+
+        <sc-if value="{{ hasFiles }}" hint-placeholder-val="{{ false }}">
+          <ul aria-label="Files in this study" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{ files }}" as="f" hint-placeholder-count="3">
+              <li style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 6px 6px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid rgba(15, 18, 34, .1)">
+                <span style="min-width: 0; overflow-wrap: anywhere; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px">{{f.name}}</span>
+                <button type="button" onClick="{{ f.remove }}" aria-label="{{f.removeLabel}}" style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 10px; background: transparent; color: #555A6E; cursor: pointer">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+                </button>
+              </li>
+            </sc-for>
+          </ul>
+        </sc-if>
+        <p aria-live="polite" style="margin: 0; font-size: 15px; color: #555A6E">{{countLine}}</p>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const list = s.files || [];
+    const hot = !!s.hot;
+    const add = (fileList) => {
+      const names = Array.from(fileList || []).map((f) => f.name);
+      const merged = list.concat(names.filter((n) => list.indexOf(n) < 0));
+      this.setState({ files: merged, hot: false });
+    };
+    const files = list.map((n) => ({
+      name: n,
+      removeLabel: 'Remove ' + n,
+      remove: () => this.setState({ files: list.filter((x) => x !== n) })
+    }));
+    const c = list.length;
+    return {
+      study: s.study ?? '',
+      setStudy: (e) => this.setState({ study: e.target.value }),
+      files: files,
+      hasFiles: c > 0,
+      noFiles: c === 0,
+      countLine: c === 0 ? 'Nothing here yet.' : (c === 1 ? '1 file ready to cut.' : c + ' files ready to cut.'),
+      zoneBg: hot ? '#E3EAFF' : '#FFFFFF',
+      zoneBd: hot ? '#2B5BFF' : 'rgba(15,18,34,.3)',
+      over: (e) => { e.preventDefault(); if (!hot) this.setState({ hot: true }); },
+      leave: () => this.setState({ hot: false }),
+      drop: (e) => { e.preventDefault(); add(e.dataTransfer && e.dataTransfer.files); },
+      pick: (e) => { add(e.target.files); e.target.value = ''; },
+      sample: () => this.setState({ files: ['interviews.docx', 'survey-q3.xlsx', 'usability.pdf'] })
+    };
+  }
+}
+</script>
+</body>
+</html>

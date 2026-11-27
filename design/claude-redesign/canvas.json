@@ -170,7 +170,7 @@
       "y": 1020,
       "w": 1440,
       "h": 900,
-      "title": "Slop onboarding 5 · Build your channel",
+      "title": "Slop onboarding 5 · Set up a demo",
       "expand": "fill",
       "page": "slopstrap",
       "is_interactive": true
@@ -181,7 +181,18 @@
       "y": 1020,
       "w": 1440,
       "h": 900,
-      "title": "Slop onboarding 6 · On air",
+      "title": "Slop onboarding 6 · Build your channel",
+      "expand": "fill",
+      "page": "slopstrap",
+      "is_interactive": true
+    },
+    {
+      "file": "SlopOnboarding7.dc.html",
+      "x": 4560,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "title": "Slop onboarding 7 · On air",
       "expand": "fill",
       "page": "slopstrap",
       "is_interactive": true

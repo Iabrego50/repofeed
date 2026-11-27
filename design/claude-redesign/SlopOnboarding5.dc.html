@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Slopstrap onboarding scene 5: Build your channel</title>
+<title>Slopstrap onboarding scene 5: Set up a demo</title>
 <script src="./_runtime/react.js"></script>
 <script src="./_runtime/react-dom.js"></script>
 <script src="./_runtime/support.js"></script>
@@ -11,13 +11,15 @@
 <body>
 <x-dc>
 <helmet>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&amp;family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 body{margin:0;background:#030712}
 button{font:inherit}
 .slop-scope a:focus-visible,.slop-scope button:focus-visible,.slop-scope label:focus-within,.slop-scope .slop-ai-bar:focus-within{outline:3px solid #c084fc;outline-offset:3px}
 @keyframes rf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes rf-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes rf-cut{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
+@keyframes rf-fill{from{width:0}to{width:100%}}
 @keyframes rf-on{0%{opacity:.15}30%{opacity:1}45%{opacity:.55}100%{opacity:1}}
 @media (prefers-reduced-motion: reduce){.slop-scope *,.slop-scope *::before,.slop-scope *::after{animation:none!important;transition:none!important}}
 </style>

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>repofeed onboarding story</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #7C9BFF;outline-offset:3px}
+@keyframes rf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes rf-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes rf-on{0%{opacity:.15}30%{opacity:1}45%{opacity:.55}100%{opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; background: {{bg}}; color: {{fg}}; transition: background .7s ease, color .7s ease">
+
+  <header style="display: flex; flex-direction: column; gap: 16px; padding: 14px 24px 0">
+    <div aria-hidden="true" style="display: flex; gap: 6px">
+      <sc-for list="{{ segs }}" as="g" hint-placeholder-count="6">
+        <span style="flex: 1 1 0; height: 4px; border-radius: 2px; background: {{g.bg}}; transition: background .4s ease"></span>
+      </sc-for>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#2B5BFF" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M14 4 3 9.5 14 15l11-5.5L14 4Z" fill="#2B5BFF"/><path d="m3 14.5 11 5.5 11-5.5"/><path d="m3 19.5 11 5.5 11-5.5"/></svg>
+        <span style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.01em">repofeed<span style="color: {{muted}}">.ai</span></span>
+      </div>
+      <sc-if value="{{ showSkip }}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{ skip }}" style="height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: inherit; font-weight: 600; font-size: 15px; cursor: pointer">Skip the story</button>
+      </sc-if>
+    </div>
+  </header>
+
+  <main style="flex: 1 1 auto; display: grid; align-items: center; padding: 24px clamp(24px, 6vw, 96px) 32px">
+
+    <!-- 1 · THEN -->
+    <sc-if value="{{ is0 }}" hint-placeholder-val="{{ true }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; gap: 20px">
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">Then</div>
+          <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Remember 8pm?</h1>
+          <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">One channel. One story. Families, offices, whole cities tuned in together, and had one conversation about it the next morning.</p>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px">
+            <button type="button" onClick="{{ p0 }}" style="height: 56px; padding: 0 24px; border: 0; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; cursor: pointer">{{cta0}}</button>
+          </div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
+          <button type="button" onClick="{{ p0 }}" aria-label="Turn on the TV" style="width: 440px; max-width: 100%; box-sizing: border-box; padding: 16px; border: 0; border-radius: 28px; background: #1C2040; color: inherit; cursor: pointer; box-shadow: {{tvGlow}}; transition: box-shadow .6s ease">
+            <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; aspect-ratio: 4 / 3; border-radius: 14px; background: {{tvBg}}; color: {{tvFg}}; transition: background .5s ease">
+              <sc-if value="{{ tvOn }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 48px; letter-spacing: -0.02em; animation: rf-on .7s ease both">8:00 PM</span>
+                <span style="font-size: 13px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase">Everyone watching</span>
+              </sc-if>
+              <sc-if value="{{ tvOff }}" hint-placeholder-val="{{ true }}">
+                <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+                <span style="font-size: 15px; font-weight: 500">Tap to turn it on</span>
+              </sc-if>
+            </span>
+          </button>
+          <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px; width: 300px; max-width: 100%">
+            <sc-for list="{{ dots }}" as="d" hint-placeholder-count="18">
+              <span style="aspect-ratio: 1 / 1; border-radius: 50%; background: {{d.bg}}; transition: background .5s ease {{d.delay}}"></span>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 2 · NOW -->
+    <sc-if value="{{ is1 }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; gap: 20px">
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">Now</div>
+          <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Then everyone got their own screen.</h1>
+          <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">Streaming built a private bubble for every person. Infinite choice, zero common plot. (Ask anyone what they watched last night.)</p>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px">
+            <button type="button" onClick="{{ back }}" style="height: 56px; padding: 0 20px; border: 1.5px solid {{line}}; border-radius: 14px; background: transparent; color: inherit; font-weight: 600; font-size: 17px; cursor: pointer">Back</button>
+            <button type="button" onClick="{{ p1 }}" style="height: 56px; padding: 0 24px; border: 0; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; cursor: pointer">{{cta1}}</button>
+          </div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px">
+          <sc-if value="{{ whole }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ p1 }}" aria-label="Change the channel" style="width: 440px; max-width: 100%; box-sizing: border-box; padding: 16px; border: 0; border-radius: 28px; background: #1C2040; color: #0F1222; cursor: pointer; box-shadow: 0 0 120px rgba(255, 216, 74, .28)">
+              <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; aspect-ratio: 4 / 3; border-radius: 14px; background: #FFD84A">
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 48px; letter-spacing: -0.02em">8:00 PM</span>
+                <span style="font-size: 13px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase">Tap to change the channel</span>
+              </span>
+            </button>
+          </sc-if>
+          <sc-if value="{{ shattered }}" hint-placeholder-val="{{ false }}">
+            <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; width: 520px; max-width: 100%">
+              <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="12">
+                <div style="aspect-ratio: 4 / 3; box-sizing: border-box; padding: 10px; border-radius: 12px; background: {{t.bg}}; color: #0F1222; display: flex; flex-direction: column; justify-content: space-between; transform: rotate({{t.rot}}); animation: rf-pop .45s cubic-bezier(.2, 1.4, .4, 1) both; animation-delay: {{t.delay}}">
+                  <span style="font-size: 12px; font-weight: 600; line-height: 1.2">{{t.label}}</span>
+                  <span style="width: 60%; height: 5px; border-radius: 3px; background: rgba(15, 18, 34, .25)"></span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px; width: 300px; max-width: 100%">
+            <sc-for list="{{ dots }}" as="d" hint-placeholder-count="18">
+              <span style="aspect-ratio: 1 / 1; border-radius: 50%; background: {{d.bg}}; transition: background .5s ease {{d.delay}}"></span>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 3 · THE COST -->
+    <sc-if value="{{ is2 }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; gap: 20px">
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">The cost</div>
+          <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Your research went the same way.</h1>
+          <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">Interviews, surveys, decks. All filed, none watched. Somewhere in there is the quote that should have changed the roadmap. Go find it.</p>
+          <p aria-live="polite" style="margin: 0; font-size: 16px; font-weight: 600">{{digLine}}</p>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px">
+            <button type="button" onClick="{{ back }}" style="height: 56px; padding: 0 20px; border: 1.5px solid {{line}}; border-radius: 14px; background: transparent; color: inherit; font-weight: 600; font-size: 17px; cursor: pointer">Back</button>
+            <button type="button" onClick="{{ next }}" style="height: 56px; padding: 0 24px; border: 0; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; cursor: pointer">{{cta2}}</button>
+          </div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 20px">
+          <sc-for list="{{ files }}" as="f" hint-placeholder-count="5">
+            <button type="button" onClick="{{ f.open }}" aria-pressed="{{ f.on }}" style="width: 236px; max-width: 100%; min-height: 136px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 10px; text-align: left; border: 1px solid rgba(255, 255, 255, .14); border-radius: 14px; background: {{f.bg}}; color: #F4F5F7; cursor: pointer; transform: rotate({{f.rot}}); transition: background .3s ease, transform .3s ease">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px">{{f.name}}</span>
+              <span aria-hidden="true" style="height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14)"></span>
+              <span aria-hidden="true" style="width: 80%; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14)"></span>
+              <span aria-hidden="true" style="width: 55%; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14)"></span>
+              <span style="margin-top: auto; font-size: 14px; font-weight: 500; color: {{f.statusColor}}">{{f.status}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 4 · THE FEED -->
+    <sc-if value="{{ is3 }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; gap: 20px">
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">repofeed</div>
+          <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Now it plays like a channel.</h1>
+          <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">That buried interview file? Here it is as a short insight scene. One common feed, everyone scrolls the same findings. Go on, react to it.</p>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px">
+            <button type="button" onClick="{{ back }}" style="height: 56px; padding: 0 20px; border: 1.5px solid {{line}}; border-radius: 14px; background: transparent; color: inherit; font-weight: 600; font-size: 17px; cursor: pointer">Back</button>
+            <button type="button" onClick="{{ next }}" style="height: 56px; padding: 0 24px; border: 0; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; cursor: pointer">Build my channel</button>
+          </div>
+        </div>
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 28px">
+          <article style="width: 300px; max-width: 100%; min-height: 500px; box-sizing: border-box; padding: 28px 24px 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; border-radius: 36px; background: #0F1222; color: #F4F5F7; box-shadow: 0 30px 60px rgba(15, 18, 34, .25)">
+            <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 16px">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #A4A9BD">Insight scene</span>
+              <blockquote style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 600; font-size: 28px; line-height: 1.15; letter-spacing: -0.01em">“It stopped feeling like help and started feeling like homework.”</blockquote>
+              <span style="font-size: 14px; color: #A4A9BD">Parent of two · 7 months</span>
+              <span style="padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .1); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px">Cut from interviews.docx</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <button type="button" onClick="{{ toggleHeard }}" aria-pressed="{{ heard }}" style="height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: {{heardBg}}; color: {{heardFg}}; font-weight: 600; font-size: 14px; cursor: pointer; transition: background .2s ease">{{heardLabel}}</button>
+              <button type="button" onClick="{{ toggleAdd }}" aria-pressed="{{ added }}" style="height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: #FFD84A; color: #0F1222; font-weight: 600; font-size: 14px; cursor: pointer">{{addLabel}}</button>
+            </div>
+          </article>
+          <div style="width: 220px; max-width: 100%; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase">
+              <span>Deck</span>
+              <span aria-live="polite" style="color: #555A6E">{{deckCount}}</span>
+            </div>
+            <sc-if value="{{ added }}" hint-placeholder-val="{{ false }}">
+              <div style="aspect-ratio: 16 / 9; box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; border-radius: 10px; background: #FFFFFF; border: 1px solid rgba(15, 18, 34, .14); box-shadow: 0 12px 24px rgba(15, 18, 34, .1); animation: rf-pop .4s cubic-bezier(.2, 1.4, .4, 1) both">
+                <span style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 600; font-size: 14px; line-height: 1.2">“It stopped feeling like help…”</span>
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #555A6E">Slide 1</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ notAdded }}" hint-placeholder-val="{{ true }}">
+              <div style="aspect-ratio: 16 / 9; box-sizing: border-box; padding: 14px; display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 10px; border: 1.5px dashed rgba(15, 18, 34, .3); font-size: 14px; color: #555A6E">Add a scene to start a deck</div>
+            </sc-if>
+            <span style="font-size: 14px; color: #555A6E">The best scenes export to PowerPoint.</span>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 5 + 6 · BUILD YOUR CHANNEL / ON AIR -->
+    <sc-if value="{{ isChannel }}" hint-placeholder-val="{{ false }}">
+      <section style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px; animation: rf-rise .5s ease both">
+        <div style="flex: 1 1 400px; max-width: 520px; display: flex; flex-direction: column; gap: 20px">
+
+          <sc-if value="{{ sub0 }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">Your channel · 1 of 4</div>
+            <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Who’s holding the remote?</h1>
+            <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">Pick your role. We’ll tune the channel’s language to how you work.</p>
+            <div role="group" aria-label="Your role" style="display: flex; flex-wrap: wrap; gap: 10px">
+              <sc-for list="{{ roles }}" as="o" hint-placeholder-count="6">
+                <button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="height: 48px; padding: 0 18px; border: 1.5px solid {{o.bd}}; border-radius: 999px; background: {{o.bg}}; color: {{o.fg}}; font-weight: 600; font-size: 16px; cursor: pointer">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sub1 }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">Your channel · 2 of 4</div>
+            <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">What goes on air?</h1>
+            <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">The research you work with. Pick all that apply. You can change this later.</p>
+            <div role="group" aria-label="Research types" style="display: flex; flex-wrap: wrap; gap: 10px">
+              <sc-for list="{{ kinds }}" as="o" hint-placeholder-count="5">
+                <button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="height: 48px; padding: 0 18px; border: 1.5px solid {{o.bd}}; border-radius: 999px; background: {{o.bg}}; color: {{o.fg}}; font-weight: 600; font-size: 16px; cursor: pointer">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sub2 }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">Your channel · 3 of 4</div>
+            <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Who’s watching?</h1>
+            <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">Start small or go wide. You invite people when you’re ready.</p>
+            <div role="group" aria-label="Audience" style="display: flex; flex-wrap: wrap; gap: 10px">
+              <sc-for list="{{ audiences }}" as="o" hint-placeholder-count="4">
+                <button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="height: 48px; padding: 0 18px; border: 1.5px solid {{o.bd}}; border-radius: 999px; background: {{o.bg}}; color: {{o.fg}}; font-weight: 600; font-size: 16px; cursor: pointer">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sub3 }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">Your channel · 4 of 4</div>
+            <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">Name the channel.</h1>
+            <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">Something short your teammates will recognize in the feed.</p>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <label for="rf-channel-name" style="font-size: 15px; font-weight: 600">Channel name</label>
+              <input id="rf-channel-name" type="text" maxlength="40" autocomplete="off" placeholder="Team research" value="{{ name }}" onChange="{{ setName }}" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 1.5px solid rgba(15, 18, 34, .3); border-radius: 14px; background: #FFFFFF; color: #0F1222; font: 500 18px 'Inter', system-ui, sans-serif">
+              <span style="font-size: 14px; color: #555A6E">Suggestion from your email. Edit freely.</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ onAir }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: {{kick}}">Ready</div>
+            <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance">You’re on air.</h1>
+            <p style="margin: 0; max-width: 44ch; font-size: 19px; line-height: 1.5; color: {{muted}}">Research, as a feed. Upload your first study, or watch the demo to see insight scenes in motion.</p>
+          </sc-if>
+
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px">
+            <button type="button" onClick="{{ back }}" style="height: 56px; padding: 0 20px; border: 1.5px solid {{line}}; border-radius: 14px; background: transparent; color: inherit; font-weight: 600; font-size: 17px; cursor: pointer">Back</button>
+            <sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ p4 }}" style="height: 56px; padding: 0 24px; border: 0; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; cursor: pointer">{{cta4}}</button>
+            </sc-if>
+            <sc-if value="{{ onAir }}" hint-placeholder-val="{{ false }}">
+              <a href="SignIn.dc.html" style="display: inline-flex; align-items: center; height: 56px; padding: 0 24px; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; text-decoration: none">Sign in to upload</a>
+              <button type="button" style="height: 56px; padding: 0 20px; border: 0; border-radius: 14px; background: #0F1222; color: #FFFFFF; font-weight: 600; font-size: 17px; cursor: pointer">Watch the demo</button>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 440px; min-width: 0; min-height: 440px; display: flex; align-items: center; justify-content: center">
+          <div style="width: 440px; max-width: 100%; box-sizing: border-box; padding: 28px; display: flex; flex-direction: column; gap: 20px; border-radius: 24px; background: #FFFFFF; color: #0F1222; border: 1px solid rgba(15, 18, 34, .1); box-shadow: 0 30px 60px rgba(15, 18, 34, .08)">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #555A6E">Channel preview</span>
+              <span style="padding: 6px 12px; border-radius: 999px; background: {{pillBg}}; color: {{pillFg}}; font-size: 13px; font-weight: 600; transition: background .4s ease">{{pill}}</span>
+            </div>
+            <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: 36px; line-height: 1.05; letter-spacing: -0.02em; overflow-wrap: anywhere; color: {{cardNameColor}}">{{cardName}}</div>
+            <dl style="margin: 0; display: flex; flex-direction: column">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+                <div style="display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid rgba(15, 18, 34, .1)">
+                  <dt style="font-size: 15px; color: #555A6E">{{r.k}}</dt>
+                  <dd style="margin: 0; text-align: right; font-size: 15px; font-weight: 600; color: {{r.c}}">{{r.v}}</dd>
+                </div>
+              </sc-for>
+            </dl>
+            <sc-if value="{{ onAir }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 20px; border-top: 1px solid rgba(15, 18, 34, .1)">
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #555A6E">What happens next</span>
+                <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px">
+                  <li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #0F1222; color: #FFFFFF; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">1</span><span>Upload your research files</span></li>
+                  <li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #0F1222; color: #FFFFFF; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">2</span><span>AI cuts them into short insight scenes</span></li>
+                  <li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #0F1222; color: #FFFFFF; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">3</span><span>Your team scrolls, likes and comments</span></li>
+                  <li style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #0F1222; color: #FFFFFF; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px">4</span><span>The best scenes go to a PowerPoint deck</span></li>
+                </ol>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+  </main>
+
+  <footer style="padding: 0 24px 20px; font-size: 14px; color: {{muted}}">Preview mode. Answers aren’t saved until you sign in.</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"int","default":0,"min":0,"max":5,"step":1},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const set = (o) => this.setState(o);
+    const start = Math.max(0, Math.min(5, Number(this.props.scene ?? 0) || 0));
+    const scene = s.scene ?? start;
+    const sub = s.sub ?? 0;
+    const dark = scene < 3;
+
+    const INK = '#0F1222';
+    const theme = dark
+      ? { bg: '#0B0D1A', fg: '#F4F5F7', muted: '#A4A9BD', kick: '#8FA8FF', line: 'rgba(255,255,255,.22)', segOff: 'rgba(255,255,255,.2)' }
+      : { bg: '#F4F5F7', fg: INK, muted: '#555A6E', kick: '#2B5BFF', line: 'rgba(15,18,34,.22)', segOff: 'rgba(15,18,34,.16)' };
+
+    const hues = ['#FFD84A', '#8FA8FF', '#FF9E7A', '#7FE0C3', '#E3A6FF', '#FFC2D4'];
+
+    const tvOn = !!s.tvOn;
+    const shattered = !!s.shattered;
+    const opened = s.opened || {};
+    const heard = !!s.heard;
+    const added = !!s.added;
+    const role = s.role || '';
+    const picked = s.kinds || {};
+    const audience = s.audience || '';
+    const name = s.name ?? '';
+
+    const next = () => set({ scene: Math.min(5, scene + 1) });
+    const back = () => {
+      if (scene === 4 && sub > 0) return set({ sub: sub - 1 });
+      if (scene === 5) return set({ scene: 4, sub: 3 });
+      set({ scene: Math.max(0, scene - 1) });
+    };
+
+    const segs = [0, 1, 2, 3, 4, 5].map((i) => ({ bg: i <= scene ? theme.fg : theme.segOff }));
+
+    const dots = Array.from({ length: 18 }, (_, i) => {
+      let bg = '#262B52';
+      if (scene === 0 && tvOn) bg = '#FFD84A';
+      if (scene === 1) bg = shattered ? hues[(i * 5 + 2) % 6] : '#FFD84A';
+      return { bg: bg, delay: (i * 25) + 'ms' };
+    });
+
+    const tileLabels = ['For you', 'Continue watching', 'Suggested', 'Because you watched', 'Up next', 'Your mix', 'Recommended', 'Watch again', 'New for you', 'Top picks', 'Trending for you', 'Skip intro'];
+    const rots = [-3, 2, -1, 3, 1, -2, 2, -3, 3, -1, 1, -2];
+    const tiles = tileLabels.map((label, i) => ({ label: label, bg: hues[(i * 5) % 6], rot: rots[i] + 'deg', delay: (i * 40) + 'ms' }));
+
+    const fileNames = ['interviews.docx', 'survey-q3.xlsx', 'usability.pdf', 'notes.md', 'deck.pptx'];
+    const fileRots = [-4, 3, -2, 4, -3];
+    const count = fileNames.filter((n) => opened[n]).length;
+    const files = fileNames.map((n, i) => {
+      const on = !!opened[n];
+      return {
+        name: n,
+        on: on,
+        bg: on ? '#2A2F5C' : '#151830',
+        rot: on ? '0deg' : fileRots[i] + 'deg',
+        status: on ? 'Opened · not in here' : 'Unread · buried',
+        statusColor: on ? '#C9CDE0' : '#FFC66B',
+        open: () => set({ opened: Object.assign({}, opened, { [n]: true }) })
+      };
+    });
+    let digLine = 'Five files. Tap one to start digging.';
+    if (count > 0) digLine = count + ' opened. Still not it.';
+    if (count >= 3) digLine = count + ' opened, nothing found. Nobody digs past this.';
+    if (count === 5) digLine = 'All five opened. It was one line on a page you skimmed.';
+    const cta2 = count >= 3 ? 'Exactly. Show me better' : (count > 0 ? 'Give up digging' : 'I’d rather not dig');
+
+    const chip = (label, on, pick) => ({
+      label: label, on: on, pick: pick,
+      bg: on ? INK : '#FFFFFF',
+      fg: on ? '#FFFFFF' : INK,
+      bd: on ? INK : 'rgba(15,18,34,.3)'
+    });
+    const roles = ['Researcher', 'Product manager', 'Designer', 'Marketer', 'Founder', 'Other']
+      .map((l) => chip(l, role === l, () => set({ role: l, sub: 1 })));
+    const kindLabels = ['Interviews', 'Surveys', 'Reports', 'Usability tests', 'Market research'];
+    const kinds = kindLabels.map((l) => chip(l, !!picked[l], () => set({ kinds: Object.assign({}, picked, { [l]: !picked[l] }) })));
+    const audiences = ['Just me', 'My team', 'My company', 'Clients']
+      .map((l) => chip(l, audience === l, () => set({ audience: l, sub: 3 })));
+
+    const kindList = kindLabels.filter((l) => picked[l]).join(' · ');
+    const trimmed = name.trim();
+    const onAir = scene === 5;
+    const row = (k, v) => ({ k: k, v: v || 'Not set yet', c: v ? INK : '#555A6E' });
+    const rows = [row('Tuned for', role), row('On air', kindList), row('Watching', audience)];
+
+    return {
+      bg: theme.bg, fg: theme.fg, muted: theme.muted, kick: theme.kick, line: theme.line,
+      segs: segs, dots: dots, tiles: tiles, files: files,
+      showSkip: scene < 5,
+      skip: () => set({ scene: 5 }),
+      next: next, back: back,
+
+      is0: scene === 0, is1: scene === 1, is2: scene === 2, is3: scene === 3,
+      isChannel: scene >= 4, isSetup: scene === 4, onAir: onAir,
+      sub0: scene === 4 && sub === 0, sub1: scene === 4 && sub === 1,
+      sub2: scene === 4 && sub === 2, sub3: scene === 4 && sub === 3,
+
+      tvOn: tvOn, tvOff: !tvOn,
+      tvBg: tvOn ? '#FFD84A' : '#0B0D1A',
+      tvFg: tvOn ? INK : '#A4A9BD',
+      tvGlow: tvOn ? '0 0 120px rgba(255,216,74,.28)' : '0 40px 80px rgba(0,0,0,.45)',
+      p0: tvOn ? next : () => set({ tvOn: true }),
+      cta0: tvOn ? 'Keep watching' : 'Turn it on',
+
+      shattered: shattered, whole: !shattered,
+      p1: shattered ? next : () => set({ shattered: true }),
+      cta1: shattered ? 'So what?' : 'Change the channel',
+
+      digLine: digLine, cta2: cta2,
+
+      heard: heard, added: added, notAdded: !added,
+      toggleHeard: () => set({ heard: !heard }),
+      toggleAdd: () => set({ added: !added }),
+      heardBg: heard ? '#2B5BFF' : 'rgba(255,255,255,.14)',
+      heardFg: '#FFFFFF',
+      heardLabel: heard ? 'You heard this' : 'Heard this',
+      addLabel: added ? 'In the deck' : 'Add to deck',
+      deckCount: added ? '1 slide' : 'Empty',
+
+      roles: roles, kinds: kinds, audiences: audiences,
+      name: name,
+      setName: (e) => set({ name: e.target.value }),
+      p4: sub < 3 ? () => set({ sub: sub + 1 }) : () => set({ scene: 5 }),
+      cta4: sub < 3 ? 'Continue' : 'Put it on air',
+
+      rows: rows,
+      cardName: trimmed || (onAir ? 'Team research' : 'Unnamed channel'),
+      cardNameColor: (trimmed || onAir) ? INK : '#555A6E',
+      pill: onAir ? 'On air' : 'Setting up',
+      pillBg: onAir ? '#2B5BFF' : '#E4E6EE',
+      pillFg: onAir ? '#FFFFFF' : INK
+    };
+  }
+}
+</script>
+</body>
+</html>

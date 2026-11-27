@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review your scenes</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+button:focus-visible,a:focus-visible{outline:3px solid #7C9BFF;outline-offset:3px}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; color: #0F1222; font-family: 'Inter', system-ui, sans-serif">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 16px 24px; border-bottom: 1px solid rgba(15, 18, 34, .1)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#2B5BFF" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M14 4 3 9.5 14 15l11-5.5L14 4Z" fill="#2B5BFF"/><path d="m3 14.5 11 5.5 11-5.5"/><path d="m3 19.5 11 5.5 11-5.5"/></svg>
+      <span style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.01em">repofeed<span style="color: #555A6E">.ai</span></span>
+    </div>
+    <ol aria-label="Progress" style="margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; font-weight: 600">
+      <li style="padding: 6px 12px; border-radius: 999px; background: #E4E6EE; color: #0F1222">1 Upload</li>
+      <li aria-current="step" style="padding: 6px 12px; border-radius: 999px; background: #0F1222; color: #FFFFFF">2 Scenes</li>
+      <li style="padding: 6px 12px; border-radius: 999px; background: #E4E6EE; color: #555A6E">3 Publish</li>
+    </ol>
+  </header>
+
+  <main style="flex: 1 1 auto; padding: clamp(32px, 5vw, 56px) clamp(24px, 6vw, 96px) 48px">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px">
+        <div style="flex: 1 1 400px; display: flex; flex-direction: column; gap: 12px">
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #2B5BFF">Sample study · First cut</div>
+          <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 800; font-size: clamp(36px, 4.4vw, 56px); line-height: 1.04; letter-spacing: -0.02em; text-wrap: balance">You’re the editor.</h1>
+          <p style="margin: 0; max-width: 52ch; font-size: 18px; line-height: 1.5; color: #555A6E">Keep the scenes worth your team’s scroll. Cut the rest. Nothing airs without your say.</p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+          <span aria-live="polite" style="font-size: 16px; font-weight: 600">{{keptLine}}</span>
+          <a href="Publish.dc.html" style="display: inline-flex; align-items: center; height: 56px; padding: 0 24px; border-radius: 14px; background: #2B5BFF; color: #FFFFFF; font-weight: 600; font-size: 17px; text-decoration: none">Pick a channel</a>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: 20px">
+        <sc-for list="{{ scenes }}" as="c" hint-placeholder-count="4">
+          <article style="min-height: 400px; box-sizing: border-box; padding: 24px 22px 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; border-radius: 28px; background: {{c.bg}}; color: #F4F5F7; transition: background .25s ease">
+            <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 14px">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #A4A9BD">{{c.num}}</span>
+              <blockquote style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 600; font-size: 24px; line-height: 1.18; letter-spacing: -0.01em; color: {{c.quoteFg}}; text-decoration: {{c.strike}}">{{c.quote}}</blockquote>
+              <span style="font-size: 14px; color: #A4A9BD">{{c.who}}</span>
+              <span style="padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .1); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px">{{c.source}}</span>
+            </div>
+            <button type="button" onClick="{{ c.toggle }}" aria-pressed="{{ c.kept }}" aria-label="{{c.aria}}" style="align-self: flex-start; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: {{c.btnBg}}; color: {{c.btnFg}}; font-weight: 600; font-size: 14px; cursor: pointer">{{c.btn}}</button>
+          </article>
+        </sc-for>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cut = (this.state || {}).cut || {};
+    const data = [
+      { quote: '“It stopped feeling like help and started feeling like homework.”', who: 'Parent of two · 7 months', source: 'interviews.docx' },
+      { quote: '[DEMO SCENE: a second quote from the interviews]', who: '[PARTICIPANT]', source: 'interviews.docx' },
+      { quote: '[DEMO SCENE: a finding from the survey]', who: '[SEGMENT]', source: 'survey-q3.xlsx' },
+      { quote: '[DEMO SCENE: a moment from the usability test]', who: '[PARTICIPANT]', source: 'usability.pdf' }
+    ];
+    const scenes = data.map((d, i) => {
+      const kept = !cut[i];
+      return {
+        num: 'Scene ' + (i + 1),
+        quote: d.quote,
+        who: d.who,
+        source: 'Cut from ' + d.source,
+        kept: kept,
+        bg: kept ? '#0F1222' : '#3A3E55',
+        quoteFg: kept ? '#F4F5F7' : '#C9CDE0',
+        strike: kept ? 'none' : 'line-through',
+        btn: kept ? 'Keeping. Tap to cut' : 'Cut. Tap to restore',
+        btnBg: kept ? '#FFD84A' : 'rgba(255,255,255,.16)',
+        btnFg: kept ? '#0F1222' : '#FFFFFF',
+        aria: 'Keep scene ' + (i + 1),
+        toggle: () => this.setState({ cut: Object.assign({}, cut, { [i]: kept }) })
+      };
+    });
+    const n = scenes.filter((c) => c.kept).length;
+    return {
+      scenes: scenes,
+      keptLine: n + ' of ' + scenes.length + ' scenes kept'
+    };
+  }
+}
+</script>
+</body>
+</html>

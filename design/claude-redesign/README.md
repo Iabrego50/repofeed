@@ -26,8 +26,9 @@ Anything left out is listed below.
 - `SlopOnboarding2.dc.html` — Slop onboarding 2 · Now
 - `SlopOnboarding3.dc.html` — Slop onboarding 3 · The cost
 - `SlopOnboarding4.dc.html` — Slop onboarding 4 · The feed
-- `SlopOnboarding5.dc.html` — Slop onboarding 5 · Build your channel
-- `SlopOnboarding6.dc.html` — Slop onboarding 6 · On air
+- `SlopOnboarding5.dc.html` — Slop onboarding 5 · Set up a demo
+- `SlopOnboarding6.dc.html` — Slop onboarding 6 · Build your channel
+- `SlopOnboarding7.dc.html` — Slop onboarding 7 · On air
 - `SlopSignIn.dc.html` — Slop first run 1 · Sign in
 - `SlopUpload.dc.html` — Slop first run 2 · Upload a study
 - `SlopCutting.dc.html` — Slop first run 3 · Cutting scenes
@@ -44,7 +45,7 @@ Anything left out is listed below.
 ## Uploaded files
 
 Images, fonts and media uploaded to the design are written once each under
-`assets/` — 3 in this export — and the exported files refer to them there. A
+`assets/` — 9 in this export — and the exported files refer to them there. A
 reference a script puts together while the page runs (for example
 `"/_blob/" + id`) is not rewritten and does not load from this folder.
 
