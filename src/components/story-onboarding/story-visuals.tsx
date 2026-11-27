@@ -344,7 +344,7 @@ export function ScatteredFilesVisual({
   return (
     <div
       className={cn(
-        "flex min-h-[440px] w-full flex-wrap content-center items-center justify-center gap-5",
+        "flex min-h-[360px] w-full flex-wrap content-center items-center justify-center gap-5 lg:min-h-[440px]",
         className,
       )}
     >

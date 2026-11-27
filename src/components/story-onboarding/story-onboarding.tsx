@@ -601,11 +601,16 @@ export default function StoryOnboarding({
           </div>
         </header>
 
-        <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div
+          className={cn(
+            "relative z-0 min-h-0 flex-1 overscroll-contain",
+            scrollableStep ? "overflow-y-auto" : "overflow-hidden",
+          )}
+        >
           <main
             className={cn(
-              "mx-auto flex w-full max-w-[1200px] flex-col flex-wrap items-center gap-12 px-6 py-6 lg:flex-row lg:gap-x-16 lg:gap-y-12",
-              scrollableStep ? "lg:items-start" : "min-h-full lg:items-center",
+              "mx-auto flex h-full w-full max-w-[1200px] flex-col flex-wrap items-center gap-12 px-6 py-6 lg:flex-row lg:gap-x-16 lg:gap-y-12",
+              scrollableStep ? "lg:items-start" : "lg:items-center",
               showPricing ? "pb-4" : "pb-[max(1.5rem,env(safe-area-inset-bottom))]",
             )}
           >
