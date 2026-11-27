@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api/complete";
+import { SlopPill } from "@/components/slop/slop-shell.tsx";
 import { cn } from "@/lib/utils.ts";
 import {
   DIVISION_CHANNEL_CODES,
@@ -13,7 +14,7 @@ import {
 
 /**
  * Desktop control: assign a study to one mobile division feed (or none).
- * Matches design screen 08 — channel grid + “where it lands” card.
+ * Matches SlopPublish — channel grid + “where it lands” card.
  */
 export default function DivisionAssign({
   studyId,
@@ -38,19 +39,39 @@ export default function DivisionAssign({
   });
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-      <div className="rounded-[1.5rem] border border-border bg-card p-6 shadow-lift">
-        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Review & publish</p>
-        <h3 className="mt-2 text-2xl font-bold tracking-tight">Which channel gets this study?</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Assign it to a phone division feed. You can do this before or after publishing.
+    <section className="slop-scope space-y-8 rounded-2xl p-1">
+      <div className="flex flex-col items-start gap-4">
+        <SlopPill dot="cyan">Review &amp; publish</SlopPill>
+        <h3
+          className="slop-h1 m-0 text-balance"
+          style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)" }}
+        >
+          Which <span className="slop-serif-emphasis slop-text-gradient-hot">channel</span> gets{" "}
+          <span className="slop-underline slop-underline-cyan">this</span> study?
+        </h3>
+        <p className="slop-lead m-0 max-w-[52ch]">
+          Assign it to a phone division feed — before or after publishing.
         </p>
+      </div>
 
-        <div className="mt-6">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+      <div className="flex flex-wrap items-stretch gap-6">
+        <div
+          className="slop-card flex min-w-0 flex-[999_1_520px] flex-col gap-5 p-8"
+          aria-labelledby="slop-pd-title"
+        >
+          <h4
+            id="slop-pd-title"
+            className="m-0 font-mono text-[13px] font-normal tracking-[0.12em] uppercase"
+            style={{ color: "#94a3b8" }}
+          >
             Phone division feed
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          </h4>
+          <div
+            role="group"
+            aria-labelledby="slop-pd-title"
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))" }}
+          >
             {DIVISION_SLUGS.map((slug) => {
               const selected = current === slug;
               return (
@@ -62,21 +83,22 @@ export default function DivisionAssign({
                   title={DIVISION_HINTS[slug]}
                   onClick={() => mutation.mutate(slug)}
                   className={cn(
-                    "min-h-[4.5rem] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                    selected
-                      ? "border-studio bg-studio text-white"
-                      : "border-border bg-background hover:border-foreground/30",
+                    "flex min-h-[88px] cursor-pointer flex-col items-start justify-between gap-2.5 p-4 text-left",
+                    selected ? "slop-card slop-card-beam" : "slop-card",
                   )}
                 >
                   <span
-                    className={cn(
-                      "font-mono text-[11px] tracking-[0.12em]",
-                      selected ? "text-mark" : "text-muted-foreground",
-                    )}
+                    className="font-mono text-[13px] tracking-[0.08em]"
+                    style={{ color: selected ? "#c084fc" : "#94a3b8" }}
                   >
                     {DIVISION_CHANNEL_CODES[slug]}
                   </span>
-                  <span className={cn("mt-1 block text-lg font-bold", selected ? "text-white" : "text-foreground")}>
+                  <span
+                    className={cn(
+                      "text-2xl font-extrabold tracking-tight",
+                      selected && "slop-text-gradient",
+                    )}
+                  >
                     {DIVISION_LABELS[slug]}
                   </span>
                 </button>
@@ -89,38 +111,54 @@ export default function DivisionAssign({
             disabled={mutation.isPending}
             onClick={() => mutation.mutate(null)}
             className={cn(
-              "mt-3 flex min-h-12 w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring",
-              current === null
-                ? "border-foreground bg-secondary text-foreground"
-                : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+              "slop-btn min-h-[52px] w-full justify-start text-left",
+              current === null ? "slop-btn-primary" : "slop-btn-ghost",
             )}
           >
             None. Keep this study off phone division feeds
           </button>
         </div>
-      </div>
 
-      <aside className="rounded-[1.5rem] bg-studio p-6 text-white shadow-lift">
-        <p className="font-mono text-[10px] tracking-[0.14em] text-white/45 uppercase">Where it lands</p>
-        {current ? (
-          <>
-            <p className="mt-3 text-2xl font-bold text-mark">{DIVISION_LABELS[current]} channel</p>
-            <p className="mt-2 text-sm text-white/70">
-              Scenes from this study appear in the {DIVISION_LABELS[current]} channel on the iOS app.
-            </p>
-            <span className="mt-6 inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-              iOS app
+        <aside
+          className="slop-card slop-border-l-gradient flex min-w-0 flex-[1_1_300px] flex-col justify-between gap-8 p-8"
+          aria-labelledby="slop-pv-title"
+          aria-live="polite"
+        >
+          <div className="flex flex-col gap-4">
+            <span className="slop-icon-box mb-0 self-start" aria-hidden>
+              📡
             </span>
-          </>
-        ) : (
-          <>
-            <p className="mt-3 text-2xl font-bold text-white/80">Off phone feeds</p>
-            <p className="mt-2 text-sm text-white/60">
-              This study stays on the desktop workspace until you assign a division channel.
-            </p>
-          </>
-        )}
-      </aside>
+            <h4
+              id="slop-pv-title"
+              className="m-0 font-mono text-[13px] font-normal tracking-[0.12em] uppercase"
+              style={{ color: "#94a3b8" }}
+            >
+              Where it lands
+            </h4>
+            {current ? (
+              <>
+                <div className="slop-text-gradient text-4xl font-extrabold leading-tight tracking-tight">
+                  {DIVISION_LABELS[current]} channel
+                </div>
+                <p className="m-0 text-base leading-relaxed" style={{ color: "#cbd5e1" }}>
+                  Scenes from this study appear in the {DIVISION_LABELS[current]} channel on the iOS app.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-4xl font-extrabold leading-tight tracking-tight">Off phone feeds</div>
+                <p className="m-0 text-base leading-relaxed" style={{ color: "#cbd5e1" }}>
+                  This study stays on the desktop workspace until you assign a division channel.
+                </p>
+              </>
+            )}
+          </div>
+          <span className="slop-status self-start">
+            <span className={cn("slop-dot", current ? "slop-dot-green" : "slop-dot-amber")} />
+            {current ? "iOS app" : "Desktop only"}
+          </span>
+        </aside>
+      </div>
     </section>
   );
 }

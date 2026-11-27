@@ -6,6 +6,7 @@ import "@fontsource/jetbrains-mono/500.css";
 import "@fontsource/jetbrains-mono/700.css";
 import "@fontsource-variable/schibsted-grotesk";
 import "@fontsource-variable/newsreader/wght-italic.css";
+import "./styles/slop-app.css";
 import { installChunkLoadErrorHandlers } from "./lib/chunk-load-error.ts";
 import App from "./App.tsx";
 

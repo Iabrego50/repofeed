@@ -7,11 +7,7 @@ import {
   normalizeEmailOtp,
   shouldAutoSubmitEmailOtp,
 } from "@/lib/email-otp";
-import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { Label } from "@/components/ui/label.tsx";
-import Logo from "@/components/logo.tsx";
-import SiteFooter from "@/components/site-footer.tsx";
+import SlopShell, { SlopBrand, SlopPill } from "@/components/slop/slop-shell.tsx";
 import { FEED_PATH } from "@/app-paths.ts";
 import { cn } from "@/lib/utils.ts";
 import { resolveReturnTo } from "./return-to.ts";
@@ -128,177 +124,254 @@ export default function SignInPage() {
   const fromStory = returnTo.startsWith("/welcome") || returnTo === "/studies/new";
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-paper">
-      <header className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-5">
-        <Link to="/" aria-label="repofeed.ai home">
-          <Logo />
-        </Link>
-        <Link
-          to={fromStory ? "/welcome" : "/demo"}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          {fromStory ? "Back to the story" : "Watch the demo"}
-        </Link>
+    <SlopShell>
+      <header className="slop-navbar relative z-20">
+        <div className="slop-navbar-inner flex-wrap px-6 py-2">
+          <Link to="/" aria-label="repofeed.ai home">
+            <SlopBrand />
+          </Link>
+          <div className="slop-row">
+            {fromStory ? (
+              <span className="slop-status">
+                <span className="slop-dot slop-dot-green" />
+                Preview mode
+              </span>
+            ) : null}
+            <Link
+              to={fromStory ? "/welcome" : "/demo"}
+              className="slop-btn slop-btn-ghost"
+              style={{ minHeight: 44 }}
+            >
+              {fromStory ? "Back to the story" : "Watch the demo"}
+            </Link>
+          </div>
+        </div>
       </header>
+
       <main
         className={cn(
-          "relative m-auto w-full px-5 pb-16",
-          fromStory ? "grid max-w-5xl gap-10 lg:grid-cols-2 lg:items-center" : "max-w-md",
+          "relative z-10 m-auto w-full flex-1 px-6 pb-12 pt-6",
+          fromStory
+            ? "grid max-w-[1200px] items-center gap-10 lg:grid-cols-2 lg:gap-16"
+            : "max-w-md",
         )}
       >
-        <div>
-        <p className="font-mono text-[11px] tracking-[0.16em] text-eyebrow uppercase">
-          {fromStory ? "One step from air" : "Welcome back"}
-        </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-          {fromStory ? "Sign in to keep your channel." : "Sign in to repofeed.ai"}
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          {fromStory
-            ? "Everything you just set up comes with you. Next stop: your first study."
-            : googleEnabled || appleEnabled
-              ? "New here or coming back, it’s the same step. Use a sign-in button below, or we’ll email you a link and a sign-in code. There’s no password to remember."
-              : "New here or coming back, it’s the same step. We’ll email you a link and a sign-in code, and there’s no password to remember."}
-        </p>
-        {sent ? (
-          <div className="mt-8 space-y-4">
-            <p role="status" className="rounded-xl border border-border bg-card p-5 text-[0.9375rem]">
-              We sent a sign-in link and a code to <span className="font-semibold">{email}</span>. Enter the code from your email here, or open the link on this device. If it hasn’t arrived in a minute, check spam.
-            </p>
-            <form onSubmit={(e) => void onVerify(e)} className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="signin-otp">Sign-in code</Label>
-                <Input
-                  ref={codeRef}
-                  id="signin-otp"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]{6,8}"
-                  autoComplete="one-time-code"
-                  autoFocus
-                  maxLength={EMAIL_OTP_MAX_LENGTH}
-                  value={code}
-                  onChange={(e) => onCodeChange(e.target.value)}
-                  onPaste={onCodePaste}
-                  placeholder="Enter code"
-                  className="h-12 tracking-[0.4em] text-center text-lg font-semibold"
-                  disabled={busy}
-                  aria-label="Sign-in code from your email"
-                />
-              </div>
-              <Button type="submit" size="lg" className="h-12 w-full font-semibold" disabled={busy || !isValidEmailOtp(code)}>
-                {busy ? "Signing you in…" : "Verify code"}
-              </Button>
-            </form>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 flex-1"
-                disabled={busy || cooldown > 0}
-                onClick={() => void sendLink()}
-              >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend email"}
-              </Button>
-              <Button type="button" variant="ghost" className="h-11 flex-1" disabled={busy} onClick={useDifferentEmail}>
-                Use a different email
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-8 space-y-4">
-            {(googleEnabled || appleEnabled) && (
+        <div className="rf-rise flex flex-col items-start gap-5">
+          <SlopPill dot={fromStory ? "green" : "purple"}>
+            {fromStory ? "One step from air" : "Welcome back"}
+          </SlopPill>
+          <h1 className="slop-h1 m-0 text-balance" style={{ fontSize: "clamp(2.25rem, 5vw, 3.75rem)" }}>
+            {fromStory ? (
               <>
-                {appleEnabled && (
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="h-12 w-full font-semibold"
-                    onClick={() => void onOAuth("apple")}
-                    disabled={busy}
-                  >
-                    Continue with Apple
-                  </Button>
-                )}
-                {googleEnabled && (
-                  <Button size="lg" className="h-12 w-full font-semibold" onClick={() => void onOAuth("google")} disabled={busy}>
-                    Continue with Google
-                  </Button>
-                )}
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="h-px flex-1 bg-border" />
-                  or email
-                  <span className="h-px flex-1 bg-border" />
-                </div>
+                Sign <span className="slop-underline slop-underline-double">in</span> to{" "}
+                <span className="slop-serif-emphasis slop-text-gradient-hot">keep</span> your channel.
+              </>
+            ) : (
+              <>
+                Sign in to <span className="slop-serif-emphasis slop-text-gradient-hot">repofeed</span>
+                <span style={{ color: "#94a3b8" }}>.ai</span>
               </>
             )}
-            <form onSubmit={(e) => void onEmail(e)} className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="signin-email">Work email</Label>
-                <Input
-                  id="signin-email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  className="h-11"
-                  disabled={busy}
-                />
-              </div>
-              <Button type="submit" variant={googleEnabled || appleEnabled ? "outline" : "default"} size="lg" className="h-12 w-full font-semibold" disabled={busy}>
-                {busy ? "Sending…" : "Email me a sign-in link"}
-              </Button>
-            </form>
-          </div>
-        )}
-        {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-        {fromStory && (
-          <p className="mt-6 text-xs text-muted-foreground">
-            By continuing you agree to the{" "}
-            <Link to="/terms" className="underline underline-offset-2">
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link to="/privacy" className="underline underline-offset-2">
-              Privacy Policy
-            </Link>
-            .
+          </h1>
+          <p className="slop-lead m-0 max-w-[44ch]">
+            {fromStory
+              ? "Everything you just set up comes with you — next stop: your first study."
+              : googleEnabled || appleEnabled
+                ? "New here or coming back, it’s the same step. Use a sign-in button below, or we’ll email you a link and a sign-in code. There’s no password to remember."
+                : "New here or coming back, it’s the same step. We’ll email you a link and a sign-in code, and there’s no password to remember."}
           </p>
-        )}
-        {returnTo !== FEED_PATH && !fromStory && (
-          <p className="mt-4 text-xs text-muted-foreground">You'll return to {returnTo} after signing in.</p>
-        )}
+
+          {sent ? (
+            <div className="mt-2 flex w-full flex-col gap-4">
+              <p role="status" className="slop-card m-0 text-[0.9375rem]">
+                We sent a sign-in link and a code to <span className="font-semibold">{email}</span>. Enter the
+                code from your email here, or open the link on this device. If it hasn’t arrived in a minute, check
+                spam.
+              </p>
+              <form onSubmit={(e) => void onVerify(e)} className="flex w-full flex-col gap-3">
+                <label htmlFor="signin-otp" className="text-sm font-semibold">
+                  Sign-in code
+                </label>
+                <div className="slop-ai-bar" style={{ minHeight: 56 }}>
+                  <input
+                    ref={codeRef}
+                    id="signin-otp"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6,8}"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    maxLength={EMAIL_OTP_MAX_LENGTH}
+                    value={code}
+                    onChange={(e) => onCodeChange(e.target.value)}
+                    onPaste={onCodePaste}
+                    placeholder="Enter code"
+                    disabled={busy}
+                    aria-label="Sign-in code from your email"
+                    style={{ height: 44, textAlign: "center", letterSpacing: "0.4em", fontSize: 18, fontWeight: 600 }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="slop-btn slop-btn-primary slop-btn-lg w-full"
+                  disabled={busy || !isValidEmailOtp(code)}
+                >
+                  {busy ? "Signing you in…" : "Verify code"}
+                </button>
+              </form>
+              <div className="slop-row w-full flex-wrap">
+                <button
+                  type="button"
+                  className="slop-btn slop-btn-ghost flex-1"
+                  disabled={busy || cooldown > 0}
+                  onClick={() => void sendLink()}
+                >
+                  {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend email"}
+                </button>
+                <button
+                  type="button"
+                  className="slop-btn slop-btn-ghost flex-1"
+                  disabled={busy}
+                  onClick={useDifferentEmail}
+                >
+                  Use a different email
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2 flex w-full flex-col gap-3.5">
+              {(googleEnabled || appleEnabled) && (
+                <>
+                  {appleEnabled && (
+                    <button
+                      type="button"
+                      className="slop-btn slop-btn-ghost slop-btn-lg w-full"
+                      onClick={() => void onOAuth("apple")}
+                      disabled={busy}
+                    >
+                      Continue with Apple
+                    </button>
+                  )}
+                  {googleEnabled && (
+                    <button
+                      type="button"
+                      className="slop-btn slop-btn-primary slop-btn-lg w-full"
+                      onClick={() => void onOAuth("google")}
+                      disabled={busy}
+                    >
+                      Continue with Google
+                    </button>
+                  )}
+                  <div className="slop-row w-full text-xs" style={{ color: "#94a3b8" }}>
+                    <span className="h-px flex-1" style={{ background: "rgba(255,255,255,0.12)" }} />
+                    or email
+                    <span className="h-px flex-1" style={{ background: "rgba(255,255,255,0.12)" }} />
+                  </div>
+                </>
+              )}
+              <form onSubmit={(e) => void onEmail(e)} className="flex w-full flex-col gap-3">
+                <label htmlFor="signin-email" className="text-sm font-semibold">
+                  Work email
+                </label>
+                <div className="slop-ai-bar" style={{ minHeight: 56 }}>
+                  <span aria-hidden>✨</span>
+                  <input
+                    id="signin-email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    disabled={busy}
+                    style={{ height: 44, fontSize: 18 }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className={cn(
+                    "slop-btn slop-btn-lg w-full",
+                    googleEnabled || appleEnabled ? "slop-btn-ghost" : "slop-btn-primary",
+                  )}
+                  disabled={busy}
+                >
+                  {busy ? "Sending…" : "Email me a sign-in link"}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {error && (
+            <p className="m-0 text-sm" style={{ color: "#f87171" }} role="alert">
+              {error}
+            </p>
+          )}
+
+          {fromStory && (
+            <p className="m-0 max-w-[44ch] text-sm" style={{ color: "#94a3b8" }}>
+              By continuing you agree to the{" "}
+              <Link to="/terms" className="underline underline-offset-2">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="underline underline-offset-2">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          )}
+          {returnTo !== FEED_PATH && !fromStory && (
+            <p className="m-0 text-xs" style={{ color: "#94a3b8" }}>
+              You&apos;ll return to {returnTo} after signing in.
+            </p>
+          )}
         </div>
 
         {fromStory && (
-          <aside className="rounded-[1.5rem] border border-border bg-card p-6 shadow-lift">
-            <div className="flex items-start justify-between gap-3">
-              <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Your channel</p>
-              <span className="rounded-full bg-mark px-2.5 py-0.5 text-[11px] font-semibold text-mark-foreground">
-                Not saved yet
-              </span>
+          <aside className="rf-rise flex min-h-[280px] items-center justify-center">
+            <div className="slop-card slop-card-beam flex w-full max-w-[440px] flex-col gap-5 p-7">
+              <div className="flex items-center justify-between gap-3">
+                <span className="slop-row">
+                  <span className="slop-icon-box mb-0" aria-hidden>
+                    📺
+                  </span>
+                  <span
+                    className="font-mono text-[13px] tracking-[0.12em] uppercase"
+                    style={{ color: "#94a3b8" }}
+                  >
+                    Your channel
+                  </span>
+                </span>
+                <span className="slop-status">
+                  <span className="slop-dot slop-dot-amber" />
+                  Not saved yet
+                </span>
+              </div>
+              <div className="slop-text-gradient text-4xl font-extrabold tracking-tight">Team research</div>
+              <dl className="m-0 flex flex-col">
+                {(
+                  [
+                    ["Tuned for", "Researcher"],
+                    ["On air", "Interviews · Usability tests"],
+                    ["Watching", "My team"],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between gap-4 py-3.5"
+                    style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}
+                  >
+                    <dt className="text-[15px]" style={{ color: "#94a3b8" }}>
+                      {label}
+                    </dt>
+                    <dd className="m-0 text-right text-[15px] font-semibold">{value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
-            <h2 className="mt-3 text-2xl font-bold tracking-tight">Team research</h2>
-            <dl className="mt-5 divide-y divide-border text-sm">
-              {(
-                [
-                  ["Tuned for", "Researcher"],
-                  ["On air", "Interviews · Usability tests"],
-                  ["Watching", "My team"],
-                ] as const
-              ).map(([label, value]) => (
-                <div key={label} className="flex items-center justify-between gap-4 py-3">
-                  <dt className="text-muted-foreground">{label}</dt>
-                  <dd className="font-medium text-foreground">{value}</dd>
-                </div>
-              ))}
-            </dl>
           </aside>
         )}
       </main>
-      <SiteFooter />
-    </div>
+    </SlopShell>
   );
 }

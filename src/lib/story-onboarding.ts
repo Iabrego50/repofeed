@@ -26,9 +26,25 @@ export const STORY_ROLES = [
 
 export type StoryRole = (typeof STORY_ROLES)[number];
 
+export const STORY_RESEARCH_KINDS = [
+  "Interviews",
+  "Surveys",
+  "Reports",
+  "Usability tests",
+  "Market research",
+] as const;
+
+export type StoryResearchKind = (typeof STORY_RESEARCH_KINDS)[number];
+
+export const STORY_AUDIENCES = ["Just me", "My team", "My company", "Clients"] as const;
+
+export type StoryAudience = (typeof STORY_AUDIENCES)[number];
+
 /** Session-local choices for the channel preview card — never written to user_metadata. */
 export type StorySession = {
   role?: StoryRole;
+  researchKinds: StoryResearchKind[];
+  audience?: StoryAudience;
   channelName: string;
 };
 
@@ -42,7 +58,7 @@ export const ROLE_LABELS: Record<StoryRole, string> = {
 };
 
 export function emptyStorySession(): StorySession {
-  return { channelName: "Team research" };
+  return { channelName: "Team research", researchKinds: [] };
 }
 
 export function hasCompletedStoryOnboarding(user: User | null | undefined): boolean {

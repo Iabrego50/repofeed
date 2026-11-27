@@ -1,6 +1,6 @@
 import { Copy, Loader2, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
+import { SlopPill } from "@/components/slop/slop-shell.tsx";
 import { cn } from "@/lib/utils.ts";
 
 export type JoinCodePanelViewProps = {
@@ -17,7 +17,7 @@ export type JoinCodePanelViewProps = {
 };
 
 /**
- * Presentational team join-code panel matching design screen 07.
+ * Presentational team join-code panel matching SlopJoinCode.
  * Settings wires live data; the design harness passes fixtures.
  */
 export function JoinCodePanelView({
@@ -34,66 +34,115 @@ export function JoinCodePanelView({
   const digits = (code ?? "").padEnd(8, " ").slice(0, 8).split("");
 
   return (
-    <section className={cn("space-y-5", className)}>
-      <div>
-        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">
-          {workspaceName} · workspace
-        </p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Get your team on the channel.</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          You’re an owner of this workspace. Share the join code and viewers land straight in your feed.
+    <section className={cn("slop-scope space-y-10 rounded-2xl p-1", className)}>
+      <div className="flex flex-col items-start gap-4">
+        <SlopPill dot="green">
+          {workspaceName} · Workspace
+        </SlopPill>
+        <h2
+          className="slop-h1 m-0 text-balance"
+          style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)" }}
+        >
+          Get your team <span className="slop-underline">on</span> the{" "}
+          <span className="slop-serif-emphasis slop-text-gradient-hot">channel</span>.
+        </h2>
+        <p className="slop-lead m-0 max-w-[52ch]">
+          You’re an owner of this workspace. Share the join code — viewers land straight in your feed.
         </p>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-[1.5rem] bg-studio p-6 text-white shadow-lift">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-eyebrow uppercase">Team join code</p>
+      <div className="flex flex-wrap items-stretch gap-6">
+        <div
+          className="slop-card slop-card-beam flex min-w-0 flex-[999_1_520px] flex-col gap-6 p-8"
+          aria-labelledby="slop-jc-title"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h3
+              id="slop-jc-title"
+              className="m-0 font-mono text-[13px] font-normal tracking-[0.12em] uppercase"
+              style={{ color: "#94a3b8" }}
+            >
+              Team join code
+            </h3>
+          </div>
           {loading || !code ? (
-            <Skeleton className="mt-5 h-16 w-full rounded-xl bg-white/10" />
+            <Skeleton className="h-16 w-full rounded-xl bg-white/10" />
           ) : (
-            <div className="mt-5 grid grid-cols-8 gap-1.5 sm:gap-2" aria-label="Team join code">
+            <div
+              className="grid grid-cols-8 gap-1.5 sm:gap-2.5"
+              aria-label="Team join code"
+              role="img"
+            >
               {digits.map((ch, i) => (
                 <span
                   key={i}
-                  className="flex aspect-square items-center justify-center rounded-xl border border-white/10 bg-[#0a0d16] font-mono text-lg font-bold text-mark sm:text-xl"
+                  className="flex aspect-[3/4] items-center justify-center rounded-xl border font-mono text-[clamp(1.25rem,3.2vw,2.5rem)] font-bold"
+                  style={{
+                    background: "rgba(2, 6, 23, .7)",
+                    borderColor: "rgba(192, 132, 252, .35)",
+                  }}
                 >
-                  {ch.trim() || "·"}
+                  <span className="slop-text-gradient">{ch.trim() || "·"}</span>
                 </span>
               ))}
             </div>
           )}
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button className="h-11 font-semibold" disabled={!code} onClick={onCopy}>
+          <div className="slop-row flex-wrap">
+            <button
+              type="button"
+              className="slop-btn slop-btn-primary slop-btn-lg"
+              disabled={!code}
+              onClick={onCopy}
+            >
               <Copy className="size-4" /> Copy code
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"
+            </button>
+            <button
+              type="button"
+              className="slop-btn slop-btn-ghost slop-btn-lg"
               disabled={regenerating}
               onClick={onRegenerate}
             >
               {regenerating ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
               Regenerate
-            </Button>
+            </button>
           </div>
-          <p className="mt-3 text-xs text-white/45">Regenerating revokes the previous code immediately.</p>
+          <div className="slop-alert slop-border-l-amber">
+            <span className="slop-dot slop-dot-amber mt-[7px]" />
+            <div>Regenerating revokes the previous code immediately.</div>
+          </div>
         </div>
 
-        <aside className="rounded-[1.5rem] border border-border bg-card p-6 shadow-lift">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+        <aside
+          className="slop-card slop-border-l-cyan flex min-w-0 flex-[1_1_300px] flex-col gap-5 p-8"
+          aria-labelledby="slop-how-title"
+        >
+          <span className="slop-icon-box slop-icon-cyan mb-0" aria-hidden>
+            📱
+          </span>
+          <h3
+            id="slop-how-title"
+            className="m-0 font-mono text-[13px] font-normal tracking-[0.12em] uppercase"
+            style={{ color: "#94a3b8" }}
+          >
             How viewers join
-          </p>
-          <ol className="mt-4 space-y-3 text-sm">
+          </h3>
+          <ol className="m-0 flex list-none flex-col gap-4 p-0 text-base leading-snug">
             {[
-              "Open the iOS app, or go to /join on the web",
+              <>
+                Open the iOS app, or go to <span className="slop-mono text-[15px]">/join</span> on the web
+              </>,
               "Enter the code",
               `Start scrolling ${workspaceName}`,
             ].map((line, i) => (
-              <li key={line} className="flex items-start gap-3">
-                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-bold text-background">
+              <li key={i} className="flex items-center gap-3">
+                <span
+                  aria-hidden
+                  className="grid size-[26px] shrink-0 place-items-center rounded-full font-mono text-[13px] text-white"
+                  style={{ background: "linear-gradient(135deg, #4338ca, #7e22ce)" }}
+                >
                   {i + 1}
                 </span>
-                {line}
+                <span>{line}</span>
               </li>
             ))}
           </ol>

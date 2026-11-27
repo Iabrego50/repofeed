@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { Upload } from "lucide-react";
 import Logo from "@/components/logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { Label } from "@/components/ui/label.tsx";
 import { JoinCodePanelView } from "@/components/design-system/join-code-panel.tsx";
 import { StudyShell } from "@/components/design-system/study-shell.tsx";
+import SlopShell, { SlopBrand, SlopPill } from "@/components/slop/slop-shell.tsx";
 import ViewerOnboarding from "@/components/viewer-onboarding/viewer-onboarding.tsx";
 import StorySignupPlans from "@/components/story-onboarding/story-signup-plans.tsx";
 import {
@@ -22,17 +20,22 @@ import { cn } from "@/lib/utils.ts";
 /** Fixture for the web story finish step with pricing (desktop + mobile web). */
 function StorySignupFixture() {
   return (
-    <div className="min-h-dvh bg-paper px-6 py-10 text-foreground">
-      <div className="mx-auto w-full max-w-3xl">
-        <Logo />
-        <p className="mt-8 font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">You&apos;re on air</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Pick a plan and start your channel.</h1>
-        <p className="mt-2 max-w-prose text-muted-foreground">
+    <SlopShell>
+      <div className="mx-auto w-full max-w-3xl px-6 py-10">
+        <SlopBrand />
+        <SlopPill dot="green">You&apos;re on air</SlopPill>
+        <h1 className="slop-h1 mt-4 text-balance" style={{ fontSize: "clamp(2rem, 4vw, 3rem)" }}>
+          Pick a plan and start your{" "}
+          <span className="slop-serif-emphasis slop-text-gradient-hot">channel</span>.
+        </h1>
+        <p className="slop-lead mt-2 max-w-prose">
           Same prices as the site. Viewers stay free. Paid plans open Stripe after workspace setup.
         </p>
-        <StorySignupPlans onStartFree={() => undefined} onStartPaid={() => undefined} />
+        <div className="mt-8">
+          <StorySignupPlans onStartFree={() => undefined} onStartPaid={() => undefined} />
+        </div>
       </div>
-    </div>
+    </SlopShell>
   );
 }
 
@@ -86,110 +89,144 @@ function DesktopChrome({ children }: { children: React.ReactNode }) {
 function DivisionPickerFixture() {
   const [current, setCurrent] = useState<DivisionSlug | null>("auto");
   return (
-    <section className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-      <div className="rounded-[1.5rem] border border-border bg-card p-6 shadow-lift">
-        <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Review & publish</p>
-        <h3 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Which channel gets this study?</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Assign it to a phone division feed. You can do this before or after publishing.
-        </p>
-        <div className="mt-6">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Phone division feed</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {DIVISION_SLUGS.map((slug) => {
-              const selected = current === slug;
-              return (
-                <button
-                  key={slug}
-                  type="button"
-                  aria-pressed={selected}
-                  title={DIVISION_HINTS[slug]}
-                  onClick={() => setCurrent(slug)}
-                  className={cn(
-                    "min-h-[4.5rem] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-colors",
-                    selected ? "border-studio bg-studio text-white" : "border-border bg-background hover:border-foreground/30",
-                  )}
-                >
-                  <span className={cn("font-mono text-[11px] tracking-[0.12em]", selected ? "text-mark" : "text-muted-foreground")}>
-                    {DIVISION_CHANNEL_CODES[slug]}
-                  </span>
-                  <span className={cn("mt-1 block text-lg font-bold", selected ? "text-white" : "text-foreground")}>
-                    {DIVISION_LABELS[slug]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <button
-            type="button"
-            aria-pressed={current === null}
-            onClick={() => setCurrent(null)}
-            className={cn(
-              "mt-3 flex min-h-12 w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed px-4 text-sm font-medium",
-              current === null
-                ? "border-foreground bg-secondary text-foreground"
-                : "border-border text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            None. Keep this study off phone division feeds
-          </button>
+    <StudyShell step="publish">
+      <section className="space-y-8">
+        <div className="flex flex-col items-start gap-4">
+          <SlopPill dot="cyan">Review &amp; publish</SlopPill>
+          <h3 className="slop-h1 m-0 text-balance" style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)" }}>
+            Which <span className="slop-serif-emphasis slop-text-gradient-hot">channel</span> gets{" "}
+            <span className="slop-underline slop-underline-cyan">this</span> study?
+          </h3>
+          <p className="slop-lead m-0 max-w-[52ch]">
+            Assign it to a phone division feed — before or after publishing.
+          </p>
         </div>
-      </div>
-      <aside className="rounded-[1.5rem] bg-studio p-6 text-white shadow-lift">
-        <p className="font-mono text-[10px] tracking-[0.14em] text-white/45 uppercase">Where it lands</p>
-        {current ? (
-          <>
-            <p className="mt-3 text-2xl font-bold text-mark">{DIVISION_LABELS[current]} channel</p>
-            <p className="mt-2 text-sm text-white/70">
-              Scenes from this study appear in the {DIVISION_LABELS[current]} channel on the iOS app.
+        <div className="flex flex-wrap items-stretch gap-6">
+          <div className="slop-card flex min-w-0 flex-[999_1_520px] flex-col gap-5 p-8">
+            <p className="m-0 font-mono text-[13px] tracking-[0.12em] uppercase" style={{ color: "#94a3b8" }}>
+              Phone division feed
             </p>
-            <span className="mt-6 inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-              iOS app
-            </span>
-          </>
-        ) : (
-          <>
-            <p className="mt-3 text-2xl font-bold text-white/80">Off phone feeds</p>
-            <p className="mt-2 text-sm text-white/60">
-              This study stays on the desktop workspace until you assign a division channel.
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {DIVISION_SLUGS.map((slug) => {
+                const selected = current === slug;
+                return (
+                  <button
+                    key={slug}
+                    type="button"
+                    aria-pressed={selected}
+                    title={DIVISION_HINTS[slug]}
+                    onClick={() => setCurrent(slug)}
+                    className={cn(
+                      "min-h-[4.5rem] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-colors",
+                      selected
+                        ? "border-violet-400/60 bg-violet-500/20 text-white"
+                        : "border-white/15 bg-white/5 text-slate-200 hover:border-white/30",
+                    )}
+                  >
+                    <span className="font-mono text-[11px] tracking-[0.12em]" style={{ color: selected ? "#c084fc" : "#94a3b8" }}>
+                      {DIVISION_CHANNEL_CODES[slug]}
+                    </span>
+                    <span className="mt-1 block text-lg font-bold">{DIVISION_LABELS[slug]}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              aria-pressed={current === null}
+              onClick={() => setCurrent(null)}
+              className={cn(
+                "flex min-h-12 w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed px-4 text-sm font-medium",
+                current === null
+                  ? "border-white/40 bg-white/10 text-white"
+                  : "border-white/20 text-slate-400 hover:border-white/40",
+              )}
+            >
+              None. Keep this study off phone division feeds
+            </button>
+          </div>
+          <aside className="slop-card slop-border-l-cyan flex min-w-0 flex-1 flex-col gap-3 p-7" style={{ flexBasis: 280 }}>
+            <p className="m-0 font-mono text-[10px] tracking-[0.14em] uppercase" style={{ color: "#94a3b8" }}>
+              Where it lands
             </p>
-          </>
-        )}
-      </aside>
-    </section>
+            {current ? (
+              <>
+                <p className="m-0 text-2xl font-bold" style={{ color: "#c084fc" }}>
+                  {DIVISION_LABELS[current]} channel
+                </p>
+                <p className="m-0 text-sm" style={{ color: "#94a3b8" }}>
+                  Scenes from this study appear in the {DIVISION_LABELS[current]} channel on the iOS app.
+                </p>
+                <span className="slop-badge slop-badge-ai mt-4 w-fit">iOS app</span>
+              </>
+            ) : (
+              <>
+                <p className="m-0 text-2xl font-bold text-white/80">Off phone feeds</p>
+                <p className="m-0 text-sm" style={{ color: "#94a3b8" }}>
+                  This study stays on the desktop workspace until you assign a division channel.
+                </p>
+              </>
+            )}
+          </aside>
+        </div>
+      </section>
+    </StudyShell>
   );
 }
 
 function UploadFixture() {
   return (
     <StudyShell step="upload">
-      <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-start">
-        <div>
-          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Team research · first study</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Empty the drawer.</h1>
-          <p className="mt-3 max-w-prose text-muted-foreground">
-            Drop in the interviews, surveys and decks from one study. Messy is fine. We’ll cut them into short insight scenes.
+      <div className="rf-rise grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+        <div className="flex flex-col items-start gap-5">
+          <SlopPill dot="purple">Team research · First study</SlopPill>
+          <h1 className="slop-h1 m-0 text-balance" style={{ fontSize: "clamp(2rem, 4.5vw, 3.25rem)" }}>
+            Empty <span className="slop-underline slop-underline-squiggle slop-underline-pink">the</span>{" "}
+            <span className="slop-serif-emphasis slop-text-gradient-hot">drawer</span>.
+          </h1>
+          <p className="slop-lead m-0 max-w-[44ch]">
+            Drop in the interviews, surveys and decks from one study. Messy is fine — we&apos;ll cut them into short
+            insight scenes.
           </p>
-          <div className="mt-6 space-y-2">
-            <Label htmlFor="harness-study-name" className="font-semibold">
+          <div className="flex w-full flex-col gap-2">
+            <label htmlFor="harness-study-name" className="text-[15px] font-semibold">
               Study name
-            </Label>
-            <Input id="harness-study-name" className="h-11" placeholder="e.g. Q3 onboarding interviews" defaultValue="" />
+            </label>
+            <div className="slop-ai-bar" style={{ minHeight: 56 }}>
+              <span aria-hidden>✨</span>
+              <input
+                id="harness-study-name"
+                placeholder="e.g. Q3 onboarding interviews"
+                style={{ height: 44, fontSize: 18 }}
+                defaultValue=""
+              />
+            </div>
           </div>
-          <Button type="button" variant="outline" className="mt-4 h-11 rounded-full font-semibold">
+          <button type="button" className="slop-btn slop-btn-ghost slop-btn-lg">
             No files handy? Use the sample study
-          </Button>
+          </button>
         </div>
-        <div className="rounded-[1.5rem] border border-dashed border-border bg-card p-8 shadow-lift">
-          <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-            <Upload className="size-8 text-primary" />
-            <p className="mt-3 text-base font-bold">Drop research files here</p>
-            <span className="mt-4 inline-flex h-10 items-center rounded-full bg-studio px-5 text-sm font-semibold text-white">
-              Choose files
+        <div className="flex flex-col gap-4">
+          <div
+            className="slop-card flex min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center"
+            style={{ border: "2px dashed rgba(192,132,252,.5)" }}
+          >
+            <span className="slop-icon-box slop-icon-cyan mb-0" aria-hidden>
+              📂
             </span>
-            <p className="mt-3 font-mono text-[11px] tracking-wide text-muted-foreground">docx · xlsx · pdf · md · pptx</p>
+            <div className="slop-text-gradient text-[1.75rem] font-extrabold tracking-tight">
+              Drop research files here
+            </div>
+            <button type="button" className="slop-btn slop-btn-primary">
+              Choose files
+            </button>
+            <span className="font-mono text-[13px]" style={{ color: "#94a3b8" }}>
+              docx · xlsx · pdf · md · pptx
+            </span>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Nothing here yet.</p>
+          <p className="m-0 text-[15px]" style={{ color: "#94a3b8" }}>
+            Nothing here yet.
+          </p>
         </div>
       </div>
     </StudyShell>
@@ -205,34 +242,56 @@ function ProcessingFixture() {
   ];
   return (
     <StudyShell step="scenes">
-      <div className="grid gap-8 lg:grid-cols-[1fr_1.05fr] lg:items-center">
-        <div>
-          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">In the edit room</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">That's a cut.</h1>
-          <p className="mt-3 max-w-prose text-muted-foreground">
-            We’re reading every file so your team doesn’t have to. You can leave this tab. Nothing goes on air until you’ve reviewed it.
+      <div className="rf-rise grid gap-8 lg:grid-cols-[1fr_1.05fr] lg:items-center">
+        <div className="flex flex-col items-start gap-5">
+          <SlopPill dot="pink">In the edit room</SlopPill>
+          <h1
+            className="slop-h1 slop-text-gradient m-0 text-balance"
+            style={{ fontSize: "clamp(2rem, 4.5vw, 3.25rem)" }}
+          >
+            That&apos;s a cut.
+          </h1>
+          <p className="slop-lead m-0 max-w-[44ch]">
+            We&apos;re reading every file so your team doesn&apos;t have to. You can leave this tab — nothing goes on
+            air until you&apos;ve reviewed it.
           </p>
-          <Button className="mt-6 h-11 font-semibold">Review the scenes</Button>
+          <button type="button" className="slop-btn slop-btn-primary slop-btn-lg">
+            Review the scenes
+          </button>
         </div>
-        <aside className="rounded-[1.5rem] bg-studio p-6 text-white shadow-lift">
-          <div className="flex items-start justify-between gap-3">
-            <p className="font-mono text-[10px] tracking-[0.14em] text-white/45 uppercase">Sample study</p>
-            <span className="rounded-full bg-mark px-2.5 py-0.5 text-[11px] font-semibold text-mark-foreground">
-              Ready for review
-            </span>
-          </div>
-          <div className="mt-3 h-0.5 rounded-full bg-mark" />
-          <ul className="mt-5 space-y-3">
-            {phases.map((label) => (
-              <li key={label} className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-mark" />
-                  {label}
+        <aside className="flex min-h-[280px] items-center justify-center">
+          <div className="slop-card slop-card-beam flex w-full max-w-[440px] flex-col gap-6 p-7">
+            <div className="flex items-center justify-between gap-3">
+              <span className="slop-row">
+                <span className="slop-icon-box slop-icon-pink mb-0" aria-hidden>
+                  ✂️
                 </span>
-                <span className="text-white/55">Done</span>
-              </li>
-            ))}
-          </ul>
+                <span className="font-mono text-[13px] tracking-[0.12em] uppercase" style={{ color: "#94a3b8" }}>
+                  Sample study
+                </span>
+              </span>
+              <span className="slop-status">
+                <span className="slop-dot slop-dot-green" />
+                Ready for review
+              </span>
+            </div>
+            <div className="slop-progress" aria-hidden>
+              <div className="slop-progress-bar" style={{ width: "100%" }} />
+            </div>
+            <ol className="m-0 flex list-none flex-col gap-[18px] p-0">
+              {phases.map((label) => (
+                <li key={label} className="flex items-center gap-3.5" style={{ color: "#f8fafc" }}>
+                  <span
+                    aria-hidden
+                    className="shrink-0"
+                    style={{ width: 9, height: 9, borderRadius: "50%", background: "#10b981" }}
+                  />
+                  <span className="flex-1 text-lg font-semibold">{label}</span>
+                  <span className="font-mono text-[13px]">Done</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </aside>
       </div>
     </StudyShell>
@@ -271,28 +330,43 @@ function EditorFixture() {
   const keptCount = kept.filter(Boolean).length;
   return (
     <StudyShell step="scenes">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="font-mono text-[11px] tracking-[0.14em] text-eyebrow uppercase">Sample study · first cut</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">You're the editor.</h1>
-          <p className="mt-2 max-w-prose text-muted-foreground">
-            Keep the scenes worth your team's scroll. Cut the rest. Nothing airs without your say.
+      <div className="rf-rise flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col items-start gap-4">
+          <SlopPill dot="purple">Sample study · First cut</SlopPill>
+          <h1 className="slop-h1 m-0 text-balance" style={{ fontSize: "clamp(2rem, 4vw, 3.25rem)" }}>
+            You&apos;re <span className="slop-underline slop-underline-emerald">the</span>{" "}
+            <span className="slop-serif-emphasis slop-text-gradient-hot">editor</span>.
+          </h1>
+          <p className="slop-lead m-0 max-w-[52ch]">
+            Keep the scenes worth your team&apos;s scroll — cut the rest. Nothing airs without your say.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
+        <div className="slop-row flex-wrap">
+          <span className="slop-status" aria-live="polite">
+            <span className="slop-dot slop-dot-green" />
             {keptCount} of {DEMO_SCENES.length} scenes kept
           </span>
-          <Button className="h-11 font-semibold">Pick a channel</Button>
+          <button type="button" className="slop-btn slop-btn-primary slop-btn-lg">
+            Pick a channel
+          </button>
         </div>
       </div>
       <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {DEMO_SCENES.map((scene, i) => (
-          <li key={scene.n} className="flex flex-col rounded-[1.5rem] bg-studio p-4 text-white shadow-lift">
-            <p className="font-mono text-[10px] tracking-[0.14em] text-white/45 uppercase">Scene {scene.n}</p>
-            <p className="mt-3 flex-1 font-serif text-[1.05rem] leading-snug">“{scene.quote}”</p>
-            <p className="mt-3 text-xs text-white/50">{scene.meta}</p>
-            <span className="mt-3 w-fit rounded-full bg-white/10 px-2.5 py-1 font-mono text-[10px] text-white/80">
+          <li key={scene.n} className="slop-card flex flex-col gap-3 p-5">
+            <p className="m-0 font-mono text-[10px] tracking-[0.14em] uppercase" style={{ color: "#94a3b8" }}>
+              Scene {scene.n}
+            </p>
+            <p className="m-0 flex-1 font-[family-name:var(--font-serif)] text-[1.05rem] leading-snug italic text-white">
+              “{scene.quote}”
+            </p>
+            <p className="m-0 text-xs" style={{ color: "#94a3b8" }}>
+              {scene.meta}
+            </p>
+            <span
+              className="w-fit rounded-full px-2.5 py-1 font-mono text-[10px]"
+              style={{ background: "rgba(255,255,255,.08)", color: "#cbd5e1" }}
+            >
               Cut from {scene.source}
             </span>
             <button
@@ -300,8 +374,8 @@ function EditorFixture() {
               aria-pressed={kept[i]}
               onClick={() => setKept((prev) => prev.map((v, j) => (j === i ? !v : v)))}
               className={cn(
-                "mt-4 flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold",
-                kept[i] ? "bg-mark text-mark-foreground" : "bg-white/10 text-white/70",
+                "mt-1 flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold",
+                kept[i] ? "bg-amber-300 text-black" : "bg-white/10 text-white/70",
               )}
             >
               {kept[i] ? "Keeping. Tap to cut" : "Cut. Tap to keep"}
@@ -316,47 +390,67 @@ function EditorFixture() {
 function JoinFixture() {
   const chars = FIXTURE_CODE.split("");
   return (
-    <div className="dark flex min-h-dvh flex-col bg-studio px-5 py-10 text-white">
-      <header className="mx-auto flex w-full max-w-lg items-center justify-between">
-        <Logo className="text-white" />
-      </header>
-      <main className="mx-auto mt-12 w-full max-w-lg flex-1">
-        <p className="font-mono text-[11px] tracking-[0.16em] text-eyebrow uppercase">Join the channel</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">Enter the team join code</h1>
-        <p className="mt-2 text-sm text-white/60">
-          Ask your researcher for the code from Workspace settings. You’ll land straight in their feed.
-        </p>
-        <div className="mt-8 rounded-[1.5rem] bg-[#12162a] p-5 sm:p-6">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-eyebrow uppercase">Team join code</p>
-          <div className="mt-5 grid grid-cols-8 gap-1.5 sm:gap-2">
-            {chars.map((ch, i) => (
-              <span
-                key={i}
-                className="flex aspect-square items-center justify-center rounded-xl border border-white/10 bg-[#0a0d16] font-mono text-lg font-bold text-mark sm:text-xl"
-              >
-                {ch}
-              </span>
-            ))}
-          </div>
-          <Button className="mt-6 h-11 w-full font-semibold">Connect</Button>
+    <SlopShell>
+      <header className="slop-navbar relative z-20">
+        <div className="slop-navbar-inner px-6 py-2">
+          <SlopBrand />
         </div>
-        <aside className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-white/45 uppercase">How viewers join</p>
-          <ol className="mt-3 space-y-2.5 text-sm text-white/80">
-            {["Open the iOS app, or go to /join on the web", "Enter the code", "Start scrolling Acme Research"].map(
-              (line, i) => (
-                <li key={line} className="flex items-start gap-3">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white text-[10px] font-bold text-studio">
-                    {i + 1}
-                  </span>
-                  {line}
-                </li>
-              ),
-            )}
-          </ol>
-        </aside>
+      </header>
+      <main className="relative z-10 mx-auto w-full max-w-lg flex-1 px-6 pb-12 pt-10">
+        <div className="rf-rise flex flex-col items-start gap-4">
+          <SlopPill dot="cyan">Join the channel</SlopPill>
+          <h1 className="slop-h1 m-0 text-balance" style={{ fontSize: "clamp(2rem, 4vw, 2.75rem)" }}>
+            Enter the team <span className="slop-serif-emphasis slop-text-gradient-hot">join code</span>
+          </h1>
+          <p className="slop-lead m-0 max-w-[44ch]">
+            Ask your researcher for the code from Workspace settings. You&apos;ll land straight in their feed.
+          </p>
+          <div className="slop-card mt-4 w-full p-6">
+            <p className="m-0 font-mono text-[10px] tracking-[0.14em] uppercase" style={{ color: "#94a3b8" }}>
+              Team join code
+            </p>
+            <div className="mt-5 grid grid-cols-8 gap-1.5 sm:gap-2">
+              {chars.map((ch, i) => (
+                <span
+                  key={i}
+                  className="flex aspect-square items-center justify-center rounded-xl border font-mono text-lg font-bold sm:text-xl"
+                  style={{
+                    borderColor: "rgba(192,132,252,.35)",
+                    background: "rgba(2,6,23,.7)",
+                    color: "#c084fc",
+                  }}
+                >
+                  {ch}
+                </span>
+              ))}
+            </div>
+            <button type="button" className="slop-btn slop-btn-primary slop-btn-lg mt-6 w-full">
+              Connect
+            </button>
+          </div>
+          <aside className="slop-card slop-border-l-cyan mt-2 w-full p-5">
+            <p className="m-0 font-mono text-[10px] tracking-[0.14em] uppercase" style={{ color: "#94a3b8" }}>
+              How viewers join
+            </p>
+            <ol className="mt-3 space-y-2.5 text-sm text-slate-200">
+              {["Open the iOS app, or go to /join on the web", "Enter the code", "Start scrolling Acme Research"].map(
+                (line, i) => (
+                  <li key={line} className="flex items-start gap-3">
+                    <span
+                      className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white"
+                      style={{ background: "linear-gradient(135deg, #4338ca, #7e22ce)" }}
+                    >
+                      {i + 1}
+                    </span>
+                    {line}
+                  </li>
+                ),
+              )}
+            </ol>
+          </aside>
+        </div>
       </main>
-    </div>
+    </SlopShell>
   );
 }
 
@@ -516,16 +610,33 @@ export default function DesignHarnessPage() {
       return <StorySignupFixture />;
     case "07-join-code":
       return (
-        <DesktopChrome>
-          <JoinCodePanelView workspaceName={WORKSPACE} code={FIXTURE_CODE} hideEmail onCopy={() => undefined} onRegenerate={() => undefined} />
-        </DesktopChrome>
+        <SlopShell>
+          <header className="slop-navbar relative z-20">
+            <div className="slop-navbar-inner flex-wrap px-6 py-2">
+              <SlopBrand />
+              <div className="slop-row">
+                <span className="slop-status">
+                  <span className="slop-dot slop-dot-green" />
+                  Signed in
+                </span>
+                <span className="text-[15px] font-semibold">{WORKSPACE}</span>
+                <span className="slop-badge slop-badge-ai">Owner</span>
+              </div>
+            </div>
+          </header>
+          <main className="relative z-10 mx-auto w-full max-w-[1120px] flex-1 px-6 py-10 lg:px-16">
+            <JoinCodePanelView
+              workspaceName={WORKSPACE}
+              code={FIXTURE_CODE}
+              hideEmail
+              onCopy={() => undefined}
+              onRegenerate={() => undefined}
+            />
+          </main>
+        </SlopShell>
       );
     case "08-division":
-      return (
-        <DesktopChrome>
-          <DivisionPickerFixture />
-        </DesktopChrome>
-      );
+      return <DivisionPickerFixture />;
     case "10-upload":
       return <UploadFixture />;
     case "11-processing":
