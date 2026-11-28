@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useReducedMotion } from "@/hooks/use-reduced-motion.ts";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
@@ -15,6 +16,7 @@ import { useNativeViewer } from "@/hooks/use-native-viewer.ts";
 import { cn } from "@/lib/utils.ts";
 import { appHomePath } from "@/lib/native-access.ts";
 import { isNativePlatform } from "@/lib/native";
+import { api } from "@/lib/api/complete";
 import SlopShell, { SlopBrand, SlopPill } from "@/components/slop/slop-shell.tsx";
 import {
   emptyStorySession,
@@ -25,6 +27,7 @@ import {
   STORY_RESEARCH_KINDS,
   STORY_ROLES,
   suggestChannelName,
+  takePendingPlan,
   type StoryAudience,
   type StoryResearchKind,
   type StoryRole,
@@ -46,7 +49,6 @@ import {
 } from "@/lib/demo-request.ts";
 import "./story-onboarding.css";
 
-const SEGMENT_MS = 10000;
 const STORY_HISTORY_KEY = "repofeed_story_step";
 /** Seven design scenes; build-channel substeps share progress bar 6. */
 const PROGRESS_COUNT = 7;
@@ -181,18 +183,38 @@ const STEPS: Step[] = [
 function Title({ text }: { text: string }) {
   // Keep non-emphasis text as raw nodes so accessible names keep spaces
   // (wrapping every segment in <span> can glue "Remember"+"8pm" → "Remember8pm").
-  // First *word* uses underline-cyan (artboard “this”); later *word* uses serif hot (“your”).
+  // Artboard: *this*/*the*/*channel* → cyan underline; *same* → underline;
+  // *on air* → gradient; other *word* → serif hot.
   const parts = text.split(/(\*[^*]+\*)/g);
-  let emphasis = 0;
   return (
     <>
       {parts.map((part, i) => {
         if (part.startsWith("*") && part.endsWith("*")) {
-          const n = emphasis++;
           const inner = part.slice(1, -1);
-          if (n === 0 && text.includes("*this*")) {
+          const lower = inner.toLowerCase();
+          if (lower === "this" || lower === "the" || lower === "channel") {
             return (
-              <span key={i} className="slop-underline slop-underline-cyan">
+              <span
+                key={i}
+                className={cn(
+                  "slop-underline slop-underline-cyan",
+                  lower === "the" && "slop-underline-squiggle",
+                )}
+              >
+                {inner}
+              </span>
+            );
+          }
+          if (lower === "same") {
+            return (
+              <span key={i} className="slop-underline">
+                {inner}
+              </span>
+            );
+          }
+          if (lower === "on air") {
+            return (
+              <span key={i} className="slop-text-gradient">
                 {inner}
               </span>
             );
@@ -237,6 +259,8 @@ function Chip({
 export type StoryOnboardingProps = {
   preview?: boolean;
   replay?: boolean;
+  /** Jump to a step id (e.g. "role") when signed-in users already finished the story but still need a workspace. */
+  startAt?: string;
   onFinished?: (destination: "upload" | "demo" | "home" | "setup") => void;
 };
 
@@ -244,16 +268,22 @@ export type StoryOnboardingProps = {
  * Full-screen product story (web). Matches SlopMain artboards; pricing stays on
  * the finish step. Native viewer onboarding is a separate component.
  */
-export default function StoryOnboarding({ preview = false, replay = false, onFinished }: StoryOnboardingProps) {
+export default function StoryOnboarding({
+  preview = false,
+  replay = false,
+  startAt,
+  onFinished,
+}: StoryOnboardingProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { workspaces } = useWorkspace();
+  const { workspaces, refresh } = useWorkspace();
   const { nativeViewerMode } = useNativeViewer();
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(() => {
-    // Preview-only deep link for screenshots / harness (?storyStep=role|demo|ready|0–N).
-    if (!preview || typeof window === "undefined") return 0;
-    const raw = new URLSearchParams(window.location.search).get("storyStep");
+    if (typeof window === "undefined") return 0;
+    const params = new URLSearchParams(window.location.search);
+    // Deep link for screenshots / harness (?storyStep=role|demo|ready|0–N).
+    const raw = params.get("storyStep") ?? startAt;
     if (!raw) return 0;
     const byId = STEPS.findIndex((s) => s.id === raw);
     if (byId >= 0) return byId;
@@ -265,7 +295,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     channelName: suggestChannelName(user?.email),
   }));
   const [busy, setBusy] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const [filesOpened, setFilesOpened] = useState(0);
   const [demoEmail, setDemoEmail] = useState("");
   const [demoError, setDemoError] = useState("");
   const [demoSent, setDemoSent] = useState(false);
@@ -347,11 +377,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     }
   }, [goTo, index]);
 
-  useEffect(() => {
-    if (paused || reduced || isQuestion || isFinish || isDemo) return;
-    const id = window.setTimeout(next, SEGMENT_MS);
-    return () => window.clearTimeout(id);
-  }, [index, paused, reduced, isQuestion, isFinish, isDemo, next]);
+  // No auto-advance — scenes change only on button press or swipe.
 
   const onSubmitDemo = async (e: FormEvent) => {
     e.preventDefault();
@@ -393,9 +419,6 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     setBusy(true);
     try {
       if (preview) markGuestStoryComplete();
-      if (!preview && user) {
-        await markStoryOnboardingComplete();
-      }
       onFinished?.(destination === "signup" ? "setup" : destination);
       if (onFinished) return;
       if (preview) {
@@ -403,23 +426,60 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
           navigate("/demo", { replace: true });
           return;
         }
-        navigate("/signin?returnTo=/welcome%3Fsetup%3D1", { replace: true });
+        // After sign-in, resume at build-your-channel (no old About-you setup).
+        navigate("/signin?returnTo=/welcome", { replace: true });
         return;
       }
       const needsTeam = !workspaces || workspaces.length === 0;
       if (needsTeam && (nativeViewerMode || isNativePlatform())) {
+        await markStoryOnboardingComplete(session);
         navigate("/join", { replace: true });
         return;
       }
-      if (destination === "setup" || destination === "signup" || needsTeam) {
-        navigate("/welcome?setup=1", { replace: true });
-        return;
+
+      let workspaceId: string | undefined = workspaces?.[0]?._id;
+      if (needsTeam) {
+        const name = session.channelName.trim() || "Team research";
+        workspaceId = await api.workspaces.create({ name: name.slice(0, 60) });
+        await refresh();
       }
-      if (destination === "upload") navigate("/studies/new", { replace: true });
-      else if (destination === "demo") navigate("/demo", { replace: true });
-      else navigate(appHomePath(), { replace: true });
+
+      await markStoryOnboardingComplete(session);
+      void api.users.update({ onboardedAt: new Date().toISOString() }).catch(() => undefined);
+
+      const pending = takePendingPlan();
+      if (pending && workspaceId) {
+        try {
+          const { url } = await api.billing.actions.checkout({
+            workspaceId,
+            plan: pending.plan,
+            interval: pending.interval,
+            successUrl: `${window.location.origin}/billing?success=true`,
+            cancelUrl: `${window.location.origin}/billing`,
+          });
+          if (url) {
+            window.location.assign(url);
+            return;
+          }
+        } catch (err) {
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Couldn't start checkout. You can upgrade later in Billing.",
+          );
+        }
+      }
+
+      if (destination === "upload" || destination === "setup" || destination === "signup" || needsTeam) {
+        navigate("/studies/new", { replace: true });
+      } else if (destination === "demo") {
+        navigate("/demo", { replace: true });
+      } else {
+        navigate(appHomePath(), { replace: true });
+      }
     } catch (err) {
       console.error("[story-onboarding] complete failed", err);
+      toast.error(err instanceof Error ? err.message : "Couldn't finish setup. Try again.");
       navigate(preview ? "/signin" : appHomePath(), { replace: true });
     } finally {
       setBusy(false);
@@ -432,14 +492,30 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
     goTo(DEMO_STEP_INDEX, "push");
   };
 
+  const digLine =
+    filesOpened === 0
+      ? "Five files. Tap one to start digging."
+      : filesOpened >= 5
+        ? "All five opened. It was one line on a page you skimmed."
+        : filesOpened >= 3
+          ? `${filesOpened} opened, nothing found. Nobody digs past this.`
+          : `${filesOpened} opened. Still not it.`;
+  const costCta =
+    filesOpened >= 3 ? "Exactly. Show me better" : filesOpened > 0 ? "Give up digging" : "I'd rather not dig";
+
   const visual = (() => {
     switch (step.visual) {
       case "crt":
-        return <CrtTvVisual reduced={reduced} onActivate={next} />;
+        return <CrtTvVisual reduced={reduced} />;
       case "yellow":
-        return <YellowScreenVisual reduced={reduced} onActivate={next} />;
+        return <YellowScreenVisual reduced={reduced} />;
       case "scattered":
-        return <ScatteredFilesVisual reduced={reduced} onActivate={next} />;
+        return (
+          <ScatteredFilesVisual
+            reduced={reduced}
+            onOpenedChange={setFilesOpened}
+          />
+        );
       case "phone":
         return <ChannelPhoneVisual reduced={reduced} />;
       case "demo":
@@ -505,12 +581,17 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
           <div className="slop-navbar-inner" style={{ flexWrap: "wrap", padding: "8px 24px" }}>
             <SlopBrand />
             <div className="slop-row">
-              {(preview || replay) && (
+              {preview || replay ? (
                 <span className="slop-status">
                   <span className="slop-dot slop-dot-green" />
                   Preview mode
                 </span>
-              )}
+              ) : user ? (
+                <span className="slop-status">
+                  <span className="slop-dot slop-dot-green" />
+                  Signed in
+                </span>
+              ) : null}
               {showSkip && (
                 <button type="button" className="slop-btn slop-btn-ghost min-h-11" onClick={skip}>
                   Skip the story
@@ -520,21 +601,31 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
           </div>
         </header>
 
-        <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div
+          className={cn(
+            "relative z-0 min-h-0 flex-1 overscroll-contain",
+            scrollableStep ? "overflow-y-auto" : "overflow-hidden",
+          )}
+        >
           <main
             className={cn(
-              "mx-auto flex w-full max-w-[1200px] flex-col gap-12 px-6 py-6 lg:flex-row lg:gap-16",
-              scrollableStep ? "lg:items-start" : "min-h-full items-center lg:items-center",
+              "mx-auto flex h-full w-full max-w-[1200px] flex-col flex-wrap items-center gap-12 px-6 py-6 lg:flex-row lg:gap-x-16 lg:gap-y-12",
+              scrollableStep ? "lg:items-start" : "lg:items-center",
               showPricing ? "pb-4" : "pb-[max(1.5rem,env(safe-area-inset-bottom))]",
             )}
           >
-            <div className={cn("rf-rise flex w-full flex-col items-start gap-5", "lg:max-w-[520px] lg:flex-1")}>
+            <div
+              className={cn(
+                "rf-rise flex w-full flex-col items-start gap-5",
+                "lg:max-w-[520px] lg:flex-[1_1_400px]",
+              )}
+            >
               <SlopPill dot={pillDot as "purple"}>{step.eyebrow}</SlopPill>
               <h1
                 ref={headingRef}
                 tabIndex={-1}
                 className="slop-h1 m-0 text-balance outline-none"
-                style={{ fontSize: "clamp(32px, 5.2vw, 68px)" }}
+                style={{ fontSize: "clamp(40px, 5.2vw, 68px)" }}
               >
                 <Title text={step.title} />
               </h1>
@@ -594,6 +685,12 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
               )}
 
               {!isDemo && <p className="slop-lead m-0 max-w-[44ch]">{step.body}</p>}
+
+              {step.id === "cost" && (
+                <p aria-live="polite" className="m-0 text-base font-semibold">
+                  {digLine}
+                </p>
+              )}
 
               {step.question === "role" && (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -701,11 +798,9 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                         type="button"
                         className="slop-btn slop-btn-primary slop-btn-lg"
                         disabled={busy}
-                        onClick={() =>
-                          void finish(workspaces && workspaces.length > 0 ? "upload" : "setup")
-                        }
+                        onClick={() => void finish("upload")}
                       >
-                        {workspaces && workspaces.length > 0 ? "Upload research" : "Set up workspace"}
+                        {busy ? "Creating…" : "Upload research 🚀"}
                       </button>
                     )}
                     <button
@@ -724,7 +819,7 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
                     disabled={!canAdvance}
                     onClick={next}
                   >
-                    {step.cta ?? "Continue"}
+                    {step.id === "cost" ? costCta : (step.cta ?? "Continue")}
                   </button>
                 ) : null}
               </div>
@@ -732,31 +827,10 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
 
             <div
               className={cn(
-                "relative flex w-full items-center justify-center",
-                scrollableStep ? "shrink-0 lg:max-w-[58%] lg:flex-1" : "min-h-[280px] flex-1",
+                "relative flex min-h-[280px] w-full min-w-0 items-center justify-center lg:min-h-[440px] lg:flex-[1_1_440px]",
+                scrollableStep && "shrink-0",
               )}
             >
-              {!isQuestion &&
-                !isFinish &&
-                !isDemo &&
-                step.visual !== "crt" &&
-                step.visual !== "yellow" &&
-                step.visual !== "scattered" &&
-                step.visual !== "phone" && (
-                <div className="absolute inset-0 z-10 hidden lg:flex">
-                  <button type="button" aria-label="Previous" className="w-1/3 cursor-pointer bg-transparent" onClick={back} />
-                  <button
-                    type="button"
-                    aria-label="Pause"
-                    className="w-1/3 cursor-pointer bg-transparent"
-                    onPointerDown={() => setPaused(true)}
-                    onPointerUp={() => setPaused(false)}
-                    onPointerLeave={() => setPaused(false)}
-                    onClick={next}
-                  />
-                  <button type="button" aria-label="Next" className="w-1/3 cursor-pointer bg-transparent" onClick={next} />
-                </div>
-              )}
               <div className="rf-rise relative z-0 w-full">{visual}</div>
             </div>
           </main>
@@ -775,6 +849,11 @@ export default function StoryOnboarding({ preview = false, replay = false, onFin
               {preview
                 ? "Preview mode — answers aren't saved until you sign in."
                 : "Replaying the product story. Finish to mark it complete."}
+            </p>
+          )}
+          {!preview && !replay && user && (
+            <p className="slop-muted relative z-20 px-6 pb-4 text-xs">
+              Signed in — your answers are saved when you put the channel on air.
             </p>
           )}
         </div>

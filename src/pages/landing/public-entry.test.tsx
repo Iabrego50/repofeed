@@ -92,6 +92,17 @@ describe("PublicEntry story-first routing", () => {
     });
   });
 
+  it("lets signed-in users replay the story via /?story=1", async () => {
+    authState.user = {
+      id: "u1",
+      user_metadata: { [STORY_META.completedAt]: "2026-01-01T00:00:00.000Z" },
+    };
+    renderAt("/?story=1");
+    await waitFor(() => {
+      expect(screen.getByText(/Product story welcome/i)).toBeInTheDocument();
+    });
+  });
+
   it("sends signed-in web users to the app home instead of the story", async () => {
     authState.user = {
       id: "u1",

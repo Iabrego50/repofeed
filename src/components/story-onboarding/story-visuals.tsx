@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils.ts";
 import type { StorySession } from "@/lib/story-onboarding.ts";
 import { ROLE_LABELS } from "@/lib/story-onboarding.ts";
@@ -42,46 +42,25 @@ const STORY_MEDIA = {
   ],
 } as const;
 
-function MutedLoopVideo({
+/** Poster-only until `playing`; never autoplays. */
+function StoryVideo({
   src,
   poster,
   reduced,
+  playing,
   label,
   className,
 }: {
   src: string;
   poster: string;
   reduced: boolean;
+  playing: boolean;
   label: string;
   className?: string;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const v = ref.current;
-    if (!v) return;
-    v.muted = true;
-    v.defaultMuted = true;
-    v.playsInline = true;
-    v.loop = true;
-    if (reduced) {
-      v.pause();
-      return;
-    }
-    const play = () => {
-      try {
-        const p = v.play();
-        if (p && typeof p.catch === "function") p.catch(() => undefined);
-      } catch {
-        /* autoplay blocked */
-      }
-    };
-    if (v.readyState >= 2) play();
-    else v.addEventListener("canplay", play, { once: true });
-    return () => v.removeEventListener("canplay", play);
-  }, [reduced, src]);
-
-  if (reduced) {
+  if (reduced || !playing) {
     return (
       <img
         src={poster}
@@ -99,72 +78,136 @@ function MutedLoopVideo({
       muted
       playsInline
       loop
+      autoPlay
       preload="metadata"
       aria-label={label}
       className={cn("absolute inset-0 size-full object-cover pointer-events-none", className)}
+      onCanPlay={(e) => {
+        const v = e.currentTarget;
+        v.muted = true;
+        v.playsInline = true;
+        v.loop = true;
+        try {
+          const p = v.play();
+          if (p && typeof p.catch === "function") p.catch(() => undefined);
+        } catch {
+          /* ignore */
+        }
+      }}
     />
   );
 }
 
-/** Retro CRT — dark until tapped / Turn it on; then Apollo loop. */
+function SpeakerDots({ shattered = false }: { shattered?: boolean }) {
+  const hues = ["#a855f7", "#06b6d4", "#ec4899", "#10b981", "#f59e0b", "#6366f1"];
+  return (
+    <div
+      aria-hidden
+      className="grid w-[300px] max-w-full grid-cols-9 gap-3"
+    >
+      {Array.from({ length: 18 }, (_, i) => {
+        const bg = shattered ? hues[(i * 5 + 2) % 6]! : "#a855f7";
+        return (
+          <span
+            key={i}
+            className="aspect-square rounded-full transition-[background] duration-500"
+            style={{
+              background: bg,
+              boxShadow: `0 0 12px ${bg}`,
+              transitionDelay: `${i * 25}ms`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/** Retro CRT — dark until tapped / Turn it on; speaker dots sit BELOW the screen. */
 export function CrtTvVisual({ reduced, className, onActivate }: VisualProps) {
   const [on, setOn] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   return (
-    <button
-      type="button"
-      onClick={() => {
-        if (!on) {
-          setOn(true);
-          return;
-        }
-        onActivate?.();
-      }}
+    <div
       className={cn(
-        "relative mx-auto flex h-full max-h-[440px] w-full max-w-md cursor-pointer items-center justify-center border-0 bg-transparent p-0",
+        "relative mx-auto flex h-full min-h-[440px] w-full max-w-[440px] flex-col items-center justify-center gap-8",
         className,
       )}
-      aria-label={on ? "Keep watching" : "Tap to turn it on"}
     >
       <div
         className={cn(
-          "relative aspect-[5/4] w-[86%] overflow-hidden rounded-[1.4rem] border-[3px] border-[#1e2436] bg-[#0c101c]",
-          !reduced && "story-crt-glow",
+          "w-full max-w-[440px] rounded-[28px] border border-white/12 bg-[rgba(15,23,42,.9)] p-4",
+          !reduced && "shadow-[0_0_120px_rgba(168,85,247,.45)]",
         )}
       >
-        {on ? (
-          <>
-            <MutedLoopVideo
-              src={STORY_MEDIA.apollo.src}
-              poster={STORY_MEDIA.apollo.poster}
-              reduced={reduced}
-              label="Archive television footage of the Apollo 11 moonwalk, July 1969"
-            />
-            <div className="absolute inset-x-2.5 bottom-2.5 rounded-[10px] bg-[rgba(2,6,23,.78)] px-3 py-2 text-left text-white">
-              <div className="text-[15px] font-bold">July 20, 1969 — the Moon landing</div>
-              <div className="text-[13px] font-medium">One broadcast. The whole world watching.</div>
-            </div>
-          </>
-        ) : (
-          <div className="absolute inset-4 flex flex-col items-center justify-center gap-3 rounded-lg bg-[#080a12]">
-            <span className="grid size-10 place-items-center rounded-full border border-white/25 text-white/80">
-              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M12 3v8" strokeLinecap="round" />
-                <path d="M7.5 6.5a7 7 0 1 0 9 0" strokeLinecap="round" />
-              </svg>
-            </span>
-            <p className="text-[11px] font-medium tracking-[0.12em] text-white/55 uppercase">
-              Tap to turn it on
-            </p>
-          </div>
-        )}
-        <div className="absolute inset-x-8 bottom-5 grid grid-cols-10 gap-1.5">
-          {Array.from({ length: 20 }, (_, i) => (
-            <span key={i} className="aspect-square rounded-full bg-[#1a2240]" />
-          ))}
+        <div
+          role="group"
+          aria-label={on ? "Live broadcast playing on the TV" : "Television — tap to turn it on"}
+          className="relative aspect-[4/3] overflow-hidden rounded-[14px] bg-black text-white"
+        >
+          {on ? (
+            <>
+              <StoryVideo
+                src={STORY_MEDIA.apollo.src}
+                poster={STORY_MEDIA.apollo.poster}
+                reduced={reduced}
+                playing={!paused}
+                label="Archive television footage of the Apollo 11 moonwalk, July 1969"
+              />
+              <span className="slop-status absolute top-2.5 left-2.5">
+                <span className="slop-dot slop-dot-red" />
+                Live
+              </span>
+              <button
+                type="button"
+                aria-label={paused ? "Play the broadcast" : "Pause the broadcast"}
+                onClick={() => setPaused((p) => !p)}
+                className="absolute top-1.5 right-1.5 flex size-11 cursor-pointer items-center justify-center rounded-full border-0 bg-[rgba(2,6,23,.7)] text-white"
+              >
+                {paused ? (
+                  <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                ) : (
+                  <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="5" width="4" height="14" rx="1" />
+                    <rect x="14" y="5" width="4" height="14" rx="1" />
+                  </svg>
+                )}
+              </button>
+              <div className="absolute inset-x-2.5 bottom-2.5 rounded-[10px] bg-[rgba(2,6,23,.78)] px-3 py-2 text-left">
+                <div className="text-[15px] font-bold">July 20, 1969 — the Moon landing</div>
+                <div className="text-[13px] font-medium">One broadcast. The whole world watching.</div>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setOn(true)}
+              className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-3 border-0 bg-[#080a12] text-white"
+              aria-label="Tap to turn it on"
+            >
+              <span className="grid size-10 place-items-center rounded-full border border-white/25 text-white/80">
+                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M12 3v8" strokeLinecap="round" />
+                  <path d="M7.5 6.5a7 7 0 1 0 9 0" strokeLinecap="round" />
+                </svg>
+              </span>
+              <p className="text-[11px] font-medium tracking-[0.12em] text-white/55 uppercase">
+                Tap to turn it on
+              </p>
+            </button>
+          )}
         </div>
       </div>
-    </button>
+      <SpeakerDots />
+      {on && onActivate ? (
+        <button type="button" className="sr-only" onClick={onActivate}>
+          Keep watching
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -184,33 +227,52 @@ const SHATTER_LABELS = [
 ];
 const HUES = ["#a855f7", "#ec4899", "#22d3ee", "#fbbf24", "#34d399", "#f472b6"];
 
-/** Now scene: Apollo clip, then shatter into streaming tiles. */
+/** Now scene: Apollo clip on tap, then shatter into streaming tiles. Dots below. */
 export function YellowScreenVisual({ reduced, className, onActivate }: VisualProps) {
+  const [on, setOn] = useState(false);
   const [shattered, setShattered] = useState(false);
 
   return (
     <div
       className={cn(
-        "relative mx-auto flex h-full max-h-[480px] w-full max-w-lg flex-col items-center justify-center gap-8",
+        "relative mx-auto flex h-full min-h-[440px] w-full max-w-lg flex-col items-center justify-center gap-8",
         className,
       )}
     >
       {!shattered ? (
         <button
           type="button"
-          onClick={() => setShattered(true)}
-          aria-label="Change the channel"
+          onClick={() => {
+            if (!on) {
+              setOn(true);
+              return;
+            }
+            setShattered(true);
+          }}
+          aria-label={on ? "Change the channel" : "Tap to turn it on"}
           className="w-full max-w-[440px] cursor-pointer rounded-[28px] border border-white/12 bg-[rgba(15,23,42,.9)] p-4 text-inherit shadow-[0_0_120px_rgba(168,85,247,.45)]"
         >
           <span className="relative block aspect-[4/3] overflow-hidden rounded-[14px] bg-black text-white">
-            <MutedLoopVideo
-              src={STORY_MEDIA.apollo.src}
-              poster={STORY_MEDIA.apollo.poster}
-              reduced={reduced}
-              label="Archive television footage of the Apollo 11 moonwalk, July 1969"
-            />
+            {on ? (
+              <StoryVideo
+                src={STORY_MEDIA.apollo.src}
+                poster={STORY_MEDIA.apollo.poster}
+                reduced={reduced}
+                playing
+                label="Archive television footage of the Apollo 11 moonwalk, July 1969"
+              />
+            ) : (
+              <span className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#080a12]">
+                <span className="grid size-10 place-items-center rounded-full border border-white/25 text-white/80">
+                  <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M12 3v8" strokeLinecap="round" />
+                    <path d="M7.5 6.5a7 7 0 1 0 9 0" strokeLinecap="round" />
+                  </svg>
+                </span>
+              </span>
+            )}
             <span className="absolute inset-x-2.5 bottom-2.5 block rounded-[10px] bg-[rgba(2,6,23,.78)] px-3 py-2 text-center text-[14px] font-bold tracking-[0.1em] text-white uppercase">
-              Tap to change the channel
+              {on ? "Tap to change the channel" : "Tap to turn it on"}
             </span>
           </span>
         </button>
@@ -244,59 +306,87 @@ export function YellowScreenVisual({ reduced, className, onActivate }: VisualPro
           })}
         </button>
       )}
+      <SpeakerDots shattered={shattered} />
     </div>
   );
 }
 
-/** Scattered research files — Unread · buried. */
-export function ScatteredFilesVisual({ reduced, className, onActivate }: VisualProps) {
-  const files = [
-    { name: "interviews.docx", rot: -7, x: "4%", y: "6%" },
-    { name: "survey-q3.xlsx", rot: 5, x: "48%", y: "0%" },
-    { name: "usability.pdf", rot: -3, x: "18%", y: "34%" },
-    { name: "notes.md", rot: 9, x: "54%", y: "38%" },
-    { name: "deck.pptx", rot: -11, x: "28%", y: "66%" },
-  ];
+const COST_FILES = [
+  "interviews.docx",
+  "survey-q3.xlsx",
+  "usability.pdf",
+  "notes.md",
+  "deck.pptx",
+] as const;
+const COST_ROTS = [-4, 3, -2, 4, -3];
+
+/**
+ * Cost scene — file cards in the right column (flex-wrap), matching SlopMain.
+ * Cards sit beside the copy; never absolute-stacked over the left column.
+ */
+export function ScatteredFilesVisual({
+  reduced,
+  className,
+  onActivate: _onActivate,
+  onOpenedChange,
+}: VisualProps & { onOpenedChange?: (count: number) => void }) {
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
+
+  const open = (name: string) => {
+    setOpened((prev) => {
+      if (prev[name]) return prev;
+      const next = { ...prev, [name]: true };
+      onOpenedChange?.(Object.keys(next).length);
+      return next;
+    });
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onActivate}
+    <div
       className={cn(
-        "relative mx-auto h-full max-h-[440px] w-full max-w-md cursor-pointer border-0 bg-transparent p-0 text-left",
+        "flex min-h-[360px] w-full flex-wrap content-center items-center justify-center gap-5 lg:min-h-[440px]",
         className,
       )}
-      aria-label="Five files. Tap one to start digging."
     >
-      {files.map((f, i) => (
-        <div
-          key={f.name}
-          className={cn(
-            "absolute w-[42%] rounded-2xl border border-white/10 bg-[#12162a] p-3.5 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.8)]",
-            !reduced && "story-file-float",
-          )}
-          style={{
-            left: f.x,
-            top: f.y,
-            transform: `rotate(${f.rot}deg)`,
-            animationDelay: reduced ? undefined : `${i * 0.12}s`,
-            zIndex: i + 1,
-          }}
-        >
-          <p className="truncate font-mono text-[11px] font-medium text-white">{f.name}</p>
-          <div className="mt-3 space-y-1.5">
-            <span className="block h-1.5 w-full rounded bg-white/15" />
-            <span className="block h-1.5 w-4/5 rounded bg-white/10" />
-          </div>
-          <p className="mt-3 text-[10px] font-semibold tracking-wide text-[#fbbf24]">Unread · buried</p>
-        </div>
-      ))}
-    </button>
+      {COST_FILES.map((name, i) => {
+        const on = !!opened[name];
+        return (
+          <button
+            key={name}
+            type="button"
+            aria-pressed={on}
+            onClick={() => open(name)}
+            className={cn(
+              "slop-card flex w-[236px] max-w-full min-h-[136px] cursor-pointer flex-col gap-2.5 p-4 text-left text-slate-50",
+              on ? "slop-border-l-purple" : "slop-border-l-amber",
+              !reduced && !on && "story-file-float",
+            )}
+            style={{
+              transform: on ? "rotate(0deg)" : `rotate(${COST_ROTS[i]}deg)`,
+              animationDelay: reduced || on ? undefined : `${i * 0.12}s`,
+            }}
+          >
+            <span className="font-mono text-[15px]">{name}</span>
+            <span aria-hidden className="h-1.5 rounded-[3px] bg-white/14" />
+            <span aria-hidden className="h-1.5 w-4/5 rounded-[3px] bg-white/14" />
+            <span aria-hidden className="h-1.5 w-[55%] rounded-[3px] bg-white/14" />
+            <span
+              className="mt-auto text-[14px] font-medium"
+              style={{ color: on ? "#94a3b8" : "#fbbf24" }}
+            >
+              {on ? "Opened · not in here" : "Unread · buried"}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-/** Phone insight reel + 16:9 deck panel (Feed scene). */
+/** Phone insight reel + 16:9 deck panel (Feed scene). Videos play only after tap. */
 export function ChannelPhoneVisual({ reduced, className }: VisualProps) {
   const [reel, setReel] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
   const [heard, setHeard] = useState(false);
   const [added, setAdded] = useState<Record<number, boolean>>({});
@@ -304,29 +394,37 @@ export function ChannelPhoneVisual({ reduced, className }: VisualProps) {
   const addedIdx = STORY_MEDIA.reels.map((_, i) => i).filter((i) => added[i]);
   const deckN = addedIdx.length;
 
-  useEffect(() => {
-    if (reduced) return;
-    const id = window.setInterval(() => {
-      setReel((r) => (r + 1) % STORY_MEDIA.reels.length);
-    }, 5000);
-    return () => window.clearInterval(id);
-  }, [reduced]);
-
   return (
     <div
       className={cn(
-        "relative mx-auto flex h-full max-h-[560px] w-full max-w-2xl flex-wrap items-center justify-center gap-7",
+        "relative mx-auto flex h-full min-h-[440px] w-full max-w-2xl flex-wrap items-center justify-center gap-7",
         className,
       )}
     >
       <article className="slop-card slop-card-beam w-[320px] max-w-full overflow-hidden rounded-[36px] p-0">
         <div className="relative flex min-h-[560px] flex-col justify-between gap-5 overflow-hidden rounded-[34px] bg-[#020617] p-4 text-white">
-          <MutedLoopVideo
+          <StoryVideo
             src={current.src}
             poster={current.poster}
             reduced={reduced}
+            playing={playing}
             label="Stock footage of a person being interviewed"
           />
+          {!playing && (
+            <button
+              type="button"
+              onClick={() => setPlaying(true)}
+              className="absolute inset-0 z-10 flex cursor-pointer flex-col items-center justify-center gap-3 border-0 bg-[rgba(2,6,23,.55)] text-white"
+              aria-label="Tap to play this scene"
+            >
+              <span className="grid size-14 place-items-center rounded-full border border-white/30 bg-[rgba(2,6,23,.7)]">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+              <span className="text-[13px] font-bold tracking-[0.1em] uppercase">Tap to play</span>
+            </button>
+          )}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
@@ -422,7 +520,10 @@ export function ChannelPhoneVisual({ reduced, className }: VisualProps) {
             <button
               type="button"
               aria-label="Previous scene"
-              onClick={() => setReel((r) => (r + STORY_MEDIA.reels.length - 1) % STORY_MEDIA.reels.length)}
+              onClick={() => {
+                setReel((r) => (r + STORY_MEDIA.reels.length - 1) % STORY_MEDIA.reels.length);
+                setPlaying(false);
+              }}
               className="flex size-11 items-center justify-center rounded-full border-0 bg-[rgba(2,6,23,.45)] text-white"
             >
               ↑
@@ -431,7 +532,10 @@ export function ChannelPhoneVisual({ reduced, className }: VisualProps) {
             <button
               type="button"
               aria-label="Next scene"
-              onClick={() => setReel((r) => (r + 1) % STORY_MEDIA.reels.length)}
+              onClick={() => {
+                setReel((r) => (r + 1) % STORY_MEDIA.reels.length);
+                setPlaying(false);
+              }}
               className="flex size-11 items-center justify-center rounded-full border-0 bg-[rgba(2,6,23,.45)] text-white"
             >
               ↓
@@ -508,10 +612,8 @@ export function DemoWhatYouGetCard({ className }: { className?: string }) {
       icon: "📱",
       iconClass: "slop-icon-pink",
       title: "A channel in every stakeholder’s pocket",
-      // Artboard said “iOS and Android apps…” — product is iOS-only today.
       body: "The iOS app streams your insights on dedicated research channels.",
     },
-    // Artboard also listed “Your files never leave your servers” — omitted on purpose.
   ];
 
   return (
@@ -558,18 +660,35 @@ export function ChannelPreviewCard({
   const title = session.channelName.trim() || "Unnamed channel.";
 
   return (
-    <aside className={cn("slop-card slop-card-beam w-full max-w-md p-6", className)}>
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-mono text-[10px] tracking-[0.14em] text-[var(--slop-text-muted)] uppercase">
-          Channel preview
-        </p>
-        <span className={cn("slop-pill", status === "air" ? "slop-pill-green" : "")}>
+    <aside
+      className={cn(
+        "slop-card slop-card-beam flex w-full max-w-[440px] flex-col gap-5 p-7",
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="slop-row">
+          <span className="slop-icon-box mb-0" aria-hidden>
+            📺
+          </span>
+          <span className="font-mono text-[13px] tracking-[0.12em] text-slate-400 uppercase">
+            Channel preview
+          </span>
+        </span>
+        <span className="slop-status">
           <span className={cn("slop-dot", status === "air" ? "slop-dot-green" : "slop-dot-amber")} />
           {status === "air" ? "On air" : "Setting up"}
         </span>
       </div>
-      <h2 className="mt-3 text-2xl font-bold tracking-tight">{title}</h2>
-      <dl className="mt-5 divide-y divide-white/10 text-sm">
+      <div
+        className={cn(
+          "text-[36px] leading-[1.1] font-extrabold tracking-[-0.04em] [overflow-wrap:anywhere]",
+          title !== "Unnamed channel." && "slop-text-gradient",
+        )}
+      >
+        {title}
+      </div>
+      <dl className="m-0 flex flex-col">
         {(
           [
             ["Tuned for", tuned],
@@ -577,12 +696,15 @@ export function ChannelPreviewCard({
             ["Watching", watching],
           ] as const
         ).map(([label, value]) => (
-          <div key={label} className="flex items-center justify-between gap-4 py-3">
-            <dt className="text-[var(--slop-text-muted)]">{label}</dt>
+          <div
+            key={label}
+            className="flex items-center justify-between gap-4 border-t border-white/10 py-3.5"
+          >
+            <dt className="text-[15px] text-slate-400">{label}</dt>
             <dd
               className={cn(
-                "text-right font-medium",
-                value === "Not set yet" ? "text-[var(--slop-text-dim)]" : "",
+                "m-0 text-right text-[15px] font-semibold",
+                value === "Not set yet" ? "text-slate-400" : "text-slate-50",
               )}
             >
               {value}
@@ -591,22 +713,26 @@ export function ChannelPreviewCard({
         ))}
       </dl>
       {showNext && (
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-[var(--slop-text-muted)] uppercase">
+        <div className="flex flex-col gap-3 border-t border-white/10 pt-5">
+          <span className="font-mono text-[13px] tracking-[0.12em] text-slate-400 uppercase">
             What happens next
-          </p>
-          <ol className="mt-3 space-y-2.5">
+          </span>
+          <ol className="m-0 flex list-none flex-col gap-2.5 p-0 text-[15px]">
             {[
               "Upload your research files",
               "AI cuts them into short insight scenes",
               "Your team scrolls, likes and comments",
               "The best scenes go to a PowerPoint deck",
             ].map((line, i) => (
-              <li key={line} className="flex items-start gap-3 text-sm">
-                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white text-[10px] font-bold text-[#030712]">
+              <li key={line} className="flex items-center gap-3">
+                <span
+                  aria-hidden
+                  className="grid size-[26px] shrink-0 place-items-center rounded-full font-mono text-[13px] text-white"
+                  style={{ background: "linear-gradient(135deg, #4338ca, #7e22ce)" }}
+                >
                   {i + 1}
                 </span>
-                {line}
+                <span>{line}</span>
               </li>
             ))}
           </ol>

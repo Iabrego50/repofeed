@@ -308,6 +308,9 @@ function EditorLayout() {
         </NavLink>
         <div className="mt-auto flex flex-col gap-0.5">
           {isAdmin && <NavRow item={{ to: "/admin/analytics", label: "Analytics", icon: TrendingUp }} />}
+          <NavLink to="/?story=1" className={cn(ROW, "w-full")}>
+            <Clapperboard className="size-4" /> Watch the story
+          </NavLink>
           <button type="button" onClick={openGuide} className={cn(ROW, "w-full")}>
             <GraduationCap className="size-4" /> Product tour
           </button>

@@ -77,6 +77,10 @@ export default function PublicEntry({ loader }: { loader: React.ReactNode }) {
   if (authLoading) return <>{loader}</>;
 
   if (user) {
+    // Anyone can replay the product story via /?story=1 (or /welcome?story=1).
+    if (params.get("story") === "1") {
+      return <Navigate to="/welcome?story=1" replace />;
+    }
     return <Navigate to={appHomePath()} replace />;
   }
 

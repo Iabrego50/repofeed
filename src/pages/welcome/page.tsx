@@ -8,12 +8,14 @@ import { isNativePlatform } from "@/lib/native";
 import { useWorkspace } from "@/hooks/use-workspace.ts";
 import StoryOnboarding from "@/components/story-onboarding/story-onboarding.tsx";
 import ViewerOnboarding from "@/components/viewer-onboarding/viewer-onboarding.tsx";
-import WorkspaceSetup from "./workspace-setup.tsx";
 
 /**
  * `/welcome` serves:
- * 1. Web: public story preview (signed out) + first-run story + workspace setup.
+ * 1. Web: public story preview (signed out) + first-run Slopstrap story + channel build.
  * 2. Native: viewer-only onboarding (no pricing / researcher signup), then `/join`.
+ *
+ * Signed-in users with no workspace stay in the Slopstrap flow (story → build channel →
+ * on air → upload). The old “About you” workspace-setup UI is gone.
  */
 export default function WelcomePage() {
   const { user, isLoading } = useAuth();
@@ -47,14 +49,20 @@ export default function WelcomePage() {
   }
 
   const storyDone = hasCompletedStoryOnboarding(user);
+  const hasWorkspace = (workspaces?.length ?? 0) > 0;
 
-  if (forceStory || (!storyDone && !forceSetup)) {
-    return <StoryOnboarding replay={forceStory && storyDone} />;
+  // Replay: full story from the start.
+  if (forceStory) {
+    return <StoryOnboarding replay={storyDone} />;
   }
 
-  return (
-    <div className="h-dvh overflow-y-auto">
-      <WorkspaceSetup />
-    </div>
-  );
+  // Signed-in, no workspace: Slopstrap story → channel → on air → upload.
+  // If they already finished the narrative (or deep-linked ?setup=1), start at role.
+  if (!hasWorkspace) {
+    const startAt = storyDone || forceSetup ? "role" : undefined;
+    return <StoryOnboarding startAt={startAt} />;
+  }
+
+  // Has a workspace — feed is home; story only via ?story=1.
+  return <Navigate to={appHomePath()} replace />;
 }
