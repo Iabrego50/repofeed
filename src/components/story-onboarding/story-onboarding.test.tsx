@@ -205,4 +205,16 @@ describe("StoryOnboarding", () => {
     expect(screen.getByRole("button", { name: /Tap to turn it on/i })).toBeInTheDocument();
     expect(document.querySelector("video")).toBeNull();
   });
+
+  it("shatters the Now screen into real show titles, not generic row labels", () => {
+    render(wrap(<StoryOnboarding preview />));
+    fireEvent.click(screen.getByRole("button", { name: /^Keep watching$/i }));
+    const tvSelector = 'button[aria-label="Tap to turn it on"], button[aria-label="Change the channel"]';
+    const tv = () => document.querySelector<HTMLButtonElement>(tvSelector);
+    fireEvent.click(tv()!);
+    fireEvent.click(tv()!);
+    expect(screen.getByText("Stranger Things")).toBeInTheDocument();
+    expect(screen.getByText("Game of Thrones")).toBeInTheDocument();
+    expect(screen.queryByText("Continue watching")).not.toBeInTheDocument();
+  });
 });

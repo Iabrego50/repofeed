@@ -211,19 +211,20 @@ export function CrtTvVisual({ reduced, className, onActivate }: VisualProps) {
   );
 }
 
+/** Real show titles (plain text only, no logos or art): everyone is watching something different. */
 const SHATTER_LABELS = [
-  "For you",
-  "Continue watching",
-  "Suggested",
-  "Because you watched",
-  "Up next",
-  "Your mix",
-  "Recommended",
-  "Watch again",
-  "New for you",
-  "Top picks",
-  "Trending for you",
-  "Skip intro",
+  "Stranger Things",
+  "The Bear",
+  "Succession",
+  "Ted Lasso",
+  "Severance",
+  "The Last of Us",
+  "Bluey",
+  "The Office",
+  "Squid Game",
+  "Yellowstone",
+  "The Crown",
+  "Game of Thrones",
 ];
 const HUES = ["#a855f7", "#ec4899", "#22d3ee", "#fbbf24", "#34d399", "#f472b6"];
 
